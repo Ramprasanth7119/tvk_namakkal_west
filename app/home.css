@@ -2130,22 +2130,22 @@
       }
 
       .hero-pin {
-        padding-top: 5.5rem;
+        padding-top: 4.2rem;
         justify-content: flex-start
       }
 
       .h-eyebrow {
-        margin-top: .5rem
+        margin-top: .3rem
       }
 
       .h-title {
-        font-size: clamp(2.1rem, 10.5vw, 3.4rem);
-        margin-bottom: 1.1rem;
+        font-size: clamp(1.8rem, 9vw, 2.8rem);
+        margin-bottom: 0.6rem;
         padding: 0 .4rem
       }
 
       .band {
-        height: 30vh
+        height: clamp(130px, 24vh, 180px);
       }
 
       .ele {
@@ -2165,18 +2165,28 @@
         min-width: 140px
       }
 
+      .h-kural {
+        margin-top: 0.7rem;
+      }
+
       .h-kural b {
-        font-size: 1.05rem
+        font-size: 0.95rem
+      }
+
+      .h-kural span {
+        margin-top: 0.3rem;
+        font-size: 0.65rem;
       }
 
       .h-ctas {
-        margin-top: 1.3rem;
-        margin-bottom: 2rem;
+        margin-top: 0.8rem;
+        margin-bottom: 1.2rem;
+        gap: .6rem;
       }
 
       .btn {
-        padding: .9rem 1.7rem;
-        font-size: .9rem
+        padding: .75rem 1.4rem;
+        font-size: .84rem
       }
 
       .svc-grid,

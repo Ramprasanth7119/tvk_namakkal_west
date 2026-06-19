@@ -242,6 +242,7 @@ export default function AnalyticsDashboard() {
   const [category, setCategory] = useState(Object.keys(CATEGORIES)[0]);
   const [subcategory, setSubcategory] = useState(CATEGORIES[Object.keys(CATEGORIES)[0]][0]);
   const [description, setDescription] = useState('');
+  const [emailHoneypot, setEmailHoneypot] = useState('');
   const [urgency, setUrgency] = useState('சாதாரண');
 
   // Media state - Support multiple photos!
@@ -527,6 +528,7 @@ export default function AnalyticsDashboard() {
         video: video || undefined,
       },
       geolocation: latitude && longitude ? { latitude, longitude } : undefined,
+      email_honeypot: emailHoneypot,
     };
 
     try {
@@ -882,7 +884,7 @@ export default function AnalyticsDashboard() {
               <b>மக்கள் குரல் மையம்</b>
             </span>
           </a>
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+          <div className="tb-actions">
             <a
               className="tb-back"
               href="#complaint"
@@ -930,8 +932,8 @@ export default function AnalyticsDashboard() {
                 </button>
               ))}
             </div>
-            <div className="fb-search" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <div style={{ position: 'relative', flex: 1 }}>
+            <div className="fb-search">
+              <div className="fb-search-input-wrapper">
                 <svg viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="7" />
                   <path d="M21 21l-4.3-4.3" />
@@ -945,7 +947,7 @@ export default function AnalyticsDashboard() {
                   onChange={(e) => setCurSearch(e.target.value)}
                 />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', borderLeft: '1.5px solid var(--line)', paddingLeft: '1rem' }}>
+              <div className="fb-toggle-wrapper">
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--m-800)', whiteSpace: 'nowrap' }}>டெமோ தரவு</span>
                 <button
                   className={`achip ${demoMode ? 'active' : ''}`}
@@ -1426,6 +1428,17 @@ export default function AnalyticsDashboard() {
                 </div>
 
                 <form onSubmit={handleSubmitComplaint} autoComplete="off">
+                  {/* Honeypot field for bot protection */}
+                  <div style={{ display: 'none' }} aria-hidden="true">
+                    <input
+                      type="text"
+                      name="email_honeypot"
+                      value={emailHoneypot}
+                      onChange={(e) => setEmailHoneypot(e.target.value)}
+                      tabIndex={-1}
+                      autoComplete="off"
+                    />
+                  </div>
                   {/* SECTION 1: VOTER VERIFICATION */}
                   <div className="form-section">
                     <div className="form-section-title">
