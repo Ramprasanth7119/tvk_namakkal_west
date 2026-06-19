@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       });
     }
 
-    await logSecurityEvent(ip, "VOTER_VERIFICATION_SUCCESS", { voterId, constituency: voter.AssemblyConstituency });
+    await logSecurityEvent(ip, "VOTER_VERIFICATION_SUCCESS", { voterId, constituency: voter.Constituency });
 
     return NextResponse.json({
       found: true,
