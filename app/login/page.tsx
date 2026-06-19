@@ -24,8 +24,10 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Redirect to homepage
-        router.push("/");
+        // Redirect to the intended page (defaults to /analytics)
+        const params = new URLSearchParams(window.location.search);
+        const redirectPath = params.get("redirect") || "/analytics";
+        router.push(redirectPath);
         router.refresh();
       } else {
         setError(data.error || "தவறான கடவுச்சொல். மீண்டும் முயற்சிக்கவும்.");

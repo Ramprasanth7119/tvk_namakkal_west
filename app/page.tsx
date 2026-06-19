@@ -250,8 +250,19 @@ export default function Home() {
       if (eleL) eleL.style.transform = `translateY(${ty}%) translate(${pxr * -12}px,${pyr * -6}px)`;
       if (eleR) eleR.style.transform = `scaleX(-1) translateY(${ty}%) translate(${pxr * 12}px,${pyr * -6}px)`;
 
-      const medScale = (0.55 + 0.30 * settle) * (1 + hold * 0.03);
-      if (medWrap) medWrap.style.transform = `translate(-50%,-50%) translate(${pxr * 16}px,${pyr * 10}px) scale(${medScale}) rotate(${(1 - settle) * -14}deg)`;
+      if (medWrap && band) {
+        const bandHeight = band.offsetHeight;
+        // Calculate the exact scale to fit the logo inside the yellow banner
+        // On scroll down (settle = 1), we want the logo to be exactly 88% of the yellow banner height
+        // On scroll up (settle = 0), we want it to be larger and majestic (1.15 times the banner height)
+        // This ensures perfect alignment and sizing on all screens (mobile, tablet, desktop)
+        const logoMaxHeight = 300 * 1.34; // 300px is the max-width of med-wrap, 1.34 is textring size
+        const targetScaleAtSettle1 = (bandHeight * 0.88) / logoMaxHeight;
+        const targetScaleAtSettle0 = (bandHeight * 1.15) / logoMaxHeight;
+        const medScale = (targetScaleAtSettle0 + (targetScaleAtSettle1 - targetScaleAtSettle0) * settle) * (1 + hold * 0.03);
+        
+        medWrap.style.transform = `translate(-50%,-50%) translate(${pxr * 16}px,${pyr * 10}px) scale(${medScale}) rotate(${(1 - settle) * -14}deg)`;
+      }
 
       if (band) {
         band.style.opacity = flagIn.toString();
