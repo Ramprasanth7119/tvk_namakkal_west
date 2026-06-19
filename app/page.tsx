@@ -247,11 +247,17 @@ export default function Home() {
       const pAmt = 1 - settle;
       const pxr = (mx / window.innerWidth - .5) * pAmt, pyr = (my / window.innerHeight - .5) * pAmt;
 
-      if (eleL) eleL.style.transform = `translateY(${ty}%) translate(${pxr * -12}px,${pyr * -6}px)`;
-      if (eleR) eleR.style.transform = `scaleX(-1) translateY(${ty}%) translate(${pxr * 12}px,${pyr * -6}px)`;
+      if (eleL) {
+        eleL.style.transform = `translateY(${ty}%) translate(${pxr * -12}px,${pyr * -6}px)`;
+        eleL.style.opacity = rise.toString();
+      }
+      if (eleR) {
+        eleR.style.transform = `scaleX(-1) translateY(${ty}%) translate(${pxr * 12}px,${pyr * -6}px)`;
+        eleR.style.opacity = rise.toString();
+      }
 
       if (medWrap && band) {
-        const bandHeight = band.offsetHeight;
+        const bandHeight = band.offsetHeight || 360;
         // Calculate the exact scale to fit the logo inside the yellow banner
         // On scroll down (settle = 1), we want the logo to be exactly 88% of the yellow banner height
         // On scroll up (settle = 0), we want it to be larger and majestic (1.15 times the banner height)
