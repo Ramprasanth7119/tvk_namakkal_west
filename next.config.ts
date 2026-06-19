@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  outputFileTracingIncludes: {
+    "/api/voter/verify": ["./lib/Voter_List.xlsx"],
+  },
 };
 
 export default nextConfig;
