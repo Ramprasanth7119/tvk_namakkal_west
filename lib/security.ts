@@ -81,7 +81,7 @@ export async function checkRateLimit(
 
   try {
     const result = await limitsCollection.findOneAndUpdate(
-      { _id: key },
+      { _id: key as any },
       {
         $inc: { count: 1 },
         $setOnInsert: {
