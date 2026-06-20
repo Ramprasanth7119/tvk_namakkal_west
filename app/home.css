@@ -281,12 +281,9 @@
       transform: translateX(-50%) scale(1)
     }
 
-    body.cursor-on,
-    body.cursor-on a,
-    body.cursor-on button,
-    body.cursor-on input,
-    body.cursor-on select {
-      cursor: none
+    body.cursor-on:not(.modal-open),
+    body.cursor-on:not(.modal-open) * {
+      cursor: none !important;
     }
 
     body.cursor-on .wcur {
@@ -965,7 +962,20 @@
     }
 
     #resolved-showcase {
-      scroll-margin-top: 88px
+      scroll-margin-top: 100px
+    }
+
+    .resolved-showcase-sec {
+      padding: clamp(3rem, 5vw, 4rem) 0
+    }
+
+    .resolved-showcase-head {
+      margin-bottom: 1.5rem
+    }
+
+    .resolved-showcase-actions {
+      text-align: center;
+      margin-top: 0
     }
 
     #resolved-showcase .sec-head h2 {
@@ -1931,9 +1941,16 @@
     }
 
     .join-ok {
-      display: none;
+      display: block;
       text-align: center;
       padding: 2.8rem 0
+    }
+
+    .join-ok a.btn {
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center
     }
 
     .join-ok img {

@@ -1,22 +1,24 @@
-export type ComplaintStatusCode = "pend" | "warn" | "ok";
+import { 
+  type ComplaintStatusCode, 
+  STATUS_LABELS, 
+  STATUS_TIMELINE_LABELS 
+} from "@/constants/statuses";
 
-export const STATUS_LABELS: Record<ComplaintStatusCode, string> = {
-  pend: "பதிவில்",
-  warn: "நடவடிக்கையில்",
-  ok: "தீர்க்கப்பட்டது",
-};
-
-export const STATUS_TIMELINE_LABELS: Record<ComplaintStatusCode, string> = {
-  pend: "PENDING",
-  warn: "IN_PROGRESS",
-  ok: "RESOLVED",
-};
+export type { ComplaintStatusCode };
+export { STATUS_LABELS, STATUS_TIMELINE_LABELS };
 
 export function normalizeStatus(status?: string | null): ComplaintStatusCode {
-  if (status === "ok" || status === "warn" || status === "pend") return status;
-  if (status === "RESOLVED") return "ok";
-  if (status === "IN_PROGRESS") return "warn";
-  return "pend";
+  if (!status) return "registered";
+  const lower = status.toLowerCase();
+  if (lower === "pend" || lower === "registered") return "registered";
+  if (lower === "warn" || lower === "under_review") return "under_review";
+  if (lower === "assigned") return "assigned";
+  if (lower === "work_in_progress") return "work_in_progress";
+  if (lower === "solution_submitted") return "solution_submitted";
+  if (lower === "pending_rep_approval") return "pending_rep_approval";
+  if (lower === "pending_admin_approval") return "pending_admin_approval";
+  if (lower === "ok" || lower === "resolved") return "resolved";
+  return "registered";
 }
 
 export function getStatusLabel(status?: string | null): string {
@@ -27,8 +29,9 @@ export interface TimelineEntry {
   status: ComplaintStatusCode;
   updatedAt: Date;
   updatedBy: string;
+  notes?: string;
 }
 
 export function buildInitialTimeline(): TimelineEntry[] {
-  return [{ status: "pend", updatedAt: new Date(), updatedBy: "system" }];
+  return [{ status: "registered", updatedAt: new Date(), updatedBy: "system", notes: "மனு வெற்றிகரமாக பதிவு செய்யப்பட்டது." }];
 }

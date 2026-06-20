@@ -39,9 +39,17 @@ export async function POST(request: Request) {
     if (username && username.trim() !== "") {
       const cleanUsername = username.trim().toLowerCase();
       const db = await getDb();
-      const user = await db.collection("users").findOne({ username: cleanUsername, active: true });
+      const user = await db.collection("users").findOne({ username: cleanUsername });
 
       if (user) {
+        if (user.active !== true) {
+          await logSecurityEvent(ip, "ADMIN_LOGIN_DEACTIVATED", { usernameAttempt: cleanUsername });
+          return NextResponse.json(
+            { error: "உங்கள் கணக்கு முடக்கப்பட்டுள்ளது. தயவுசெய்து நிர்வாகியைத் தொடர்பு கொள்ளவும். (Your account is deactivated. Please contact the administrator.)" },
+            { status: 403 }
+          );
+        }
+
         const computedHash = hashPassword(password);
         if (user.passwordHash === computedHash) {
           userSession = {

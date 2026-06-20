@@ -55,6 +55,7 @@ export async function GET(request: Request) {
       voterId: doc.voterId,
       name: doc.name || "",
       dob: formatVoterDob(doc.dob),
+      doorNo: doc.doorNo || "",
       mobile: doc.mobile || "",
       address: doc.address || "",
       constituency: doc.constituency || "",

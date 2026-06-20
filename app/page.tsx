@@ -7,6 +7,7 @@ import './home.css';
 import './analytics/analytics.css';
 import { CONSTITUENCIES, ALL_AREAS } from '@/lib/constituencies';
 import { TVK_LOGO } from '@/lib/brand';
+import { WHISTLE_CURSOR_GOLD } from '@/lib/whistleCursorAssets';
 import { calculateAgeFromDob } from '@/lib/voterRegistry';
 
 const CATEGORIES = {
@@ -38,6 +39,14 @@ export default function Home() {
   const [voterVerified, setVoterVerified] = useState(false);
   const [verificationError, setVerificationError] = useState('');
 
+  // Fallback Verification states
+  const [fbName, setFbName] = useState('');
+  const [fbDoorNo, setFbDoorNo] = useState('');
+  const [fbDob, setFbDob] = useState('');
+  const [fbWard, setFbWard] = useState('');
+  const [isFindingVoter, setIsFindingVoter] = useState(false);
+  const [verificationMethod, setVerificationMethod] = useState<'VOTER_ID' | 'DETAIL_MATCH' | ''>('');
+
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [aadhaar, setAadhaar] = useState('');
@@ -64,6 +73,10 @@ export default function Home() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isIpLocating, setIsIpLocating] = useState(false);
+  const [locationAttempts, setLocationAttempts] = useState(0);
+  const [successLocationCount, setSuccessLocationCount] = useState(0);
+  const [gpsMessage, setGpsMessage] = useState('');
+  const [locationTimestamp, setLocationTimestamp] = useState<string>('');
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,6 +92,98 @@ export default function Home() {
   useEffect(() => {
     setSubcategory(CATEGORIES[category][0]);
   }, [category]);
+
+  const [isFormLoaded, setIsFormLoaded] = useState(false);
+
+  // Load persisted form data from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('tvk_complaint_form_data');
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.voterId !== undefined) setVoterId(data.voterId);
+        if (data.voterVerified !== undefined) setVoterVerified(data.voterVerified);
+        if (data.verificationMethod !== undefined) setVerificationMethod(data.verificationMethod);
+        if (data.fbName !== undefined) setFbName(data.fbName);
+        if (data.fbDoorNo !== undefined) setFbDoorNo(data.fbDoorNo);
+        if (data.fbDob !== undefined) setFbDob(data.fbDob);
+        if (data.fbWard !== undefined) setFbWard(data.fbWard);
+        if (data.name !== undefined) setName(data.name);
+        if (data.mobile !== undefined) setMobile(data.mobile);
+        if (data.aadhaar !== undefined) setAadhaar(data.aadhaar);
+        if (data.gender !== undefined) setGender(data.gender);
+        if (data.age !== undefined) setAge(data.age);
+        if (data.dob !== undefined) setDob(data.dob);
+        if (data.address !== undefined) setAddress(data.address);
+        if (data.constituency !== undefined) setConstituency(data.constituency);
+        if (data.ward !== undefined) setWard(data.ward);
+        if (data.areaStreet !== undefined) setAreaStreet(data.areaStreet);
+        if (data.category !== undefined) setCategory(data.category);
+        if (data.subcategory !== undefined) setSubcategory(data.subcategory);
+        if (data.description !== undefined) setDescription(data.description);
+        if (data.urgency !== undefined) setUrgency(data.urgency);
+        if (data.photos !== undefined) setPhotos(data.photos);
+        if (data.video !== undefined) setVideo(data.video);
+        if (data.latitude !== undefined) setLatitude(data.latitude);
+        if (data.longitude !== undefined) setLongitude(data.longitude);
+        if (data.locationAttempts !== undefined) setLocationAttempts(data.locationAttempts);
+        if (data.successLocationCount !== undefined) setSuccessLocationCount(data.successLocationCount);
+        if (data.gpsMessage !== undefined) setGpsMessage(data.gpsMessage);
+        if (data.locationTimestamp !== undefined) setLocationTimestamp(data.locationTimestamp);
+      }
+    } catch (e) {
+      console.error('Error loading form data from sessionStorage:', e);
+    } finally {
+      setIsFormLoaded(true);
+    }
+  }, []);
+
+  // Save form data to sessionStorage on any change
+  useEffect(() => {
+    if (!isFormLoaded) return;
+    try {
+      const data = {
+        voterId,
+        voterVerified,
+        verificationMethod,
+        fbName,
+        fbDoorNo,
+        fbDob,
+        fbWard,
+        name,
+        mobile,
+        aadhaar,
+        gender,
+        age,
+        dob,
+        address,
+        constituency,
+        ward,
+        areaStreet,
+        category,
+        subcategory,
+        description,
+        urgency,
+        photos,
+        video,
+        latitude,
+        longitude,
+        locationAttempts,
+        successLocationCount,
+        gpsMessage,
+        locationTimestamp,
+      };
+      sessionStorage.setItem('tvk_complaint_form_data', JSON.stringify(data));
+    } catch (e) {
+      console.warn('Quota exceeded or error writing to sessionStorage:', e);
+    }
+  }, [
+    isFormLoaded,
+    voterId, voterVerified, verificationMethod, fbName, fbDoorNo, fbDob, fbWard,
+    name, mobile, aadhaar, gender, age, dob, address, constituency, ward, areaStreet,
+    category, subcategory, description, urgency, photos, video,
+    latitude, longitude, locationAttempts, successLocationCount, gpsMessage, locationTimestamp
+  ]);
 
   // Lock scroll and restore native cursor while complaint modal is open
   useEffect(() => {
@@ -164,8 +269,8 @@ export default function Home() {
 
       if (res.ok && data.found) {
         setVoterVerified(true);
+        setVerificationMethod('VOTER_ID');
         setName(data.voter.VoterName);
-        setMobile(data.voter.Mobile);
         setWard(String(data.voter.WardNo));
         setAddress(data.voter.Address);
         const voterDob = data.voter.DOB || '';
@@ -189,20 +294,113 @@ export default function Home() {
     }
   };
 
+  // Handle fallback detail-match voter verification lookup
+  const handleFallbackVerify = async () => {
+    if (!fbName.trim() || !fbDoorNo.trim() || !fbDob || !fbWard.trim()) {
+      setVerificationError('பெயர், கதவு எண், பிறந்த தேதி மற்றும் வார்டு எண் அனைத்தும் தேவை.');
+      return;
+    }
+
+    setIsFindingVoter(true);
+    setVerificationError('');
+    setVoterVerified(false);
+
+    try {
+      const res = await fetch('/api/voter/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isFallback: true,
+          name: fbName.trim(),
+          doorNo: fbDoorNo.trim(),
+          dob: fbDob,
+          wardNo: fbWard.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.found) {
+        setVoterVerified(true);
+        setVerificationMethod('DETAIL_MATCH');
+        
+        // Auto-fill and lock
+        setVoterId(data.voter.VoterID);
+        setName(data.voter.VoterName);
+        setWard(String(data.voter.WardNo));
+        setAddress(data.voter.Address);
+        const voterDob = data.voter.DOB || '';
+        setDob(voterDob);
+        setAge(calculateAgeFromDob(voterDob));
+
+        const matchedConstituency = CONSTITUENCIES.find(
+          (c) => c.toLowerCase() === data.voter.Constituency.toLowerCase()
+        );
+        if (matchedConstituency) {
+          setConstituency(matchedConstituency);
+        }
+      } else {
+        setVerificationError(data.message || 'வாக்காளர் அடையாளம் கண்டறியப்படவில்லை');
+      }
+    } catch (err) {
+      console.error(err);
+      setVerificationError('சரிபார்ப்பதில் பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.');
+    } finally {
+      setIsFindingVoter(false);
+    }
+  };
+
   // Geolocation lookup with Nominatim reverse geocoding to get real Tamil address!
   const handleGetLocation = () => {
+    if (!voterVerified) {
+      setGpsMessage("முதலில் வாக்காளர் சரிபார்ப்பை முடிக்கவும்");
+      return;
+    }
+
+    // Rule 3 & 4: If we already have 2 successful requests in the session, or if we want to avoid extra calls
+    if (successLocationCount >= 2) {
+      setGpsMessage("முன்னர் பெறப்பட்ட இருப்பிடத் தகவல் பயன்படுத்தப்படுகிறது.");
+      const cachedLat = localStorage.getItem('tvk_gps_lat');
+      const cachedLon = localStorage.getItem('tvk_gps_lon');
+      const cachedAddr = localStorage.getItem('tvk_gps_address');
+      if (cachedLat && cachedLon) {
+        setLatitude(Number(cachedLat));
+        setLongitude(Number(cachedLon));
+        if (cachedAddr) setAddress(cachedAddr);
+      }
+      return;
+    }
+
+    // Rule 2: Limit GPS requests to 2 attempts per complaint session.
+    if (locationAttempts >= 2) {
+      setGpsMessage("அதிகப்படியான இருப்பிட முயற்சிகள் (அதிகபட்சம் 2 முறை).");
+      return;
+    }
+
     if (!navigator.geolocation) {
       alert('உங்கள் உலாவி இருப்பிட சேவையை ஆதரிக்கவில்லை.');
       return;
     }
 
     setIsLocating(true);
+    setGpsMessage('');
+    setLocationAttempts((prev) => prev + 1);
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
+        const timestamp = new Date().toISOString();
+        
         setLatitude(lat);
         setLongitude(lon);
+        setLocationTimestamp(timestamp);
+        setSuccessLocationCount((prev) => prev + 1);
+
+        // Store locally
+        localStorage.setItem('tvk_gps_lat', String(lat));
+        localStorage.setItem('tvk_gps_lon', String(lon));
+        localStorage.setItem('tvk_gps_timestamp', timestamp);
 
         try {
           // Fetch real Tamil address from OpenStreetMap Nominatim API
@@ -216,6 +414,7 @@ export default function Home() {
             const geoData = await geoRes.json();
             if (geoData.display_name) {
               setAddress(geoData.display_name);
+              localStorage.setItem('tvk_gps_address', geoData.display_name);
               
               // Try to auto-detect and set constituency from the Tamil address!
               const addressLower = geoData.display_name.toLowerCase();
@@ -235,8 +434,15 @@ export default function Home() {
       },
       (error) => {
         console.error(error);
-        alert('இருப்பிடத்தைப் பெறுவதில் தோல்வி. அனுமதி வழங்கப்பட்டுள்ளதா எனச் சரிபார்க்கவும்.');
         setIsLocating(false);
+        // Rule 5 & 6
+        if (error.code === error.PERMISSION_DENIED) {
+          setGpsMessage("இருப்பிட அனுமதி மறுக்கப்பட்டுள்ளது. தயவுசெய்து உலாவி அமைப்புகளில் அனுமதியை வழங்கவும்.");
+        } else if (error.code === error.TIMEOUT) {
+          setGpsMessage("இருப்பிடத்தை கண்டறிய முடியவில்லை. மீண்டும் முயற்சிக்கவும்.");
+        } else {
+          setGpsMessage("இருப்பிடத்தை கண்டறிய முடியவில்லை. மீண்டும் முயற்சிக்கவும்.");
+        }
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -327,6 +533,11 @@ export default function Home() {
     const payload = {
       voterId: voterId.trim(),
       voterVerified,
+      verificationMethod,
+      locationAttempts,
+      latitude: latitude || undefined,
+      longitude: longitude || undefined,
+      locationTimestamp: locationTimestamp || undefined,
       ward,
       constituency,
       citizenDetails: {
@@ -363,6 +574,7 @@ export default function Home() {
 
       if (res.ok && data.success) {
         setTrackingId(data.trackingId);
+        sessionStorage.removeItem('tvk_complaint_form_data');
       } else {
         setSubmissionError(data.error || 'புகாரைச் சமர்ப்பிப்பதில் பிழை ஏற்பட்டது.');
       }
@@ -375,9 +587,6 @@ export default function Home() {
   };
   const [flagPart, setFlagPart] = useState('none');
   const [selectedUnion, setSelectedUnion] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
-  const [websiteHoneypot, setWebsiteHoneypot] = useState('');
-  const [resolvedShowcase, setResolvedShowcase] = useState<any[]>([]);
 
   // Stats numbers state
   const [stats, setStats] = useState({ year: 0, members: 0, seats: 0, votes: 0 });
@@ -389,7 +598,7 @@ export default function Home() {
   const confettiCanvasRef = useRef(null);
 
   const flagData = {
-    none: { t: 'கொடியைத் தொடுங்கள் 👈', x: 'மரூன், மஞ்சள், வாகை மலர், இரு யானைகள் — ஒவ்வொரு கூறும் இயக்கத்தின் ஒரு நம்பிக்கையைச் சுமக்கிறது. கொடியின் எந்தப் பகுதியையும் தொட்டு அதன் விளக்கத்தைக் காணுங்கள்.' },
+    none: { t: 'கொடியைத் தொடுங்கள் ', x: 'மரூன், மஞ்சள், வாகை மலர், இரு யானைகள் — ஒவ்வொரு கூறும் இயக்கத்தின் ஒரு நம்பிக்கையைச் சுமக்கிறது. கொடியின் எந்தப் பகுதியையும் தொட்டு அதன் விளக்கத்தைக் காணுங்கள்.' },
     maroon: { t: 'மரூன் சிவப்பு — வீரம் & புரட்சி', x: 'மேலும் கீழும் அமைந்த மரூன் பட்டைகள் மாற்றத்திற்கான துணிவையும், மக்களுக்காகப் போராடும் உறுதியையும் குறிக்கின்றன.' },
     yellow: { t: 'மஞ்சள் — செழிப்பு & நம்பிக்கை', x: 'நடுவில் ஒளிரும் மஞ்சள், அனைவருக்குமான வளமான எதிர்காலத்தின் மீது இயக்கம் கொண்ட நம்பிக்கையை உணர்த்துகிறது.' },
     vaagai: { t: 'வாகை மலர் — வெற்றியின் அடையாளம்', x: 'தமிழ் மரபில் வெற்றி வீரர்கள் சூடும் மலர் வாகை. "வெற்றிக் கழகம்" என்ற பெயரின் ஆன்மா இந்த மலரில்தான்.' },
@@ -401,20 +610,6 @@ export default function Home() {
     [CONSTITUENCIES[1], 12, 58, 280],
     [CONSTITUENCIES[2], 18, 86, 420],
   ];
-
-  useEffect(() => {
-    const fetchResolved = async () => {
-      try {
-        const res = await fetch('/api/public/resolved?limit=6');
-        if (res.ok) {
-          setResolvedShowcase(await res.json());
-        }
-      } catch (err) {
-        console.error('Error fetching resolved showcase:', err);
-      }
-    };
-    fetchResolved();
-  }, []);
 
   useEffect(() => {
     /* ================= LOADER ================= */
@@ -861,21 +1056,7 @@ export default function Home() {
 
   const easeOutVal = t => 1 - Math.pow(1 - t, 3);
 
-  /* ================= JOIN / CONFETTI ================= */
-  const handleJoinSubmit = (e) => {
-    e.preventDefault();
-    if (websiteHoneypot) {
-      console.warn("Bot submission detected.");
-      return;
-    }
-    setSubmitted(true);
-    const card = document.getElementById('joinCard');
-    if (card) {
-      const r = card.getBoundingClientRect();
-      burst(r.left + r.width / 2, r.top + r.height / 2, 110);
-    }
-  };
-
+  /* ================= CONFETTI (legacy) ================= */
   let confettiRaf = null;
   let confettiParts = [];
   function burst(x, y, n) {
@@ -968,7 +1149,7 @@ export default function Home() {
             <a href="#complaint" onClick={(e) => { e.preventDefault(); setNavOpen(false); setIsComplaintOpen(true); }}>குறைதீர் மனு</a>
             <a href="/track" onClick={() => setNavOpen(false)}>மனு நிலை அறிதல்</a>
             <a href="#contact" onClick={() => setNavOpen(false)}>தொடர்பு</a>
-            <a href="#join" className="cta" onClick={() => setNavOpen(false)}>இணையுங்கள் 🚩</a>
+            <a href="#join" className="cta" onClick={() => setNavOpen(false)}>இணையுங்கள் </a>
           </div>
         </div>
       </nav>
@@ -1023,8 +1204,8 @@ export default function Home() {
         <span>திருக்குறள் · 972</span>
       </div>
       <div className="h-ctas">
-        <a className="btn btn-gold magnetic" href="#complaint" onClick={(e) => { e.preventDefault(); setIsComplaintOpen(true); }}>குறைதீர் மனு சமர்ப்பிக்க 📋</a>
-        <a className="btn btn-ghost magnetic" href="#join">இப்போதே இணையுங்கள் 🚩</a>
+        <a className="btn btn-gold magnetic" href="#complaint" onClick={(e) => { e.preventDefault(); setIsComplaintOpen(true); }}>குறைதீர் மனு சமர்ப்பிக்க </a>
+        <a className="btn btn-ghost magnetic" href="#join">இப்போதே இணையுங்கள் </a>
       </div>
       <div className="h-cue" id="hCue">Scroll</div>
     </div>
@@ -1055,40 +1236,16 @@ export default function Home() {
     </div>
   </section>
 
-  {/* SERVICES */}
-  {/* RESOLVED COMPLAINTS SHOWCASE */}
-  <section className="sec-pad" data-cursor="gold" data-rail="தீர்வுகள்" id="resolved-showcase">
+  {/* TRACK COMPLAINT STATUS */}
+  <section className="sec-pad resolved-showcase-sec" data-cursor="gold" data-rail="தீர்வுகள்" id="resolved-showcase">
     <div className="wrap">
-      <div className="sec-head center">
+      <div className="sec-head center resolved-showcase-head">
         <span className="sec-eyebrow">பொது வெளிப்படைத்தன்மை</span>
         <h2>தீர்க்கப்பட்ட மக்கள் குறைகள்</h2>
-        <p>தமிழக வெற்றிக் கழகம் தீர்த்த வெற்றிகரமான மக்கள் குறைகளின் சில உதாரணங்கள் — குடிமக்கள் அடையாளம் மறைக்கப்பட்டுள்ளது.</p>
+        <p>உங்கள் மனுவின் தற்போதைய நிலையை எப்போது வேண்டுமானாலும் பார்க்கலாம்.</p>
       </div>
-      {resolvedShowcase.length > 0 ? (
-        <div className="svc-grid" style={{ marginTop: '2rem' }}>
-          {resolvedShowcase.map((item, idx) => (
-            <div key={item.trackingId || idx} className="svc spot rv" style={{ minHeight: '280px' }}>
-              <div className="svc-ic" style={{ fontSize: '1.5rem' }}>✅</div>
-              <h3>{item.category}{item.subcategory ? ` · ${item.subcategory}` : ''}</h3>
-              <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.75)' }}>📍 {item.constituency}</p>
-              <p style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{item.summary || 'மக்கள் குறை வெற்றிகரமாக தீர்க்கப்பட்டது.'}</p>
-              {(item.beforeImage || item.afterImage) && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.75rem' }}>
-                  {item.beforeImage && <img src={item.beforeImage} alt="முன்" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />}
-                  {item.afterImage && <img src={item.afterImage} alt="பின்" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />}
-                </div>
-              )}
-              <p style={{ fontSize: '0.8rem', marginTop: '0.75rem', opacity: 0.8 }}>
-                தீர்வு: {item.resolutionDate ? new Date(item.resolutionDate).toLocaleDateString('ta-IN') : '-'}
-              </p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p style={{ textAlign: 'center', marginTop: '2rem', opacity: 0.7 }}>தீர்க்கப்பட்ட புகார்கள் விரைவில் இங்கே காட்டப்படும்.</p>
-      )}
-      <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-        <a className="btn btn-ghost magnetic" href="/track">உங்கள் மனு நிலையை அறிய 🔍</a>
+      <div className="resolved-showcase-actions">
+        <a className="btn btn-ghost magnetic" href="/track">உங்கள் மனு நிலையை அறிய</a>
       </div>
     </div>
   </section>
@@ -1279,7 +1436,7 @@ export default function Home() {
       <div className="org-grid">
         <div className="ocard spot rv">
           <div className="ophoto"><span className="obadge">தலைமை</span>
-            <img src="https://www.tvknamakkaleast.com/assets/images/leader.jpg" alt="தளபதி விஜய்" data-fb="வி" />
+            <img src="/vijaycm.jpg" alt="தளபதி விஜய்" data-fb="வி" width="100%"/>
           </div>
           <div className="obody">
             <h3>தளபதி விஜய்</h3><span>தலைவர், தமிழக வெற்றிக் கழகம் · தமிழ்நாடு முதலமைச்சர்</span>
@@ -1357,7 +1514,7 @@ export default function Home() {
   <section className="dark sec-pad" data-cursor="gold" data-rail="என் தெரு" id="plan">
     <div className="wrap">
       <div className="sec-head center">
-        <span className="sec-eyebrow">என் தெரு, என் திட்டம் 🚩</span>
+        <span className="sec-eyebrow">என் தெரு, என் திட்டம் </span>
         <h2>உங்கள் ஒன்றியத்தைத் தேர்வு செய்யுங்கள்</h2>
         <p>ஒன்றிய வாரியாக கள அமைப்பு, பூத் குழுக்கள் மற்றும் ஒருங்கிணைப்பாளர் விவரங்கள்.</p>
       </div>
@@ -1425,51 +1582,22 @@ export default function Home() {
   <section className="dark sec-pad" data-cursor="gold" data-rail="இணைய" id="join">
     <div className="wrap join-grid">
       <div className="rv">
-        <span className="sec-eyebrow">இணையுங்கள் 🚩</span>
+        <span className="sec-eyebrow">இணையுங்கள் </span>
         <h2>மாற்றத்தின் <em>விசில்</em>,<br />உங்கள் கையில்.</h2>
         <p>நாமக்கல் மேற்கு மாவட்டக் கிளையில் உறுப்பினராகுங்கள். உங்கள் வார்டில், உங்கள் தெருவில் — மக்களாட்சியை நீங்களே
           கட்டமைக்கலாம். விவரங்களைப் பதிவு செய்தால் ஒன்றிய ஒருங்கிணைப்பாளர் உங்களைத் தொடர்பு கொள்வார்.</p>
       </div>
       <div className="join-card rv rv-d1" id="joinCard">
-        {!submitted ? (
-          <form id="joinForm" autoComplete="off" onSubmit={handleJoinSubmit}>
-            {/* Honeypot field for bot protection */}
-            <div style={{ display: 'none' }} aria-hidden="true">
-              <input
-                type="text"
-                name="website_honeypot"
-                value={websiteHoneypot}
-                onChange={(e) => setWebsiteHoneypot(e.target.value)}
-                tabIndex={-1}
-                autoComplete="off"
-              />
-            </div>
-            <label htmlFor="jName">பெயர்</label>
-            <input id="jName" type="text" placeholder="உங்கள் பெயர்" required />
-            <label htmlFor="jPhone">அலைபேசி எண்</label>
-            <input id="jPhone" type="tel" placeholder="98XXX XXXXX" pattern="[0-9 +]{10,14}" required />
-            <label htmlFor="jUnion">ஒன்றியம்</label>
-            <select
-              id="jUnion"
-              value={unions[selectedUnion][0]}
-              onChange={(e) => {
-                const idx = unions.findIndex(u => u[0] === e.target.value);
-                if (idx !== -1) handleUnionPick(idx);
-              }}
-            >
-              {unions.map((u, i) => (
-                <option key={i} value={u[0]}>{u[0]}</option>
-              ))}
-            </select>
-            <button className="btn btn-gold magnetic" type="submit">உறுப்பினராக 🚩</button>
-          </form>
-        ) : null}
-        <div className="join-ok" id="joinOk" style={submitted ? { display: 'block' } : undefined}>
-          <img
-            src="data:image/png;base64,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"
-            alt="" />
-          <h3>வரவேற்கிறோம்!</h3>
-          <p>உங்கள் விவரம் பதிவானது (Demo). ஒருங்கிணைப்பாளர் விரைவில் அழைப்பார்.</p>
+        <div className="join-ok" id="joinOk" style={{ display: 'block' }}>
+          <img src={WHISTLE_CURSOR_GOLD} alt="" aria-hidden="true" />
+          <a
+            href="https://tvk.family/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-gold magnetic"
+          >
+            உறுப்பினர் ஆக
+          </a>
         </div>
       </div>
     </div>
@@ -1547,9 +1675,9 @@ export default function Home() {
             <a
               className="verify-btn"
               href={`/track?trackingId=${encodeURIComponent(trackingId)}`}
-              style={{ padding: '0.8rem 2rem', fontSize: '1rem', marginTop: '1rem', display: 'inline-block', textDecoration: 'none' }}
+              style={{ padding: '0.8rem 2rem', fontSize: '1rem', margin: '1rem', display: 'inline-block', textDecoration: 'none' }}
             >
-              மனு நிலையை அறிய 🔍
+              மனு நிலையை அறிய 
             </a>
             <button
               className="verify-btn"
@@ -1569,6 +1697,12 @@ export default function Home() {
                 setVideo(null);
                 setLatitude(null);
                 setLongitude(null);
+                setFbName('');
+                setFbDoorNo('');
+                setFbDob('');
+                setFbWard('');
+                setVerificationMethod('');
+                sessionStorage.removeItem('tvk_complaint_form_data');
               }}
             >
               புதிய மனுவைச் சமர்ப்பிக்க
@@ -1639,14 +1773,82 @@ export default function Home() {
                     )}
                   </div>
 
+                  {!voterVerified && (
+                    <div className="fallback-verify-section" style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--line)' }}>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '1rem', lineHeight: '1.5' }}>
+                        <strong>வாக்காளர் அடையாள எண் தற்போது இல்லையா?</strong><br />
+                        பெயர், கதவு எண், பிறந்த தேதி மற்றும் வார்டு எண்ணை பயன்படுத்தி உங்கள் வாக்காளர் விவரங்களை கண்டறியலாம்.
+                      </p>
+                      
+                      <div className="input-row" style={{ marginBottom: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="input-group" style={{ marginBottom: 0 }}>
+                          <label htmlFor="fbName" style={{ fontSize: '0.85rem', fontWeight: 600 }}>பெயர் *</label>
+                          <input
+                            id="fbName"
+                            type="text"
+                            placeholder="எ.கா. அருண் குமார்"
+                            value={fbName}
+                            onChange={(e) => setFbName(e.target.value)}
+                            style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '6px', border: '1.5px solid var(--cream-2)' }}
+                          />
+                        </div>
+                        <div className="input-group" style={{ marginBottom: 0 }}>
+                          <label htmlFor="fbDoorNo" style={{ fontSize: '0.85rem', fontWeight: 600 }}>கதவு எண் *</label>
+                          <input
+                            id="fbDoorNo"
+                            type="text"
+                            placeholder="எ.கா. 12/4A"
+                            value={fbDoorNo}
+                            onChange={(e) => setFbDoorNo(e.target.value)}
+                            style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '6px', border: '1.5px solid var(--cream-2)' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="input-row" style={{ marginBottom: '1.25rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="input-group" style={{ marginBottom: 0 }}>
+                          <label htmlFor="fbDob" style={{ fontSize: '0.85rem', fontWeight: 600 }}>பிறந்த தேதி *</label>
+                          <input
+                            id="fbDob"
+                            type="date"
+                            value={fbDob}
+                            onChange={(e) => setFbDob(e.target.value)}
+                            style={{ width: '100%', height: '39px', padding: '0.5rem 0.8rem', borderRadius: '6px', border: '1.5px solid var(--cream-2)', backgroundColor: '#fff' }}
+                          />
+                        </div>
+                        <div className="input-group" style={{ marginBottom: 0 }}>
+                          <label htmlFor="fbWard" style={{ fontSize: '0.85rem', fontWeight: 600 }}>வார்டு எண் *</label>
+                          <input
+                            id="fbWard"
+                            type="text"
+                            placeholder="எ.கா. 5"
+                            value={fbWard}
+                            onChange={(e) => setFbWard(e.target.value)}
+                            style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '6px', border: '1.5px solid var(--cream-2)' }}
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="verify-btn"
+                        style={{ width: '100%', height: '42px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}
+                        onClick={handleFallbackVerify}
+                        disabled={isFindingVoter}
+                      >
+                        {isFindingVoter ? 'தேடுகிறது...' : 'வாக்காளர் விவரத்தை கண்டறி'}
+                      </button>
+                    </div>
+                  )}
+
                   {voterVerified && (
-                    <div className="status-badge success">
-                      <span>✅ வாக்காளர் அடையாளம் சரிபார்க்கப்பட்டது</span>
+                    <div className="status-badge success" style={{ marginTop: '1rem' }}>
+                      <span>வாக்காளர் விவரங்கள் சரிபார்க்கப்பட்டன</span>
                     </div>
                   )}
 
                   {verificationError && (
-                    <div className="status-badge error">
+                    <div className="status-badge error" style={{ marginTop: '1rem' }}>
                       <span>❌ {verificationError}</span>
                     </div>
                   )}
@@ -1678,7 +1880,6 @@ export default function Home() {
                       type="tel"
                       value={mobile}
                       onChange={(e) => setMobile(e.target.value)}
-                      readOnly={voterVerified}
                       required
                     />
                   </div>
@@ -1797,19 +1998,41 @@ export default function Home() {
 
                 <div className="input-group">
                   <label>தற்போதைய இருப்பிடம் (GPS)</label>
-                  <div className="geo-box">
+                  <div className="geo-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
                     <button
                       type="button"
                       className="geo-btn"
                       onClick={handleGetLocation}
-                      disabled={isLocating}
+                      disabled={isLocating || !voterVerified}
+                      style={{
+                        opacity: !voterVerified ? 0.65 : 1,
+                        cursor: !voterVerified ? 'not-allowed' : 'pointer',
+                        background: !voterVerified ? '#e5e5e5' : undefined,
+                        color: !voterVerified ? '#777' : undefined,
+                        border: !voterVerified ? '1px solid #ccc' : undefined,
+                        pointerEvents: !voterVerified ? 'none' : 'auto'
+                      }}
                     >
                       <svg viewBox="0 0 24 24" style={{ width: 18, height: 18, fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}>
                         <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
                         <circle cx="12" cy="10" r="3" />
                       </svg>
-                      {isLocating ? 'கண்டறிகிறது...' : 'இருப்பிடத்தை கண்டறி'}
+                      {!voterVerified ? 'முதலில் வாக்காளர் சரிபார்ப்பை முடிக்கவும்' : isLocating ? 'கண்டறிகிறது...' : 'இருப்பிடத்தை கண்டறி'}
                     </button>
+                    {gpsMessage && (
+                      <div className="status-badge" style={{
+                        fontSize: '0.85rem',
+                        padding: '0.4rem 0.75rem',
+                        borderRadius: '4px',
+                        fontWeight: 600,
+                        background: gpsMessage.includes('மறுக்கப்பட்டுள்ளது') || gpsMessage.includes('முடியவில்லை') || gpsMessage.includes('முயற்சிகள்') ? 'rgba(211, 47, 47, 0.08)' : 'rgba(254, 203, 2, 0.12)',
+                        color: gpsMessage.includes('மறுக்கப்பட்டுள்ளது') || gpsMessage.includes('முடியவில்லை') || gpsMessage.includes('முயற்சிகள்') ? '#d32f2f' : '#A06800',
+                        border: `1px solid ${gpsMessage.includes('மறுக்கப்பட்டுள்ளது') || gpsMessage.includes('முடியவில்லை') || gpsMessage.includes('முயற்சிகள்') ? '#ef5350' : '#FECB02'}`,
+                        width: '100%'
+                      }}>
+                        <span>{gpsMessage}</span>
+                      </div>
+                    )}
                     {latitude && longitude && (
                       <span style={{ fontSize: '0.9rem', color: 'var(--ok)', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <span>📍 {latitude.toFixed(5)}, {longitude.toFixed(5)}</span>
@@ -1998,7 +2221,7 @@ export default function Home() {
                 className="submit-btn"
                 disabled={isSubmitting || !voterVerified}
               >
-                {isSubmitting ? 'சமர்ப்பிக்கப்படுகிறது...' : 'மனுவைச் சமர்ப்பி 🚩'}
+                {isSubmitting ? 'சமர்ப்பிக்கப்படுகிறது...' : 'மனுவைச் சமர்ப்பி '}
               </button>
             </form>
           </div>
@@ -2007,9 +2230,6 @@ export default function Home() {
       </div>
     </div>
   )}
-
-  
-
     </>
   );
 }

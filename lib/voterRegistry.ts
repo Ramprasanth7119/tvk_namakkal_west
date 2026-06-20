@@ -9,6 +9,7 @@ export interface VoterRegistryDocument {
   constituency: string;
   wardNo: number | string;
   wardName: string;
+  doorNo?: string;
   importedAt?: Date;
   updatedAt: Date;
   sourceFile: string;

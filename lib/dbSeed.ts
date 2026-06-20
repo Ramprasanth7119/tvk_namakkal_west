@@ -49,6 +49,7 @@ export async function seedDatabase(db: Db) {
     await db.collection("citizenComplaints").createIndex({ status: 1 });
     await db.collection("citizenComplaints").createIndex({ createdAt: -1 });
     await db.collection("citizenComplaints").createIndex({ approvalStatus: 1 });
+    await db.collection("citizenComplaints").createIndex({ assignedTo: 1 });
 
     // auditLogs
     await db.collection("auditLogs").createIndex({ timestamp: -1 });
@@ -73,25 +74,76 @@ export async function seedDatabase(db: Db) {
           active: true,
           createdAt: new Date(),
         },
-        // Representatives for each constituency (order matches CONSTITUENCIES)
-        ...[
-          { username: "rep_komarapalayam", constituency: CONSTITUENCIES[0] },
-          { username: "rep_namakkal", constituency: CONSTITUENCIES[1] },
-          { username: "rep_velur", constituency: CONSTITUENCIES[2] },
-        ].map((rep) => ({
-          username: rep.username,
+        {
+          username: "rep_komarapalayam",
           passwordHash: hashPassword("password123"),
+          name: "கோபாலகிருஷ்ணன் (Gopalakrishnan)",
+          phone: "9874523542",
           role: "REPRESENTATIVE",
-          constituency: rep.constituency,
+          constituency: CONSTITUENCIES[0],
           active: true,
           createdAt: new Date(),
-        })),
+        },
+        {
+          username: "rep_namakkal",
+          passwordHash: hashPassword("password123"),
+          name: "ராமச்சந்திரன் (Ramachandran)",
+          phone: "9135252352",
+          role: "REPRESENTATIVE",
+          constituency: CONSTITUENCIES[1],
+          active: true,
+          createdAt: new Date(),
+        },
+        {
+          username: "rep_velur",
+          passwordHash: hashPassword("password123"),
+          name: "செந்தில் குமார் (Senthil Kumar)",
+          phone: "9857432354",
+          role: "REPRESENTATIVE",
+          constituency: CONSTITUENCIES[2],
+          active: true,
+          createdAt: new Date(),
+        },
       ];
 
       await db.collection("users").insertMany(defaultUsers);
       console.log("Users seeded successfully.");
     } else {
-      console.log("Users already exist.");
+      console.log("Users already exist. Making sure standard representatives are fully detailed.");
+      // Ensure all standard seeded representatives have realistic template names and phones
+      await db.collection("users").updateOne(
+        { username: "rep_komarapalayam" },
+        {
+          $set: {
+            name: "கோபாலகிருஷ்ணன் (Gopalakrishnan)",
+            phone: "9874523542",
+            constituency: CONSTITUENCIES[0],
+            role: "REPRESENTATIVE",
+          }
+        }
+      );
+      await db.collection("users").updateOne(
+        { username: "rep_namakkal" },
+        {
+          $set: {
+            name: "ராமச்சந்திரன் (Ramachandran)",
+            phone: "9135252352",
+            constituency: CONSTITUENCIES[1],
+            role: "REPRESENTATIVE",
+          }
+        }
+      );
+      await db.collection("users").updateOne(
+        { username: "rep_velur" },
+        {
+          $set: {
+            name: "செந்தில் குமார் (Senthil Kumar)",
+            phone: "9857432354",
+            constituency: CONSTITUENCIES[2],
+            role: "REPRESENTATIVE",
+          }
+        }
+      );
     }
 
     // Remove legacy representatives outside the current constituency list

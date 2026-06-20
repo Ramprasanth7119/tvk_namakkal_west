@@ -6,9 +6,10 @@ import { useSearchParams } from "next/navigation";
 import "../analytics/analytics.css";
 import { TVK_LOGO } from "@/lib/brand";
 import TvkAppFooter from "@/components/TvkAppFooter";
+import { normalizeStatus } from "@/lib/complaintStatus";
 
 const STATUS_STEPS = [
-  { code: "pend", label: "பதிவில்", icon: "📝" },
+  { code: "pend", label: "பதிவில்", icon: "" },
   { code: "warn", label: "நடவடிக்கையில்", icon: "⏳" },
   { code: "ok", label: "தீர்க்கப்பட்டது", icon: "✓" },
 ];
@@ -67,7 +68,7 @@ function TrackPageContent() {
             </span>
           </Link>
           <div className="tb-actions">
-            <Link className="tb-back" href="/analytics">📊 பகுப்பாய்வு</Link>
+            <Link className="tb-back" href="/analytics"> பகுப்பாய்வு</Link>
             <Link className="tb-back" href="/">முகப்பு</Link>
           </div>
         </div>
@@ -113,7 +114,7 @@ function TrackPageContent() {
                 className="verify-btn"
                 style={{ padding: "0.85rem 1.5rem", fontSize: "1rem", whiteSpace: "nowrap" }}
               >
-                {loading ? "தேடுகிறது..." : "நிலையை அறி 🔍"}
+                {loading ? "தேடுகிறது..." : "நிலையை அறி "}
               </button>
             </div>
             <p style={{ fontSize: "0.85rem", color: "var(--ink-soft)", margin: 1 }}>
@@ -145,7 +146,7 @@ function TrackPageContent() {
                 <div>
                   <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>தற்போதைய நிலை</small>
                   <p style={{ margin: "0.25rem 0 0" }}>
-                    <span className={`badge ${result.status}`} style={{ display: "inline-flex" }}>
+                    <span className={`badge ${result.status === "resolved" ? "ok" : result.status === "registered" ? "pend" : "warn"}`} style={{ display: "inline-flex" }}>
                       <i></i>{result.statusLabel}
                     </span>
                   </p>
@@ -164,26 +165,77 @@ function TrackPageContent() {
                 </div>
               </div>
 
+              {/* RESPONSIBILITY DETAILS */}
+              {(result.solvedBy || result.verifiedBy || result.approvedBy) && (
+                <div style={{ marginTop: "2rem", background: "rgba(254, 203, 2, 0.05)", border: "1px dashed var(--gold)", padding: "1.25rem", borderRadius: "0.75rem" }}>
+                  <h3 style={{ fontSize: "1rem", fontWeight: 900, color: "var(--m-800)", marginBottom: "0.75rem" }}>
+                    🤝 குறைதீர் பொறுப்பாளர்கள் விவரம்
+                  </h3>
+                  <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+                    {result.solvedBy && (
+                      <div>
+                        <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block" }}>தீர்வு செய்தவர்:</small>
+                        <b style={{ color: "var(--ink)", fontSize: "0.95rem" }}>{result.solvedBy}</b>
+                        <span style={{ display: "block", fontSize: "0.75rem", opacity: 0.7 }}>களப்பணியாளர் (Field Officer)</span>
+                      </div>
+                    )}
+                    {result.verifiedBy && (
+                      <div>
+                        <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block" }}>சரிபார்த்தவர்:</small>
+                        <b style={{ color: "var(--ink)", fontSize: "0.95rem" }}>{result.verifiedBy}</b>
+                        <span style={{ display: "block", fontSize: "0.75rem", opacity: 0.7 }}>தொகுதிப் பிரதிநிதி (Representative)</span>
+                      </div>
+                    )}
+                    {result.approvedBy && (
+                      <div>
+                        <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block" }}>ஒப்புதல் வழங்கியவர்:</small>
+                        <b style={{ color: "var(--ink)", fontSize: "0.95rem" }}>{result.approvedBy}</b>
+                        <span style={{ display: "block", fontSize: "0.75rem", opacity: 0.7 }}>கட்சித் தலைமை (Super Admin)</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TIMELINE */}
               <div style={{ marginTop: "2rem" }}>
                 <h3 style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--m-800)", marginBottom: "1rem" }}>
-                  மனு நிலை போக்கு (Timeline)
+                   மனு நிலை போக்கு (Timeline)
                 </h3>
-                <div className="activity-timeline">
+                <div className="activity-timeline" style={{ padding: '0.5rem 0' }}>
                   {(result.timeline || []).map((step: any, idx: number) => {
-                    const stepIdx = getStepIndex(step.status);
-                    const stepMeta = STATUS_STEPS[stepIdx] || STATUS_STEPS[0];
+                    const norm = normalizeStatus(step.status);
+                    const isLast = idx === result.timeline.length - 1;
                     return (
-                      <div key={idx} className="timeline-item">
-                        <div className="timeline-badge" style={{ background: stepIdx === 2 ? "var(--ok)" : stepIdx === 1 ? "var(--warn)" : "var(--pend)" }}>
-                          {stepMeta.icon}
+                      <div key={idx} className="timeline-item" style={{ display: 'flex', gap: '1rem', marginBottom: isLast ? 0 : '1.5rem', position: 'relative' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <div className="timeline-badge" style={{ 
+                            background: norm === 'resolved' ? '#5E8C3A' : norm === 'registered' ? '#FECB02' : '#E08600', 
+                            color: 'white',
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.8rem',
+                            fontWeight: 'bold',
+                            zIndex: 2
+                          }}>
+                            {idx + 1}
+                          </div>
+                          {!isLast && <div style={{ width: '2px', flex: 1, background: '#E5E7EB', minHeight: '20px', zIndex: 1, marginTop: '4px' }}></div>}
                         </div>
-                        <div className="timeline-content">
-                          <div className="timeline-header">
-                            <span className="timeline-id">{stepMeta.label}</span>
-                            <span className="timeline-date">
-                              {step.updatedAt ? new Date(step.updatedAt).toLocaleDateString("ta-IN") : ""}
+                        <div style={{ flex: 1, background: '#F9FAFB', padding: '0.75rem 1rem', borderRadius: '0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <b style={{ fontSize: '0.9rem', color: '#111' }}>{step.label}</b>
+                            <span style={{ fontSize: '0.75rem', color: '#666' }}>
+                              {step.updatedAt ? new Date(step.updatedAt).toLocaleString("ta-IN") : ""}
                             </span>
                           </div>
+                          <p style={{ margin: 0, fontSize: '0.82rem', color: '#555', lineHeight: '1.4' }}>
+                            {step.notes || `மனுவின் நிலை "${step.label}" என புதுப்பிக்கப்பட்டது.`}
+                          </p>
                         </div>
                       </div>
                     );

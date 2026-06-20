@@ -8,12 +8,18 @@ import { TVK_LOGO } from "@/lib/brand";
 import TvkAppFooter from "@/components/TvkAppFooter";
 import { getComplaintPhotos, getComplaintVideo } from "@/lib/complaintMedia";
 import { getGoogleMapsEmbedUrl, getGoogleMapsOpenUrl } from "@/lib/maps";
+import { getStatusLabel, normalizeStatus } from "@/lib/complaintStatus";
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_FILTER_LABELS: Record<string, string> = {
   all: "அனைத்தும்",
-  ok: "தீர்க்கப்பட்டது",
-  warn: "நடவடிக்கையில்",
-  pend: "பதிவில்",
+  registered: "பதிவு செய்யப்பட்டது",
+  under_review: "பிரதிநிதி ஆய்வில்",
+  assigned: "களப்பணியாளருக்கு ஒதுக்கப்பட்டது",
+  work_in_progress: "களப்பணி நடைபெறுகிறது",
+  solution_submitted: "தீர்வு சமர்ப்பிக்கப்பட்டது",
+  pending_rep_approval: "பிரதிநிதி ஒப்புதல் நிலுவையில்",
+  pending_admin_approval: "நிர்வாக ஒப்புதல் நிலுவையில்",
+  resolved: "தீர்க்கப்பட்டது",
 };
 
 const CATEGORIES: Record<string, string[]> = {
@@ -50,6 +56,37 @@ export default function ComplaintsManagementPage() {
   const [selectedComplaint, setSelectedComplaint] = useState<any | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusUpdateMessage, setStatusUpdateMessage] = useState("");
+
+  // Field Officers / Assignment / Review states
+  const [officers, setOfficers] = useState<any[]>([]);
+  const [selectedOfficerUsername, setSelectedOfficerUsername] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  // Create / Edit Field Officer states
+  const [isOfficersLoading, setIsOfficersLoading] = useState(false);
+  const [isCreateOfficerModalOpen, setIsCreateOfficerModalOpen] = useState(false);
+  const [isEditOfficerModalOpen, setIsEditOfficerModalOpen] = useState(false);
+  const [editingOfficer, setEditingOfficer] = useState<any | null>(null);
+
+  // Field Officer Form fields
+  const [offUsername, setOffUsername] = useState("");
+  const [offPassword, setOffPassword] = useState("");
+  const [offName, setOffName] = useState("");
+  const [offPhone, setOffPhone] = useState("");
+  const [offActive, setOffActive] = useState(true);
+  const [offError, setOffError] = useState("");
+  const [offSuccess, setOffSuccess] = useState("");
+  const [isOffSubmitting, setIsOffSubmitting] = useState(false);
+
+  // Edit Field Officer Form fields
+  const [editOffName, setEditOffName] = useState("");
+  const [editOffPhone, setEditOffPhone] = useState("");
+  const [editOffPassword, setEditOffPassword] = useState("");
+  const [editOffActive, setEditOffActive] = useState(true);
+  const [editOffError, setEditOffError] = useState("");
+  const [editOffSuccess, setEditOffSuccess] = useState("");
+  const [isEditOffSubmitting, setIsEditOffSubmitting] = useState(false);
 
   const selectedPhotos = useMemo(
     () => (selectedComplaint ? getComplaintPhotos(selectedComplaint) : []),
@@ -94,6 +131,37 @@ export default function ComplaintsManagementPage() {
     fetchSession();
   }, [router]);
 
+  // Fetch Field Officers
+  const fetchOfficers = async () => {
+    setIsOfficersLoading(true);
+    try {
+      const res = await fetch("/api/representative/officers");
+      if (res.ok) {
+        const data = await res.json();
+        setOfficers(data);
+      }
+    } catch (err) {
+      console.error("Error fetching field officers:", err);
+    } finally {
+      setIsOfficersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (sessionUser && (sessionUser.role === "REPRESENTATIVE" || sessionUser.role === "SUPER_ADMIN")) {
+      fetchOfficers();
+    }
+  }, [sessionUser]);
+
+  // Manage modal-open body class for cursor overrides
+  useEffect(() => {
+    const modalOpen = !!selectedComplaint || isCreateOfficerModalOpen || isEditOfficerModalOpen;
+    document.body.classList.toggle("modal-open", modalOpen);
+    return () => document.body.classList.remove("modal-open");
+  }, [selectedComplaint, isCreateOfficerModalOpen, isEditOfficerModalOpen]);
+
+  const activeOfficers = useMemo(() => officers.filter(o => o.active), [officers]);
+
   // Fetch Complaints
   const fetchComplaints = async () => {
     setIsLoadingComplaints(true);
@@ -130,8 +198,18 @@ export default function ComplaintsManagementPage() {
       // Area filter
       if (curArea !== "அனைத்தும்" && c.constituency !== curArea) return false;
       // Status filter
-      const cStatus = c.status || "pend";
-      if (curStatus !== "all" && cStatus !== curStatus) return false;
+      const cStatus = normalizeStatus(c.status);
+      if (curStatus !== "all") {
+        if (curStatus === "pend") {
+          if (cStatus !== "registered" && cStatus !== "under_review") return false;
+        } else if (curStatus === "warn") {
+          if (cStatus === "registered" || cStatus === "under_review" || cStatus === "resolved") return false;
+        } else if (curStatus === "ok") {
+          if (cStatus !== "resolved") return false;
+        } else {
+          if (cStatus !== curStatus) return false;
+        }
+      }
       // Category filter
       if (curCategory !== "அனைத்தும்" && c.complaintDetails?.category !== curCategory) return false;
       // Search filter (ID, citizen name, description, phone)
@@ -168,7 +246,7 @@ export default function ComplaintsManagementPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setStatusUpdateMessage("✅ நிலை புதுப்பிக்கப்பட்டது!");
+        setStatusUpdateMessage("நிலை புதுப்பிக்கப்பட்டது!");
         
         // Update local state instantly
         setComplaints((prev) =>
@@ -187,6 +265,160 @@ export default function ComplaintsManagementPage() {
       setStatusUpdateMessage("❌ இணைப்புப் பிழை");
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleAssignOfficer = async (trackingId: string) => {
+    if (!selectedOfficerUsername) {
+      alert("தயவுசெய்து ஒரு களப்பணியாளரைத் தேர்ந்தெடுக்கவும்");
+      return;
+    }
+    setIsAssigning(true);
+    setStatusUpdateMessage("");
+    try {
+      const res = await fetch("/api/complaints", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trackingId,
+          action: "assign",
+          assignedTo: selectedOfficerUsername,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setStatusUpdateMessage("களப்பணியாளர் வெற்றிகரமாக ஒதுக்கப்பட்டார்!");
+        const assignedOfficer = officers.find(o => o.username === selectedOfficerUsername);
+        const nameToUse = assignedOfficer?.name || selectedOfficerUsername;
+        setComplaints((prev) =>
+          prev.map((c) => (c.trackingId === trackingId ? { ...c, status: "assigned", assignedTo: selectedOfficerUsername, assignedToName: nameToUse } : c))
+        );
+        setSelectedComplaint((prev: any) =>
+          prev ? { ...prev, status: "assigned", assignedTo: selectedOfficerUsername, assignedToName: nameToUse } : null
+        );
+        setSelectedOfficerUsername("");
+        fetchComplaints();
+      } else {
+        setStatusUpdateMessage(`❌ பிழை: ${data.error || "ஒதுக்க முடியவில்லை"}`);
+      }
+    } catch {
+      setStatusUpdateMessage("❌ இணைப்புப் பிழை");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const handleRepReview = async (trackingId: string, approve: boolean) => {
+    if (!approve && !rejectionReason.trim()) {
+      alert("நிராகரிப்பதற்கான காரணத்தை உள்ளிடவும்.");
+      return;
+    }
+    setIsUpdatingStatus(true);
+    setStatusUpdateMessage("");
+    try {
+      const res = await fetch("/api/complaints", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trackingId,
+          action: approve ? "rep_approve" : "rep_reject",
+          rejectionReason: approve ? undefined : rejectionReason,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const nextStatus = approve ? "pending_admin_approval" : "work_in_progress";
+        setStatusUpdateMessage(approve ? "மனு வெற்றிகரமாக அங்கீகரிக்கப்பட்டது!" : "❌ மனு நிராகரிக்கப்பட்டு மீண்டும் களப்பணிக்கு அனுப்பப்பட்டது.");
+        setComplaints((prev) =>
+          prev.map((c) => (c.trackingId === trackingId ? { ...c, status: nextStatus } : c))
+        );
+        setSelectedComplaint((prev: any) =>
+          prev ? { ...prev, status: nextStatus } : null
+        );
+        setRejectionReason("");
+        fetchComplaints();
+      } else {
+        setStatusUpdateMessage(`❌ பிழை: ${data.error || "புதுப்பிக்க முடியவில்லை"}`);
+      }
+    } catch {
+      setStatusUpdateMessage("❌ இணைப்புப் பிழை");
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleCreateOfficer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOffError("");
+    setOffSuccess("");
+    setIsOffSubmitting(true);
+    try {
+      const res = await fetch("/api/representative/officers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: offUsername,
+          password: offPassword,
+          name: offName,
+          phone: offPhone,
+          active: offActive,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setOffSuccess("களப்பணியாளர் வெற்றிகரமாக சேர்க்கப்பட்டார்!");
+        setOffUsername("");
+        setOffPassword("");
+        setOffName("");
+        setOffPhone("");
+        fetchOfficers();
+        setTimeout(() => {
+          setIsCreateOfficerModalOpen(false);
+          setOffSuccess("");
+        }, 1500);
+      } else {
+        setOffError(data.error || "சேர்ப்பதில் பிழை ஏற்பட்டது");
+      }
+    } catch {
+      setOffError("இணைப்புப் பிழை");
+    } finally {
+      setIsOffSubmitting(false);
+    }
+  };
+
+  const handleEditOfficer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditOffError("");
+    setEditOffSuccess("");
+    setIsEditOffSubmitting(true);
+    try {
+      const res = await fetch("/api/representative/officers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: editingOfficer.username,
+          name: editOffName,
+          phone: editOffPhone,
+          password: editOffPassword || undefined,
+          active: editOffActive,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEditOffSuccess("விவரங்கள் புதுப்பிக்கப்பட்டன!");
+        fetchOfficers();
+        setTimeout(() => {
+          setIsEditOfficerModalOpen(false);
+          setEditingOfficer(null);
+          setEditOffSuccess("");
+        }, 1500);
+      } else {
+        setEditOffError(data.error || "புதுப்பிப்பதில் பிழை ஏற்பட்டது");
+      }
+    } catch {
+      setEditOffError("இணைப்புப் பிழை");
+    } finally {
+      setIsEditOffSubmitting(false);
     }
   };
 
@@ -220,10 +452,10 @@ export default function ComplaintsManagementPage() {
               </a>
             )}
             <a className="tb-back" href="/analytics">
-              📊 பகுப்பாய்வு
+               பகுப்பாய்வு
             </a>
             <a className="tb-back active" href="/complaints" style={{ background: 'rgba(255,255,255,0.1)' }}>
-              📋 புகார்கள் மேலாண்மை
+               புகார்கள் மேலாண்மை
             </a>
             <a className="tb-back" href="/">
               <svg viewBox="0 0 24 24">
@@ -298,9 +530,17 @@ export default function ComplaintsManagementPage() {
                   title="மனுக்களின் நிலை"
                 >
                   <option value="all">அனைத்து நிலைகளும்</option>
-                  <option value="pend">பதிவில் (Pending)</option>
-                  <option value="warn">நடவடிக்கையில் (In Progress)</option>
-                  <option value="ok">தீர்க்கப்பட்டது (Resolved)</option>
+                  <option value="registered">பதிவு செய்யப்பட்டது (Registered)</option>
+                  <option value="under_review">பிரதிநிதி ஆய்வில் (Under Review)</option>
+                  <option value="assigned">களப்பணியாளருக்கு ஒதுக்கப்பட்டது (Assigned)</option>
+                  <option value="work_in_progress">களப்பணி நடைபெறுகிறது (Work In Progress)</option>
+                  <option value="solution_submitted">தீர்வு சமர்ப்பிக்கப்பட்டது (Solution Submitted)</option>
+                  <option value="pending_rep_approval">பிரதிநிதி ஒப்புதல் நிலுவையில் (Pending Rep Approval)</option>
+                  <option value="pending_admin_approval">நிர்வாக ஒப்புதல் நிலுவையில் (Pending Admin Approval)</option>
+                  <option value="resolved">தீர்க்கப்பட்டது (Resolved)</option>
+                  <option value="pend">பதிவில் (Legacy Pending)</option>
+                  <option value="warn">நடவடிக்கையில் (Legacy In Progress)</option>
+                  <option value="ok">தீர்க்கப்பட்டது (Legacy Resolved)</option>
                 </select>
               </div>
 
@@ -361,7 +601,7 @@ export default function ComplaintsManagementPage() {
                   gap: '0.4rem'
                 }}
               >
-                🔄 {isLoadingComplaints ? "புதுப்பிக்கிறது..." : "புதுப்பி"}
+                 {isLoadingComplaints ? "புதுப்பிக்கிறது..." : "புதுப்பி"}
               </button>
             </div>
 
@@ -435,9 +675,17 @@ export default function ComplaintsManagementPage() {
                             </span>
                           </td>
                           <td>
-                            {cStatus === "ok" && <span className="badge ok"><i></i>தீர்க்கப்பட்டது</span>}
-                            {cStatus === "warn" && <span className="badge warn"><i></i>நடவடிக்கையில்</span>}
-                            {cStatus === "pend" && <span className="badge pend"><i></i>பதிவில்</span>}
+                            {(() => {
+                              const norm = normalizeStatus(c.status);
+                              const label = getStatusLabel(c.status);
+                              if (norm === "resolved") {
+                                return <span className="badge ok"><i></i>{label}</span>;
+                              }
+                              if (norm === "registered") {
+                                return <span className="badge pend"><i></i>{label}</span>;
+                              }
+                              return <span className="badge warn"><i></i>{label}</span>;
+                            })()}
                           </td>
                           <td className="t-meta">{dateStr}</td>
                         </tr>
@@ -455,6 +703,197 @@ export default function ComplaintsManagementPage() {
           </div>
         </div>
       </section>
+
+      {/* FIELD OFFICER MANAGEMENT SECTION */}
+      {sessionUser && (sessionUser.role === "REPRESENTATIVE" || sessionUser.role === "SUPER_ADMIN") && (
+        <section className="section" style={{ padding: '0 1rem 2rem 1rem' }}>
+          <div className="wrap">
+            <div className="card table-card">
+              <div className="tc-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+                <div>
+                  <h3> களப்பணி குழு (Field Officer Management)</h3>
+                  <span className="sub" style={{ display: "block", marginTop: "0.35rem", color: "var(--ink-soft)", fontSize: "0.88rem" }}>
+                    உங்கள் தொகுதியில் உள்ள களப்பணியாளர்களை உருவாக்கி, திருத்தி, மற்றும் கடவுச்சொற்களை மீட்டமைக்கவும்.
+                    {sessionUser.role === "REPRESENTATIVE" && ` தொகுதி: ${sessionUser.constituency}`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="submit-btn"
+                  onClick={() => {
+                    setOffUsername("");
+                    setOffPassword("");
+                    setOffName("");
+                    setOffPhone("");
+                    setOffActive(true);
+                    setOffError("");
+                    setOffSuccess("");
+                    setIsCreateOfficerModalOpen(true);
+                  }}
+                  style={{ cursor: "pointer", background: "var(--gold)", color: "var(--m-900)", padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                >
+                  + புதிய களப்பணியாளர்
+                </button>
+              </div>
+
+              <div className="tbl-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>பயனர் பெயர் (Username)</th>
+                      <th>முழுப்பெயர் (Full Name)</th>
+                      <th>தொலைபேசி (Mobile)</th>
+                      <th style={{ textAlign: "center" }}>கணக்கு நிலை (Status)</th>
+                      <th style={{ textAlign: "center" }}>செயல்கள் (Actions)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isOfficersLoading ? (
+                      <tr>
+                        <td colSpan={5} style={{ textAlign: "center", padding: "3rem" }}>
+                          <span className="w-8 h-8 border-4 border-[#A00000] border-t-transparent rounded-full animate-spin inline-block"></span>
+                          <p style={{ marginTop: '0.5rem', fontWeight: 700 }}>தரவுகள் ஏற்றப்படுகின்றன...</p>
+                        </td>
+                      </tr>
+                    ) : officers.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ textAlign: "center", padding: "3rem", color: "#777" }}>
+                          களப்பணியாளர்கள் யாரும் இதுவரை நியமிக்கப்படவில்லை.
+                        </td>
+                      </tr>
+                    ) : (
+                      officers.map((off) => (
+                        <tr key={off._id || off.username}>
+                          <td style={{ fontWeight: 800 }}>@{off.username}</td>
+                          <td>{off.name || "விவரம் இல்லை"}</td>
+                          <td>{off.phone || "விவரம் இல்லை"}</td>
+                          <td style={{ textAlign: "center" }}>
+                            {off.active ? (
+                              <span className="badge ok" style={{ display: "inline-flex" }}><i></i>செயலில் (Active)</span>
+                            ) : (
+                              <span className="badge warn" style={{ display: "inline-flex" }}><i></i>முடக்கப்பட்டது</span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingOfficer(off);
+                                setEditOffName(off.name);
+                                setEditOffPhone(off.phone);
+                                setEditOffActive(off.active);
+                                setEditOffPassword("");
+                                setEditOffError("");
+                                setEditOffSuccess("");
+                                setIsEditOfficerModalOpen(true);
+                              }}
+                              className="tfilt"
+                              style={{ cursor: "pointer", background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.1)", padding: "0.3rem 0.6rem", borderRadius: "0.3rem", fontWeight: "bold" }}
+                            >
+                              தொகு / திருத்து
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="tbl-foot">
+                <span>மொத்தம் <b>{officers.length}</b> களப்பணியாளர்கள் உள்ளனர்.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* CREATE FIELD OFFICER MODAL */}
+      {isCreateOfficerModalOpen && (
+        <div className="modal-overlay admin-modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content admin-modal-content" style={{ maxWidth: "520px" }}>
+            <div className="admin-modal-header">
+              <img src={TVK_LOGO} alt="" className="detail-modal-whistle" aria-hidden="true" />
+              <h3> புதிய களப்பணியாளர் நியமனம்</h3>
+              <button type="button" className="admin-modal-close" onClick={() => setIsCreateOfficerModalOpen(false)} aria-label="மூடு">✕</button>
+            </div>
+            <form onSubmit={handleCreateOfficer} className="admin-modal-body">
+              <div className="admin-modal-field">
+                <label htmlFor="off-username">பயனர் பெயர் (Username) *</label>
+                <input id="off-username" type="text" placeholder="e.g. field_kumar" value={offUsername} onChange={(e) => setOffUsername(e.target.value)} required />
+              </div>
+              <div className="admin-modal-field">
+                <label htmlFor="off-password">நுழைவு கடவுச்சொல் (Password) *</label>
+                <input id="off-password" type="password" placeholder="••••••••" value={offPassword} onChange={(e) => setOffPassword(e.target.value)} required />
+              </div>
+              <div className="admin-modal-field">
+                <label htmlFor="off-name">முழுப்பெயர் (Full Name) *</label>
+                <input id="off-name" type="text" placeholder="e.g. குமார்" value={offName} onChange={(e) => setOffName(e.target.value)} required />
+              </div>
+              <div className="admin-modal-field">
+                <label htmlFor="off-phone">தொலைபேசி எண் (Phone Mobile)</label>
+                <input id="off-phone" type="tel" placeholder="e.g. 9876543210" value={offPhone} onChange={(e) => setOffPhone(e.target.value)} />
+              </div>
+              <div className="admin-modal-field">
+                <label htmlFor="off-constituency">ஒதுக்கப்படும் தொகுதி (Constituency)</label>
+                <input id="off-constituency" type="text" value={sessionUser.constituency || "தலைமை அலுவலகம் (Headquarters)"} disabled style={{ background: "rgba(0,0,0,0.05)" }} title="ஒதுக்கப்படும் தொகுதி" />
+                <small style={{ color: "var(--ink-soft)" }}>தொகுதி தானாகவே பிரதிநிதியின் தொகுதியிலிருந்து பெறப்படும்.</small>
+              </div>
+              <div className="admin-checkbox-row">
+                <input type="checkbox" id="off-active" checked={offActive} onChange={(e) => setOffActive(e.target.checked)} />
+                <label htmlFor="off-active">கணக்கை உடனே செயல்பாட்டுக்கு கொண்டுவரவும்</label>
+              </div>
+              {offError && <div className="admin-form-message error">{offError}</div>}
+              {offSuccess && <div className="admin-form-message success">{offSuccess}</div>}
+              <div className="admin-modal-actions">
+                <button type="button" className="admin-modal-cancel" onClick={() => setIsCreateOfficerModalOpen(false)}>ரத்து செய்</button>
+                <button type="submit" className="submit-btn" disabled={isOffSubmitting}>
+                  {isOffSubmitting ? "பதிவு செய்யப்படுகிறது..." : "களப்பணியாளரை நியமி"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT FIELD OFFICER MODAL */}
+      {isEditOfficerModalOpen && editingOfficer && (
+        <div className="modal-overlay admin-modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content admin-modal-content" style={{ maxWidth: "520px" }}>
+            <div className="admin-modal-header">
+              <img src={TVK_LOGO} alt="" className="detail-modal-whistle" aria-hidden="true" />
+              <h3> களப்பணியாளர் கணக்கு திருத்தம் (@{editingOfficer.username})</h3>
+              <button type="button" className="admin-modal-close" onClick={() => { setIsEditOfficerModalOpen(false); setEditingOfficer(null); }} aria-label="மூடு">✕</button>
+            </div>
+            <form onSubmit={handleEditOfficer} className="admin-modal-body">
+              <div className="admin-modal-field">
+                <label htmlFor="edit-off-name">முழுப்பெயர் (Full Name)</label>
+                <input id="edit-off-name" type="text" placeholder="முழுப்பெயர்" value={editOffName} onChange={(e) => setEditOffName(e.target.value)} />
+              </div>
+              <div className="admin-modal-field">
+                <label htmlFor="edit-off-phone">தொலைபேசி எண் (Phone Mobile)</label>
+                <input id="edit-off-phone" type="tel" placeholder="தொலைபேசி எண்" value={editOffPhone} onChange={(e) => setEditOffPhone(e.target.value)} />
+              </div>
+              <div className="admin-modal-field">
+                <label htmlFor="edit-off-password">கடவுச்சொல்லை மீட்டமை (Optional Password Reset)</label>
+                <input id="edit-off-password" type="password" placeholder="புதிய கடவுச்சொல் (மாற்ற விரும்பினால் மட்டும்)" value={editOffPassword} onChange={(e) => setEditOffPassword(e.target.value)} />
+                <small style={{ color: "var(--ink-soft)" }}>கடவுச்சொல்லை மாற்றத் தேவையில்லை எனில் இதைக் காலியாக விடவும்.</small>
+              </div>
+              <div className="admin-checkbox-row">
+                <input type="checkbox" id="editOffActive" checked={editOffActive} onChange={(e) => setEditOffActive(e.target.checked)} />
+                <label htmlFor="editOffActive">கணக்கு செயல்பாட்டில் இருக்கட்டும்</label>
+              </div>
+              {editOffError && <div className="admin-form-message error">{editOffError}</div>}
+              {editOffSuccess && <div className="admin-form-message success">{editOffSuccess}</div>}
+              <div className="admin-modal-actions">
+                <button type="button" className="admin-modal-cancel" onClick={() => { setIsEditOfficerModalOpen(false); setEditingOfficer(null); }}>ரத்து செய்</button>
+                <button type="submit" className="submit-btn" disabled={isEditOffSubmitting}>
+                  {isEditOffSubmitting ? "புதுப்பிக்கப்படுகிறது..." : "மாற்றங்களைச் சேமி"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* COMPLAINT DETAILS MODAL */}
       {selectedComplaint && (
@@ -594,79 +1033,292 @@ export default function ComplaintsManagementPage() {
                 </div>
               </div>
 
-              {/* ACTION: UPDATE STATUS */}
-              <div style={{ 
-                background: 'linear-gradient(135deg, rgba(254,203,2,0.08) 0%, rgba(254,203,2,0.15) 100%)', 
-                border: '1px dashed #FECB02', 
-                borderRadius: '0.75rem', 
-                padding: '1.2rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '1rem'
-              }}>
-                <div>
-                  <h4 style={{ color: '#4A080E', margin: '0 0 0.2rem 0', fontWeight: 800 }}>தீர்க்கும் நிலை மாற்றம் (Update Action Status)</h4>
-                  <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>தகவலின் நிலையை மாற்றுவதுடன், தமிழக வெற்றிக் கழகத்தின் மக்கள் சேவையைப் பதிவு செய்யவும்.</p>
+              {/* FIELD WORK EVIDENCE SECTION (If available) */}
+              {(selectedComplaint.beforeImages?.length > 0 || selectedComplaint.afterImages?.length > 0 || selectedComplaint.workNotes) && (
+                <div style={{ background: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '0.75rem', padding: '1.2rem', marginBottom: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                  <h4 style={{ color: '#4A080E', fontSize: '1rem', borderBottom: '2px solid #FECB02', paddingBottom: '0.4rem', marginBottom: '0.8rem', fontWeight: 800 }}> களப்பணி சான்றுகள் (Field Work Evidence)</h4>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1rem' }} className="mobile-one-col">
+                    <div>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', display: 'block', marginBottom: '0.5rem' }}>பணிக்கு முன் (Before Work):</span>
+                      {selectedComplaint.beforeImages?.length > 0 ? (
+                        <div className="complaint-media-grid">
+                          {selectedComplaint.beforeImages.map((photo: string, idx: number) => (
+                            <a href={photo} target="_blank" rel="noopener noreferrer" key={idx} className="complaint-media-thumb">
+                              <img src={photo} alt={`Before ${idx + 1}`} loading="lazy" />
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <p style={{ fontSize: '0.85rem', color: '#999', fontStyle: 'italic' }}>புகைப்படங்கள் இல்லை</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', display: 'block', marginBottom: '0.5rem' }}>பணிக்கு பின் (After Work):</span>
+                      {selectedComplaint.afterImages?.length > 0 ? (
+                        <div className="complaint-media-grid">
+                          {selectedComplaint.afterImages.map((photo: string, idx: number) => (
+                            <a href={photo} target="_blank" rel="noopener noreferrer" key={idx} className="complaint-media-thumb">
+                              <img src={photo} alt={`After ${idx + 1}`} loading="lazy" />
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <p style={{ fontSize: '0.85rem', color: '#999', fontStyle: 'italic' }}>புகைப்படங்கள் இல்லை</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedComplaint.videos?.length > 0 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', display: 'block', marginBottom: '0.5rem' }}>வீடியோ ஆதாரம் (Video Evidence):</span>
+                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                        {selectedComplaint.videos.map((vid: string, idx: number) => (
+                          <video key={idx} src={vid} controls playsInline className="complaint-media-video" style={{ maxWidth: '320px', height: 'auto' }} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedComplaint.workNotes && (
+                    <div style={{ background: '#F9FAFB', padding: '1rem', borderRadius: '0.5rem', borderLeft: '4px solid #5E8C3A' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#333', display: 'block', marginBottom: '0.35rem' }}>பணி நிறைவு குறிப்பு (Work Notes):</span>
+                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#111', lineHeight: '1.5', whiteSpace: 'pre-wrap', fontWeight: 600 }}>{selectedComplaint.workNotes}</p>
+                    </div>
+                  )}
                 </div>
+              )}
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <button 
-                    onClick={() => handleUpdateStatus(selectedComplaint.trackingId, "pend")}
-                    disabled={isUpdatingStatus || selectedComplaint.status === "pend"}
-                    style={{
-                      background: selectedComplaint.status === "pend" || !selectedComplaint.status ? '#FECB02' : '#FFF',
-                      color: '#4A080E',
-                      border: '1px solid #FECB02',
-                      padding: '0.4rem 0.8rem',
-                      borderRadius: '0.4rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      opacity: selectedComplaint.status === "pend" ? 1 : 0.8
-                    }}
-                  >
-                    📝 பதிவில் (Pending)
-                  </button>
-
-                  <button 
-                    onClick={() => handleUpdateStatus(selectedComplaint.trackingId, "warn")}
-                    disabled={isUpdatingStatus || selectedComplaint.status === "warn"}
-                    style={{
-                      background: selectedComplaint.status === "warn" ? '#E08600' : '#FFF',
-                      color: selectedComplaint.status === "warn" ? '#FFF' : '#333',
-                      border: '1px solid #E08600',
-                      padding: '0.4rem 0.8rem',
-                      borderRadius: '0.4rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      opacity: selectedComplaint.status === "warn" ? 1 : 0.8
-                    }}
-                  >
-                    ⚙️ நடவடிக்கையில்
-                  </button>
-
-                  <button 
-                    onClick={() => handleUpdateStatus(selectedComplaint.trackingId, "ok")}
-                    disabled={isUpdatingStatus || selectedComplaint.status === "ok"}
-                    style={{
-                      background: selectedComplaint.status === "ok" ? '#5E8C3A' : '#FFF',
-                      color: selectedComplaint.status === "ok" ? '#FFF' : '#333',
-                      border: '1px solid #5E8C3A',
-                      padding: '0.4rem 0.8rem',
-                      borderRadius: '0.4rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      opacity: selectedComplaint.status === "ok" ? 1 : 0.8
-                    }}
-                  >
-                    ✅ தீர்க்கப்பட்டது
-                  </button>
+              {/* TIMELINE SECTION */}
+              <div style={{ background: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '0.75rem', padding: '1.2rem', marginBottom: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                <h4 style={{ color: '#4A080E', fontSize: '1rem', borderBottom: '2px solid #FECB02', paddingBottom: '0.4rem', marginBottom: '0.8rem', fontWeight: 800 }}> மனு நிலை போக்கு (Tracking Timeline)</h4>
+                <div className="activity-timeline" style={{ padding: '0.5rem 0' }}>
+                  {(() => {
+                    const steps = selectedComplaint.timeline || [{ status: "registered", updatedAt: selectedComplaint.createdAt, updatedBy: "system", notes: "மனு வெற்றிகரமாக பதிவு செய்யப்பட்டது." }];
+                    return steps.map((step: any, idx: number) => {
+                      const label = getStatusLabel(step.status);
+                      const isLast = idx === steps.length - 1;
+                      return (
+                        <div key={idx} className="timeline-item" style={{ display: 'flex', gap: '1rem', marginBottom: isLast ? 0 : '1.5rem', position: 'relative' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <div className="timeline-badge" style={{ 
+                              background: normalizeStatus(step.status) === 'resolved' ? '#5E8C3A' : normalizeStatus(step.status) === 'registered' ? '#FECB02' : '#E08600', 
+                              color: 'white',
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.8rem',
+                              fontWeight: 'bold',
+                              zIndex: 2
+                            }}>
+                              {idx + 1}
+                            </div>
+                            {!isLast && <div style={{ width: '2px', flex: 1, background: '#E5E7EB', minHeight: '20px', zIndex: 1, marginTop: '4px' }}></div>}
+                          </div>
+                          <div style={{ flex: 1, background: '#F9FAFB', padding: '0.75rem 1rem', borderRadius: '0.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              <b style={{ fontSize: '0.9rem', color: '#111' }}>{label}</b>
+                              <span style={{ fontSize: '0.75rem', color: '#666' }}>{new Date(step.updatedAt).toLocaleString("ta-IN")}</span>
+                            </div>
+                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#555', lineHeight: '1.4' }}>
+                              {step.notes || `மனுவின் நிலை "${label}" என புதுப்பிக்கப்பட்டது.`}
+                              {step.updatedBy && <span style={{ display: 'block', fontSize: '0.75rem', marginTop: '0.25rem', opacity: 0.8, color: '#888' }}>செய்தவர்: @{step.updatedBy}</span>}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
+
+              {/* FIELD OFFICER ASSIGNMENT WORKFLOW */}
+              {(sessionUser.role === "REPRESENTATIVE" || sessionUser.role === "SUPER_ADMIN") && normalizeStatus(selectedComplaint.status) !== "resolved" && (
+                <div style={{ 
+                  background: 'linear-gradient(135deg, rgba(254,203,2,0.08) 0%, rgba(254,203,2,0.15) 100%)', 
+                  border: '1px dashed #FECB02', 
+                  borderRadius: '0.75rem', 
+                  padding: '1.2rem',
+                  marginBottom: '1.5rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '1rem'
+                }}>
+                  <div>
+                    <h4 style={{ color: '#4A080E', margin: '0 0 0.2rem 0', fontWeight: 800 }}>களப்பணியாளருக்கு ஒதுக்கு (Assign Field Officer)</h4>
+                    <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>
+                      {selectedComplaint.assignedTo 
+                        ? `மனு தற்போது களப்பணியாளர் ${selectedComplaint.assignedToName || selectedComplaint.assignedTo} (@${selectedComplaint.assignedTo}) வசம் ஒதுக்கப்பட்டுள்ளது.`
+                        : "மனுவை கள ஆய்விற்கும் தீர்வுக்கும் உங்கள் களப்பணி குழுவில் உள்ள ஒருவரிடம் ஒப்படைக்கவும்."}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <select
+                      value={selectedOfficerUsername}
+                      onChange={(e) => setSelectedOfficerUsername(e.target.value)}
+                      title="களப்பணியாளர் தேர்வு"
+                      style={{
+                        padding: '0.5rem',
+                        borderRadius: '0.4rem',
+                        border: '1px solid #FECB02',
+                        fontSize: '0.85rem',
+                        fontWeight: 'bold',
+                        background: 'white'
+                      }}
+                    >
+                      <option value="">-- களப்பணியாளர் தேர்வு --</option>
+                      {activeOfficers.map(off => (
+                        <option key={off.username} value={off.username}>{off.name} (@{off.username})</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => handleAssignOfficer(selectedComplaint.trackingId)}
+                      disabled={isAssigning || !selectedOfficerUsername}
+                      className="submit-btn"
+                      style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', margin: 0 }}
+                    >
+                      {isAssigning ? "ஒதுக்கப்படுகிறது..." : "ஒதுக்கு"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* REPRESENTATIVE REVIEW ACTIONS */}
+              {(sessionUser.role === "REPRESENTATIVE" || sessionUser.role === "SUPER_ADMIN") && 
+                normalizeStatus(selectedComplaint.status) === "solution_submitted" && (
+                <div style={{ 
+                  background: 'rgba(94, 140, 58, 0.08)', 
+                  border: '1px dashed #5E8C3A', 
+                  borderRadius: '0.75rem', 
+                  padding: '1.2rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                    <div>
+                      <h4 style={{ color: '#1B4314', margin: '0 0 0.2rem 0', fontWeight: 800 }}> தீர்வு மதிப்பாய்வு (Representative Review Queue)</h4>
+                      <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>களப்பணியாளர் சமர்ப்பித்த தீர்வை ஆய்வு செய்து ஒப்புதல் அல்லது நிராகரிப்பு வழங்கவும்.</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleRepReview(selectedComplaint.trackingId, true)}
+                        disabled={isUpdatingStatus}
+                        style={{ background: '#5E8C3A', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '0.4rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}
+                      >
+                        ஒப்புதல் (Approve)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRepReview(selectedComplaint.trackingId, false)}
+                        disabled={isUpdatingStatus || !rejectionReason.trim()}
+                        style={{ background: '#A00000', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '0.4rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem', opacity: rejectionReason.trim() ? 1 : 0.5 }}
+                      >
+                        நிராகரி (Reject)
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="rejection-reason" style={{ fontSize: '0.82rem', fontWeight: 700, color: '#333', display: 'block', marginBottom: '0.35rem' }}>
+                      நிராகரிப்பு காரணம் (Rejection Reason - நிராகரிக்கும் போது மட்டும் கட்டாயம்):
+                    </label>
+                    <textarea
+                      id="rejection-reason"
+                      rows={2}
+                      placeholder="தீர்வு திருப்திகரமாக இல்லை எனில் அதற்கான காரணத்தை இங்கே எழுதவும்..."
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '0.4rem', border: '1px solid #CCC', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ACTION: UPDATE STATUS (SUPER_ADMIN ONLY FOR LEGACY OVERRIDES) */}
+              {sessionUser.role === "SUPER_ADMIN" && (
+                <div style={{ 
+                  background: 'linear-gradient(135deg, rgba(254,203,2,0.08) 0%, rgba(254,203,2,0.15) 100%)', 
+                  border: '1px dashed #FECB02', 
+                  borderRadius: '0.75rem', 
+                  padding: '1.2rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '1rem'
+                }}>
+                  <div>
+                    <h4 style={{ color: '#4A080E', margin: '0 0 0.2rem 0', fontWeight: 800 }}>தீர்க்கும் நிலை மாற்றம் (Update Action Status)</h4>
+                    <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>தகவலின் நிலையை மாற்றுவதுடன், தமிழக வெற்றிக் கழகத்தின் மக்கள் சேவையைப் பதிவு செய்யவும்.</p>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button 
+                      type="button"
+                      onClick={() => handleUpdateStatus(selectedComplaint.trackingId, "registered")}
+                      disabled={isUpdatingStatus || normalizeStatus(selectedComplaint.status) === "registered"}
+                      style={{
+                        background: normalizeStatus(selectedComplaint.status) === "registered" ? '#FECB02' : '#FFF',
+                        color: '#4A080E',
+                        border: '1px solid #FECB02',
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: '0.4rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        opacity: normalizeStatus(selectedComplaint.status) === "registered" ? 1 : 0.8
+                      }}
+                    >
+                       பதிவில் (Pending)
+                    </button>
+
+                    <button 
+                      type="button"
+                      onClick={() => handleUpdateStatus(selectedComplaint.trackingId, "under_review")}
+                      disabled={isUpdatingStatus || normalizeStatus(selectedComplaint.status) === "under_review"}
+                      style={{
+                        background: normalizeStatus(selectedComplaint.status) === "under_review" ? '#E08600' : '#FFF',
+                        color: normalizeStatus(selectedComplaint.status) === "under_review" ? '#FFF' : '#333',
+                        border: '1px solid #E08600',
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: '0.4rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        opacity: normalizeStatus(selectedComplaint.status) === "under_review" ? 1 : 0.8
+                      }}
+                    >
+                      ⚙️ நடவடிக்கையில்
+                    </button>
+
+                    <button 
+                      type="button"
+                      onClick={() => handleUpdateStatus(selectedComplaint.trackingId, "resolved")}
+                      disabled={isUpdatingStatus || normalizeStatus(selectedComplaint.status) === "resolved"}
+                      style={{
+                        background: normalizeStatus(selectedComplaint.status) === "resolved" ? '#5E8C3A' : '#FFF',
+                        color: normalizeStatus(selectedComplaint.status) === "resolved" ? '#FFF' : '#333',
+                        border: '1px solid #5E8C3A',
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: '0.4rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        opacity: normalizeStatus(selectedComplaint.status) === "resolved" ? 1 : 0.8
+                      }}
+                    >
+                      தீர்க்கப்பட்டது
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {statusUpdateMessage && (
                 <div style={{ 

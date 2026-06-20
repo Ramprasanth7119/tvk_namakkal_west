@@ -138,7 +138,7 @@ function AnimatedNumber({ value, dec = 0 }: { value: number; dec?: number }) {
     };
   }, [value]);
 
-  return <span>{displayVal.toFixed(dec)}</span>;
+  return <span className="kpi-val">{displayVal.toFixed(dec)}</span>;
 }
 
 export default function AnalyticsDashboard() {
@@ -147,6 +147,8 @@ export default function AnalyticsDashboard() {
   const [curSearch, setCurSearch] = useState("");
   const [demoMode, setDemoMode] = useState(true);
   const [dbData, setDbData] = useState<Complaint[]>([]);
+  const [managedDemoData, setManagedDemoData] = useState<Complaint[]>([]);
+  const [isManagedDemoLoading, setIsManagedDemoLoading] = useState(false);
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
   const [publicAnalytics, setPublicAnalytics] = useState<any>(null);
@@ -171,7 +173,8 @@ export default function AnalyticsDashboard() {
           if (data.authenticated && data.user) {
             setSessionUser(data.user);
             if (data.user.role === "REPRESENTATIVE") {
-              setDemoMode(false);
+              // REPRESENTATIVE starts in demo mode so they see managed demo data for their constituency
+              setDemoMode(true);
               setCurArea(data.user.constituency);
             }
           }
@@ -646,6 +649,42 @@ export default function AnalyticsDashboard() {
     }
   };
 
+  // Fetch managed demo data when in demo mode (authenticated users only)
+  useEffect(() => {
+    if (demoMode && sessionUser) {
+      const fetchManagedDemo = async () => {
+        setIsManagedDemoLoading(true);
+        try {
+          const constituency = sessionUser.role === "REPRESENTATIVE" ? sessionUser.constituency : (curArea !== "அனைத்தும்" ? curArea : "");
+          const q = constituency ? `?constituency=${encodeURIComponent(constituency)}` : "";
+          const res = await fetch(`/api/admin/demo${q}`);
+          if (res.ok) {
+            const raw = await res.json();
+            const mapped: Complaint[] = raw.map((item: any) => ({
+              id: item._id || `DEMO-${Math.random().toString(36).slice(2,6).toUpperCase()}`,
+              sector: item.sector || "civic",
+              area: item.constituency || CONSTITUENCIES[0],
+              title: item.title,
+              by: item.by || "பொது",
+              month: typeof item.month === "number" ? item.month : 0,
+              date: item.date || "01/01/26",
+              status: (item.status as "ok" | "warn" | "pend") || "pend",
+              resolver: item.resolver || null,
+            }));
+            setManagedDemoData(mapped);
+          }
+        } catch (err) {
+          console.error("Error fetching managed demo data:", err);
+        } finally {
+          setIsManagedDemoLoading(false);
+        }
+      };
+      fetchManagedDemo();
+    } else if (!demoMode) {
+      setManagedDemoData([]);
+    }
+  }, [demoMode, sessionUser, curArea]);
+
   useEffect(() => {
     if (!demoMode) {
       const fetchDbData = async () => {
@@ -700,8 +739,17 @@ export default function AnalyticsDashboard() {
     if (isPublicView && publicAnalytics?.recentActivity) {
       return publicAnalytics.recentActivity as Complaint[];
     }
+    if (demoMode && sessionUser) {
+      // Prefer managed demo data from DB; fall back to static generated data
+      if (managedDemoData.length > 0) return managedDemoData;
+      // Static fallback: filter by constituency for REPRESENTATIVE
+      if (sessionUser.role === "REPRESENTATIVE" && sessionUser.constituency) {
+        return DATA.filter(d => d.area === sessionUser.constituency);
+      }
+      return DATA;
+    }
     return demoMode ? DATA : dbData;
-  }, [demoMode, dbData, isPublicView, publicAnalytics]);
+  }, [demoMode, dbData, managedDemoData, sessionUser, isPublicView, publicAnalytics]);
 
   // Filters computed in React
   const areaFilteredData = useMemo((): Complaint[] => {
@@ -971,21 +1019,21 @@ export default function AnalyticsDashboard() {
           </a>
           <div className="tb-actions">
             <a className="tb-back" href="/track" style={{ color: '#FECB02', borderColor: '#FECB02' }}>
-              🔍 மனு நிலை அறிதல்
+              மனு நிலை அறிதல்
             </a>
             {sessionUser?.role === "SUPER_ADMIN" && (
               <a className="tb-back" href="/admin" style={{ color: '#FECB02', borderColor: '#FECB02' }}>
-                ⚙️ நிர்வாகக் கட்டுப்பாடு
+                நிர்வாகக் கட்டுப்பாடு
               </a>
             )}
             {sessionUser && (
               <a className="tb-back" href="/complaints" style={{ color: '#FECB02', borderColor: '#FECB02' }}>
-                📋 புகார்கள் மேலாண்மை
+                புகார்கள் மேலாண்மை
               </a>
             )}
             {!sessionUser && (
               <a className="tb-back" href="/login?redirect=/analytics">
-                🔐 பிரதிநிதி உள்நுழைவு
+                பிரதிநிதி உள்நுழைவு
               </a>
             )}
             <a className="tb-back" href="/">
@@ -1063,15 +1111,25 @@ export default function AnalyticsDashboard() {
                   onChange={(e) => setCurSearch(e.target.value)}
                 />
               </div>
-              {sessionUser && sessionUser.role !== "REPRESENTATIVE" && (
-                <div className="fb-toggle-wrapper">
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--m-800)', whiteSpace: 'nowrap' }}>டெமோ தரவு</span>
+              {sessionUser && (
+                <div className="fb-toggle-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0.75rem', background: demoMode ? 'rgba(254,203,2,0.12)' : 'rgba(0,0,0,0.04)', border: `1.5px solid ${demoMode ? '#FECB02' : 'var(--line)'}`, borderRadius: '2rem', transition: 'all 0.2s' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: demoMode ? '#A06800' : 'var(--ink-soft)', whiteSpace: 'nowrap' }}>
+                    {demoMode ? ' மாதிரி தரவு (Demo)' : ' நேரடி தரவு (Live)'}
+                  </span>
                   <button
-                    className={`achip ${demoMode ? 'active' : ''}`}
                     onClick={() => setDemoMode(!demoMode)}
-                    style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem' }}
+                    title={demoMode ? "மாதிரி தரவு இயக்கத்தில் — அணைக்க அழுத்தவும்" : "நேரடி தரவு — மாதிரி தரவுக்கு மாற்ற அழுத்தவும்"}
+                    style={{
+                      position: 'relative', width: '40px', height: '22px', borderRadius: '11px',
+                      background: demoMode ? '#FECB02' : '#ccc', border: 'none', cursor: 'pointer',
+                      transition: 'background 0.25s', flexShrink: 0, padding: 0,
+                    }}
                   >
-                    {demoMode ? 'ஆன்' : 'ஆஃப்'}
+                    <span aria-hidden="true" style={{
+                      position: 'absolute', top: '3px', left: demoMode ? '21px' : '3px',
+                      width: '16px', height: '16px', borderRadius: '50%', background: '#fff',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.25)', transition: 'left 0.25s',
+                    }} />
                   </button>
                 </div>
               )}
@@ -1079,6 +1137,18 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Demo mode managed data status */}
+      {demoMode && sessionUser && isManagedDemoLoading && (
+        <div style={{ textAlign: 'center', padding: '0.5rem', fontSize: '0.82rem', color: 'var(--ink-soft)', background: 'rgba(254,203,2,0.07)' }}>
+          மாதிரி தரவு ஏற்றப்படுகிறது…
+        </div>
+      )}
+      {demoMode && sessionUser && !isManagedDemoLoading && managedDemoData.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '0.4rem', fontSize: '0.8rem', color: 'var(--ink-soft)', background: 'rgba(0,0,0,0.03)' }}>
+           நிர்வாக பலகையில் மாதிரி தரவு சேர்க்கப்படவில்லை — உள்ளமைக்கப்பட்ட மாதிரிக் காட்டப்படுகிறது
+        </div>
+      )}
 
       {/* KPIs */}
       <section className="section">
@@ -1340,11 +1410,11 @@ export default function AnalyticsDashboard() {
                           </div>
                           <p className="timeline-title">{act.title}</p>
                           <div className="timeline-footer">
-                            <span className="timeline-area">📍 {act.area}</span>
+                            <span className="timeline-area"> {act.area}</span>
                             <span className={`timeline-status ${act.status}`}>
-                              {act.status === 'ok' && 'தீர்க்கப்பட்டது ✓'}
-                              {act.status === 'warn' && 'நடவடிக்கையில் ⏳'}
-                              {act.status === 'pend' && 'பதிவில் 📝'}
+                              {act.status === 'ok' && 'தீர்க்கப்பட்டது'}
+                              {act.status === 'warn' && 'நடவடிக்கையில் '}
+                              {act.status === 'pend' && 'பதிவில் '}
                             </span>
                           </div>
                         </div>

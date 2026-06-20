@@ -83,19 +83,16 @@ export async function POST(request: Request) {
 
     const isActive = active === true;
 
-    // Validate one active representative per constituency rule
-    if (isActive) {
-      const activeRep = await db.collection("users").findOne({
-        role: "REPRESENTATIVE",
-        constituency,
-        active: true,
-      });
+    // Validate strictly one representative per constituency rule
+    const existingRep = await db.collection("users").findOne({
+      role: "REPRESENTATIVE",
+      constituency,
+    });
 
-      if (activeRep) {
-        return NextResponse.json({
-          error: `${constituency} தொகுதிக்கு ஏற்கனவே ஒரு செயலில் உள்ள பிரதிநிதி உள்ளார். (There is already an active representative for ${constituency})`,
-        }, { status: 400 });
-      }
+    if (existingRep) {
+      return NextResponse.json({
+        error: `${constituency} தொகுதிக்கு ஏற்கனவே ஒரு பிரதிநிதி உள்ளார். (There is already a representative available in ${constituency})`,
+      }, { status: 400 });
     }
 
     const newUser = {
@@ -156,18 +153,17 @@ export async function PATCH(request: Request) {
 
     const isActive = active === true;
 
-    // Validate one active representative per constituency rule
-    if (isActive) {
-      const activeRep = await db.collection("users").findOne({
+    // Validate strictly one representative per constituency rule
+    if (constituency !== undefined) {
+      const existingRep = await db.collection("users").findOne({
         role: "REPRESENTATIVE",
         constituency,
-        active: true,
         username: { $ne: cleanUsername }, // exclude self
       });
 
-      if (activeRep) {
+      if (existingRep) {
         return NextResponse.json({
-          error: `${constituency} தொகுதிக்கு ஏற்கனவே ஒரு செயலில் உள்ள பிரதிநிதி உள்ளார். (There is already an active representative for ${constituency})`,
+          error: `${constituency} தொகுதிக்கு ஏற்கனவே ஒரு பிரதிநிதி உள்ளார். (There is already a representative available in ${constituency})`,
         }, { status: 400 });
       }
     }

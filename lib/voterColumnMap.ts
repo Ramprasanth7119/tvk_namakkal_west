@@ -6,7 +6,8 @@ export type VoterFieldKey =
   | "wardName"
   | "constituency"
   | "mobile"
-  | "address";
+  | "address"
+  | "doorNo";
 
 export type ColumnMapping = Partial<Record<VoterFieldKey, string>>;
 
@@ -19,6 +20,7 @@ const FIELD_LABELS: Record<VoterFieldKey, string> = {
   constituency: "Constituency",
   mobile: "Mobile",
   address: "Address",
+  doorNo: "Door Number",
 };
 
 /** English + Tamil header aliases (normalized before compare). */
@@ -105,6 +107,18 @@ const COLUMN_ALIASES: Record<VoterFieldKey, string[]> = {
     "residence",
     "location",
     "முகவரி",
+  ],
+  doorNo: [
+    "doorno",
+    "door number",
+    "door_no",
+    "door_number",
+    "houseno",
+    "house no",
+    "house_no",
+    "கதவுஎண்",
+    "கதவு",
+    "வீட்டுஎண்",
   ],
 };
 

@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { getDb } from "@/lib/mongodb";
 import { verifySession } from "@/lib/session";
 import { logAuditEvent } from "@/lib/auditLog";
-import { buildInitialTimeline, normalizeStatus } from "@/lib/complaintStatus";
+import { buildInitialTimeline, normalizeStatus, getStatusLabel } from "@/lib/complaintStatus";
 import { isCloudinaryConfigured, uploadMediaListToCloudinary } from "@/lib/cloudinary";
 import { normalizeComplaintMedia } from "@/lib/complaintMedia";
 import {
@@ -58,6 +58,8 @@ export async function GET(request: Request) {
           // Representative with no constituency gets no data
           return NextResponse.json([]);
         }
+      } else if (session.role === "FIELD_OFFICER") {
+        filter.assignedTo = session.username;
       }
     } else {
       return NextResponse.json(
@@ -122,6 +124,11 @@ export async function POST(request: Request) {
     const {
       voterId,
       voterVerified,
+      verificationMethod,
+      locationAttempts,
+      latitude,
+      longitude,
+      locationTimestamp,
       ward,
       constituency,
       citizenDetails,
@@ -255,6 +262,11 @@ export async function POST(request: Request) {
       trackingId,
       voterVerified,
       voterId: String(voterId).trim().toUpperCase(),
+      verificationMethod: verificationMethod || "VOTER_ID",
+      locationAttempts: typeof locationAttempts === 'number' ? locationAttempts : 0,
+      latitude: latitude != null ? Number(latitude) : (geolocation?.latitude != null ? Number(geolocation.latitude) : null),
+      longitude: longitude != null ? Number(longitude) : (geolocation?.longitude != null ? Number(geolocation.longitude) : null),
+      locationTimestamp: locationTimestamp ? new Date(locationTimestamp) : null,
       ward: sanitizeInput(ward),
       constituency: sanitizeInput(constituency),
       citizenDetails: sanitizeInput(citizenDetails),
@@ -297,60 +309,198 @@ export async function PATCH(request: Request) {
   try {
     const rawBody = await request.json();
     const body = sanitizeInput(rawBody);
-    const { trackingId, status } = body;
+    const { trackingId, action, status } = body;
 
-    if (!trackingId || !status) {
-      return NextResponse.json({ error: "தேவையான அளவுருக்கள் இல்லை (Missing parameters)" }, { status: 400 });
+    if (!trackingId) {
+      return NextResponse.json({ error: "தேவையான அளவுருக்கள் இல்லை (Tracking ID is required)" }, { status: 400 });
     }
 
     const cookieStore = await cookies();
     const authCookie = cookieStore.get("site_auth");
     if (!authCookie) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல்" }, { status: 401 });
+      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized)" }, { status: 401 });
     }
     const session = verifySession(authCookie.value);
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல்" }, { status: 401 });
+      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized)" }, { status: 401 });
     }
 
     const db = await getDb();
-    
-    // If REPRESENTATIVE, ensure they can only update complaints within their constituency
     const complaint = await db.collection("citizenComplaints").findOne({ trackingId });
     if (!complaint) {
       return NextResponse.json({ error: "புகார் கண்டறியப்படவில்லை (Complaint not found)" }, { status: 404 });
     }
 
+    // Role-based constituency access check
     if (session.role === "REPRESENTATIVE" && complaint.constituency !== session.constituency) {
       return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது (Access Forbidden)" }, { status: 403 });
     }
+    if (session.role === "FIELD_OFFICER" && complaint.assignedTo !== session.username) {
+      return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது (Access Forbidden)" }, { status: 403 });
+    }
 
-    const normalizedStatus = normalizeStatus(status);
+    const now = new Date();
+    const updateFields: any = { updatedAt: now };
+    let timelineNote = "";
+    let nextStatus = complaint.status;
+
+    // Standardize Workflow Actions
+    if (action === "assign") {
+      // Representative assigns to Field Officer
+      if (session.role !== "REPRESENTATIVE" && session.role !== "SUPER_ADMIN") {
+        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+      }
+      const { assignedTo } = body;
+      if (!assignedTo) {
+        return NextResponse.json({ error: "களப்பணியாளர் தேர்ந்தெடுக்கப்பட வேண்டும்" }, { status: 400 });
+      }
+      
+      const officer = await db.collection("users").findOne({ username: assignedTo, role: "FIELD_OFFICER" });
+      if (!officer) {
+        return NextResponse.json({ error: "களப்பணியாளர் கண்டறியப்படவில்லை" }, { status: 404 });
+      }
+
+      nextStatus = "assigned";
+      updateFields.status = "assigned";
+      updateFields.assignedTo = officer.username;
+      updateFields.assignedToName = officer.name || officer.username;
+      updateFields.assignedBy = session.username;
+      updateFields.assignedAt = now;
+      timelineNote = `களப்பணியாளர் ${officer.name || officer.username}க்கு மனு ஒதுக்கப்பட்டது`;
+
+    } else if (action === "start_work") {
+      // Field Officer claims work
+      if (session.role !== "FIELD_OFFICER") {
+        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+      }
+      nextStatus = "work_in_progress";
+      updateFields.status = "work_in_progress";
+      timelineNote = `களப்பணியாளர் ${session.username} பணியைத் தொடங்கினார்`;
+
+    } else if (action === "submit_solution") {
+      // Field Officer uploads evidence and finishes task
+      if (session.role !== "FIELD_OFFICER") {
+        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+      }
+      const { beforeImages, afterImages, videos, workNotes } = body;
+
+      let uploadedBefore: string[] = [];
+      let uploadedAfter: string[] = [];
+      let uploadedVideos: string[] = [];
+
+      if (isCloudinaryConfigured()) {
+        try {
+          if (Array.isArray(beforeImages) && beforeImages.length > 0) {
+            uploadedBefore = await uploadMediaListToCloudinary(beforeImages, "evidence/before", "image");
+          }
+          if (Array.isArray(afterImages) && afterImages.length > 0) {
+            uploadedAfter = await uploadMediaListToCloudinary(afterImages, "evidence/after", "image");
+          }
+          if (Array.isArray(videos) && videos.length > 0) {
+            uploadedVideos = await uploadMediaListToCloudinary(videos, "evidence/videos", "video");
+          }
+        } catch (uploadErr) {
+          console.error("Cloudinary upload error inside submit_solution:", uploadErr);
+          return NextResponse.json({ error: "சான்றுகளைப் பதிவேற்றுவதில் பிழை ஏற்பட்டது" }, { status: 500 });
+        }
+      }
+
+      nextStatus = "solution_submitted";
+      updateFields.status = "solution_submitted";
+      updateFields.beforeImages = uploadedBefore;
+      updateFields.afterImages = uploadedAfter;
+      updateFields.videos = uploadedVideos;
+      updateFields.workNotes = workNotes || "";
+      updateFields.solvedBy = session.username;
+      timelineNote = `களப்பணியாளர் ${session.username} தீர்வு சமர்ப்பித்தார்`;
+
+    } else if (action === "rep_approve") {
+      // Representative approves field work
+      if (session.role !== "REPRESENTATIVE" && session.role !== "SUPER_ADMIN") {
+        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+      }
+      nextStatus = "pending_admin_approval";
+      updateFields.status = "pending_admin_approval";
+      updateFields.representativeApproval = "APPROVED";
+      updateFields.representativeApprovedAt = now;
+      updateFields.verifiedBy = session.username;
+      timelineNote = `பிரதிநிதி ${session.username} ஒப்புதல் அளித்தார்`;
+
+    } else if (action === "rep_reject") {
+      // Representative rejects field work, sends back
+      if (session.role !== "REPRESENTATIVE" && session.role !== "SUPER_ADMIN") {
+        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+      }
+      const { rejectionReason } = body;
+      if (!rejectionReason) {
+        return NextResponse.json({ error: "நிராகரிப்பதற்கான காரணம் தேவை" }, { status: 400 });
+      }
+      nextStatus = "work_in_progress";
+      updateFields.status = "work_in_progress";
+      updateFields.representativeApproval = "REJECTED";
+      updateFields.rejectionReason = rejectionReason;
+      timelineNote = `பிரதிநிதி ${session.username} தீர்வினை நிராகரித்தார்: ${rejectionReason}`;
+
+    } else if (action === "admin_approve") {
+      // Super Admin resolves finally
+      if (session.role !== "SUPER_ADMIN") {
+        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+      }
+      nextStatus = "resolved";
+      updateFields.status = "resolved";
+      updateFields.adminApproval = "APPROVED";
+      updateFields.adminApprovedAt = now;
+      updateFields.approvedBy = "SUPER_ADMIN";
+      timelineNote = "நிர்வாகி இறுதி ஒப்புதல் அளித்தார் - மனு தீர்க்கப்பட்டது";
+
+    } else if (action === "admin_reject") {
+      // Super Admin rejects and sends back to work_in_progress
+      if (session.role !== "SUPER_ADMIN") {
+        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+      }
+      const { rejectionReason } = body;
+      nextStatus = "work_in_progress";
+      updateFields.status = "work_in_progress";
+      updateFields.adminApproval = "REJECTED";
+      updateFields.adminRejectionReason = rejectionReason || "நிர்வாகி திருப்தி அடையவில்லை";
+      timelineNote = `நிர்வாகி தீர்வினை மீண்டும் அனுப்பினார்: ${rejectionReason || "மதிப்பாய்வுக்காக"}`;
+
+    } else {
+      // Fallback to legacy single status updates
+      if (!status) {
+        return NextResponse.json({ error: "தவறான நடவடிக்கை" }, { status: 400 });
+      }
+      nextStatus = normalizeStatus(status);
+      updateFields.status = nextStatus;
+      timelineNote = `மனுவின் நிலை ${getStatusLabel(nextStatus)} என மாற்றப்பட்டது`;
+    }
+
     const timelineEntry = {
-      status: normalizedStatus,
-      updatedAt: new Date(),
+      status: nextStatus,
+      updatedAt: now,
       updatedBy: session.username,
+      notes: timelineNote,
     };
 
     await db.collection("citizenComplaints").updateOne(
       { trackingId },
       {
-        $set: { status: normalizedStatus, updatedAt: new Date() },
+        $set: updateFields,
         $push: { timeline: timelineEntry } as any,
       }
     );
 
-    await logSecurityEvent(ip, "COMPLAINT_STATUS_UPDATED", { trackingId, status: normalizedStatus, updatedBy: session.username });
+    await logSecurityEvent(ip, "COMPLAINT_STATUS_UPDATED", { trackingId, status: nextStatus, updatedBy: session.username, action });
     await logAuditEvent({
       username: session.username,
       role: session.role,
       constituency: session.constituency,
-      action: "COMPLAINT_STATUS_CHANGE",
+      action: action ? `COMPLAINT_${action.toUpperCase()}` : "COMPLAINT_STATUS_CHANGE",
       trackingId,
-      metadata: { status: normalizedStatus },
+      metadata: { status: nextStatus, notes: timelineNote },
     });
 
-    return NextResponse.json({ success: true, message: "புகாரின் நிலை வெற்றிகரமாக புதுப்பிக்கப்பட்டது (Status updated successfully)" });
+    return NextResponse.json({ success: true, message: "மனுவின் விவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது" });
   } catch (error) {
     console.error("Error updating complaint status:", error);
     return NextResponse.json({ error: "நிலை புதுப்பிப்பதில் பிழை ஏற்பட்டது" }, { status: 500 });

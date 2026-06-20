@@ -39,6 +39,10 @@ export async function GET(request: Request) {
           createdAt: 1,
           updatedAt: 1,
           timeline: 1,
+          solvedBy: 1,
+          verifiedBy: 1,
+          approvedBy: 1,
+          assignedToName: 1,
           "complaintDetails.category": 1,
           "complaintDetails.subcategory": 1,
         },
@@ -55,8 +59,9 @@ export async function GET(request: Request) {
           status: normalizeStatus(entry.status),
           label: getStatusLabel(entry.status),
           updatedAt: entry.updatedAt,
+          notes: entry.notes || "",
         }))
-      : [{ status: "pend", label: getStatusLabel("pend"), updatedAt: complaint.createdAt }];
+      : [{ status: "registered", label: getStatusLabel("registered"), updatedAt: complaint.createdAt, notes: "மனு வெற்றிகரமாக பதிவு செய்யப்பட்டது." }];
 
     return NextResponse.json({
       trackingId: complaint.trackingId,
@@ -67,6 +72,9 @@ export async function GET(request: Request) {
       statusLabel: getStatusLabel(status),
       createdAt: complaint.createdAt,
       updatedAt: complaint.updatedAt || complaint.createdAt,
+      solvedBy: complaint.solvedBy || complaint.assignedToName || null,
+      verifiedBy: complaint.verifiedBy || null,
+      approvedBy: complaint.approvedBy || null,
       timeline,
     });
   } catch (error) {

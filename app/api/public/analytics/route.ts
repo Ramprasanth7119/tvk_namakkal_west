@@ -48,15 +48,16 @@ export async function GET(request: Request) {
             $group: {
               _id: null,
               total: { $sum: 1 },
-              resolved: { $sum: { $cond: [{ $eq: ["$status", "ok"] }, 1, 0] } },
-              inProgress: { $sum: { $cond: [{ $eq: ["$status", "warn"] }, 1, 0] } },
+              resolved: { $sum: { $cond: [{ $in: ["$status", ["ok", "resolved"]] }, 1, 0] } },
+              inProgress: { $sum: { $cond: [{ $in: ["$status", ["warn", "under_review", "assigned", "work_in_progress", "solution_submitted", "pending_rep_approval", "pending_admin_approval"]] }, 1, 0] } },
               pending: {
                 $sum: {
                   $cond: [
                     {
                       $or: [
                         { $eq: ["$status", "pend"] },
-                        { $eq: [{ $ifNull: ["$status", "pend"] }, "pend"] },
+                        { $eq: ["$status", "registered"] },
+                        { $eq: [{ $ifNull: ["$status", "registered"] }, "registered"] },
                         { $eq: ["$status", null] },
                       ],
                     },
@@ -77,9 +78,9 @@ export async function GET(request: Request) {
             $group: {
               _id: "$constituency",
               total: { $sum: 1 },
-              resolved: { $sum: { $cond: [{ $eq: ["$status", "ok"] }, 1, 0] } },
+              resolved: { $sum: { $cond: [{ $in: ["$status", ["ok", "resolved"]] }, 1, 0] } },
               pending: {
-                $sum: { $cond: [{ $ne: ["$status", "ok"] }, 1, 0] },
+                $sum: { $cond: [{ $not: [{ $in: ["$status", ["ok", "resolved"]] }] }, 1, 0] },
               },
             },
           },
@@ -94,7 +95,7 @@ export async function GET(request: Request) {
             $group: {
               _id: "$complaintDetails.category",
               total: { $sum: 1 },
-              resolved: { $sum: { $cond: [{ $eq: ["$status", "ok"] }, 1, 0] } },
+              resolved: { $sum: { $cond: [{ $in: ["$status", ["ok", "resolved"]] }, 1, 0] } },
             },
           },
           { $sort: { total: -1 } },
@@ -111,7 +112,7 @@ export async function GET(request: Request) {
                 month: { $month: "$createdAt" },
               },
               total: { $sum: 1 },
-              resolved: { $sum: { $cond: [{ $eq: ["$status", "ok"] }, 1, 0] } },
+              resolved: { $sum: { $cond: [{ $in: ["$status", ["ok", "resolved"]] }, 1, 0] } },
             },
           },
           { $sort: { "_id.year": 1, "_id.month": 1 } },

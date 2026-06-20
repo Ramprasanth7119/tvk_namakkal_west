@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     const totalReps = await db.collection("users").countDocuments(repFilter);
     const activeReps = await db.collection("users").countDocuments({ ...repFilter, active: true });
     const totalComplaints = await db.collection("citizenComplaints").countDocuments();
-    const resolvedComplaints = await db.collection("citizenComplaints").countDocuments({ status: "ok" });
+    const resolvedComplaints = await db.collection("citizenComplaints").countDocuments({ status: { $in: ["ok", "resolved"] } });
     const pendingComplaints = totalComplaints - resolvedComplaints; // Includes "pend", "warn", or undefined
 
     // 2. Calculate Stats per Constituency
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
     for (const c of CONSTITUENCIES) {
       const cTotal = await db.collection("citizenComplaints").countDocuments({ constituency: c });
-      const cResolved = await db.collection("citizenComplaints").countDocuments({ constituency: c, status: "ok" });
+      const cResolved = await db.collection("citizenComplaints").countDocuments({ constituency: c, status: { $in: ["ok", "resolved"] } });
       const cPending = cTotal - cResolved;
       const repName = repMap[c] || "பிரதிநிதி நியமிக்கப்படவில்லை (No Representative)";
 

@@ -2,7 +2,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || "tvk-west-representative-se
 
 export interface UserSession {
   username: string;
-  role: "SUPER_ADMIN" | "REPRESENTATIVE";
+  role: "SUPER_ADMIN" | "REPRESENTATIVE" | "FIELD_OFFICER";
   constituency: string | null;
 }
 

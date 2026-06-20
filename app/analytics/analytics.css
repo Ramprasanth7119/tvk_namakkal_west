@@ -497,14 +497,15 @@
     .kpi b {
       font-family: var(--f-disp);
       font-weight: 800;
-      font-size: 2.1rem;
+      font-size: clamp(3.25rem, 5.5vw, 4.75rem);
       color: var(--ink);
       display: block;
-      line-height: 1
+      line-height: 1;
+      letter-spacing: -.02em
     }
 
     .kpi b small {
-      font-size: .5em;
+      font-size: .42em;
       color: var(--ink-soft);
       font-weight: 700;
       margin-left: .15em
@@ -1089,8 +1090,9 @@
         text-align: left
       }
 
-      .kpi b {
-        font-size: 1.7rem
+      .kpi b,
+      .kpi-val {
+        font-size: clamp(2.75rem, 8vw, 3.5rem)
       }
     }
 
@@ -1784,13 +1786,9 @@ body.chover .wcur .clabel {
   transform: translateX(-50%) scale(1);
 }
 
-body.cursor-on,
-body.cursor-on a,
-body.cursor-on button,
-body.cursor-on input,
-body.cursor-on select,
-body.cursor-on textarea {
-  cursor: none;
+body.cursor-on:not(.modal-open),
+body.cursor-on:not(.modal-open) * {
+  cursor: none !important;
 }
 
 body.cursor-on .wcur {
@@ -1851,6 +1849,22 @@ body.chover .wcur {
 
 .kpi:hover .kpi-ic {
   transform: rotate(-8deg) scale(1.1);
+}
+
+.kpi > b,
+.kpi > b .kpi-val,
+.kpi-val {
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size: clamp(3.25rem, 5.5vw, 4.75rem);
+  line-height: 1;
+  letter-spacing: -.02em;
+  color: var(--ink);
+}
+
+.kpi > b small {
+  font-size: .42em;
+  font-weight: 700;
 }
 
 /* Insights Section */
@@ -2381,8 +2395,9 @@ body.chover .wcur {
   .kpi-grid .kpi:last-child {
     grid-column: span 4 !important; /* Spans full width for perfect visual balance */
   }
-  .kpi b {
-    font-size: 1.6rem;
+  .kpi b,
+  .kpi-val {
+    font-size: clamp(2.75rem, 8vw, 3.5rem);
     margin-top: 0.25rem;
   }
   .kpi span {
@@ -2908,8 +2923,9 @@ body.chover .wcur {
     padding: .4rem .7rem
   }
 
-  .kpi b {
-    font-size: clamp(1.35rem, 6vw, 1.6rem)
+  .kpi b,
+  .kpi-val {
+    font-size: clamp(2.4rem, 9vw, 3rem)
   }
 
   .kpi span {
@@ -2961,6 +2977,39 @@ body.chover .wcur {
 @media (min-width: 1025px) and (max-width: 1440px) {
   :root {
     --maxw: 1240px
+  }
+}
+
+/* KPI stat numbers — final size boost (analytics, admin, voter registry) */
+.kpi-grid .kpi > b,
+.kpi-grid .kpi > b .kpi-val,
+.kpi-grid .kpi-val {
+  font-family: var(--f-disp) !important;
+  font-weight: 800 !important;
+  font-size: clamp(3.25rem, 5.5vw, 4.75rem) !important;
+  line-height: 1 !important;
+  letter-spacing: -.02em !important;
+  color: var(--ink) !important;
+}
+
+.kpi-grid .kpi > b small {
+  font-size: .42em !important;
+  font-weight: 700 !important;
+}
+
+@media (max-width: 768px) {
+  .kpi-grid .kpi > b,
+  .kpi-grid .kpi > b .kpi-val,
+  .kpi-grid .kpi-val {
+    font-size: clamp(2.75rem, 8vw, 3.5rem) !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .kpi-grid .kpi > b,
+  .kpi-grid .kpi > b .kpi-val,
+  .kpi-grid .kpi-val {
+    font-size: clamp(2.4rem, 9vw, 3rem) !important;
   }
 }
   

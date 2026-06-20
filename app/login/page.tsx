@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TVK_LOGO } from "@/lib/brand";
 import { useRouter } from "next/navigation";
+import WhistleCursor, { useWhistleCursor } from "@/components/WhistleCursor";
+import "../analytics/analytics.css";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -10,6 +12,13 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Reset any leftover modal locks from previous page sessions
+  useEffect(() => {
+    document.body.classList.remove("modal-open");
+  }, []);
+
+  useWhistleCursor({ theme: "gold", enabled: true });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,9 +35,9 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Redirect to the intended page (defaults to /analytics)
+        // Redirect to the intended page (defaults to /analytics or /my-tasks for field officers)
         const params = new URLSearchParams(window.location.search);
-        const redirectPath = params.get("redirect") || "/analytics";
+        const redirectPath = params.get("redirect") || (data.user?.role === "FIELD_OFFICER" ? "/my-tasks" : "/analytics");
         router.push(redirectPath);
         router.refresh();
       } else {
@@ -43,31 +52,73 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#220305] via-[#4A080E] to-[#110102] p-4 relative overflow-hidden font-sans">
+    <div 
+      className="font-sans"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh",
+        width: "100vw",
+        boxSizing: "border-box",
+        background: "linear-gradient(135deg, #220305 0%, #4A080E 50%, #110102 100%)",
+        position: "relative",
+        overflowX: "hidden",
+        margin: 0,
+        padding: "20px"
+      }}
+    >
       {/* Decorative background elements */}
-      <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-[#FECB02] opacity-10 blur-3xl"></div>
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-[#A00000] opacity-20 blur-3xl"></div>
+      <div style={{ position: "absolute", top: "-10rem", right: "-10rem", width: "24rem", height: "24rem", borderRadius: "50%", background: "#FECB02", opacity: 0.1, filter: "blur(60px)" }} />
+      <div style={{ position: "absolute", bottom: "-10rem", left: "-10rem", width: "24rem", height: "24rem", borderRadius: "50%", background: "#A00000", opacity: 0.2, filter: "blur(60px)" }} />
 
-      <div className="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10">
-        <div className="flex flex-col items-center mb-8">
+      {/* Styled card with high z-index and explicit inline-styles to prevent global overrides */}
+      <div 
+        style={{
+          boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
+          border: "1px solid rgba(255, 255, 255, 0.12)",
+          background: "rgba(17, 1, 2, 0.75)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          width: "100%",
+          maxWidth: "420px",
+          boxSizing: "border-box",
+          padding: "2.5rem 2rem",
+          borderRadius: "1rem",
+          position: "relative",
+          zIndex: 10
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "2rem" }}>
           <img 
             src={TVK_LOGO} 
             alt="TVK Logo" 
-            className="w-24 h-24 object-contain mb-4 drop-shadow-[0_4px_10px_rgba(254,203,2,0.3)]"
+            style={{ width: "90px", height: "90px", objectFit: "contain", marginBottom: "1rem", filter: "drop-shadow(0 4px 10px rgba(254,203,2,0.3))" }}
           />
-          <h1 className="text-2xl font-black text-[#FECB02] text-center tracking-wide">
+          <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 900, color: "#FECB02", textAlign: "center", letterSpacing: "0.05em" }}>
             தமிழக வெற்றிக் கழகம்
           </h1>
-          <p className="text-xs text-white/60 mt-1 font-bold tracking-widest uppercase">
+          <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.75rem", color: "rgba(255,255,255,0.6)", fontWeight: "bold", letterSpacing: "0.1em", textTransform: "uppercase" }}>
             Namakkal West · மக்கள் குரல்
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
+        <form 
+          onSubmit={handleSubmit} 
+          style={{ display: "flex", flexDirection: "column", gap: "1.5rem", width: "100%" }}
+        >
+          {/* Username Field Group */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", width: "100%" }}>
             <label 
               htmlFor="username" 
-              className="block text-sm font-bold text-white/80 mb-2"
+              style={{
+                display: "block",
+                color: "rgba(255, 255, 255, 0.9)",
+                fontSize: "0.85rem",
+                fontWeight: "bold",
+                margin: 0,
+                textAlign: "left"
+              }}
             >
               பயனர் பெயர் (Username)
             </label>
@@ -77,16 +128,39 @@ export default function LoginPage() {
               placeholder="e.g. rep_namakkal"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#FECB02] focus:ring-2 focus:ring-[#FECB02]/20 transition-all text-center text-lg font-semibold"
               disabled={loading}
               autoFocus
+              style={{
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                color: "#FFF",
+                width: "100%",
+                padding: "0.8rem 1rem",
+                borderRadius: "0.6rem",
+                boxSizing: "border-box",
+                fontSize: "1rem",
+                fontWeight: "bold",
+                textAlign: "center",
+                outline: "none",
+                transition: "all 0.2s"
+              }}
+              onFocus={(e) => { e.target.style.border = "1px solid #FECB02"; e.target.style.boxShadow = "0 0 0 2px rgba(254, 203, 2, 0.2)"; }}
+              onBlur={(e) => { e.target.style.border = "1px solid rgba(255, 255, 255, 0.12)"; e.target.style.boxShadow = "none"; }}
             />
           </div>
 
-          <div>
+          {/* Password Field Group */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", width: "100%" }}>
             <label 
               htmlFor="password" 
-              className="block text-sm font-bold text-white/80 mb-2"
+              style={{
+                display: "block",
+                color: "rgba(255, 255, 255, 0.9)",
+                fontSize: "0.85rem",
+                fontWeight: "bold",
+                margin: 0,
+                textAlign: "left"
+              }}
             >
               நுழைவு கடவுச்சொல் (Enter Password)
             </label>
@@ -96,14 +170,29 @@ export default function LoginPage() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#FECB02] focus:ring-2 focus:ring-[#FECB02]/20 transition-all text-center text-lg tracking-widest"
               required
               disabled={loading}
+              style={{
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                color: "#FFF",
+                width: "100%",
+                padding: "0.8rem 1rem",
+                borderRadius: "0.6rem",
+                boxSizing: "border-box",
+                fontSize: "1.1rem",
+                letterSpacing: "0.15em",
+                textAlign: "center",
+                outline: "none",
+                transition: "all 0.2s"
+              }}
+              onFocus={(e) => { e.target.style.border = "1px solid #FECB02"; e.target.style.boxShadow = "0 0 0 2px rgba(254, 203, 2, 0.2)"; }}
+              onBlur={(e) => { e.target.style.border = "1px solid rgba(255, 255, 255, 0.12)"; e.target.style.boxShadow = "none"; }}
             />
           </div>
 
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-200 text-sm text-center font-semibold">
+            <div style={{ padding: "0.75rem", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "0.5rem", color: "#FECB02", fontSize: "0.85rem", textAlign: "center", fontWeight: "bold" }}>
               ⚠️ {error}
             </div>
           )}
@@ -111,24 +200,42 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-[#FECB02] to-[#FFDD55] hover:from-[#FFDD55] hover:to-[#FECB02] text-[#4A080E] font-black rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer text-base"
+            style={{
+              width: "100%",
+              padding: "0.85rem",
+              background: "linear-gradient(to right, #FECB02, #FFDD55)",
+              color: "#4A080E",
+              fontWeight: 900,
+              border: "none",
+              borderRadius: "0.6rem",
+              cursor: "pointer",
+              fontSize: "1rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.5rem",
+              marginTop: "0.5rem",
+              boxShadow: "0 4px 15px rgba(254, 203, 2, 0.25)",
+              transition: "transform 0.1s, box-shadow 0.1s"
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(254, 203, 2, 0.35)"; }}
+            onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 4px 15px rgba(254, 203, 2, 0.25)"; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.98)"; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1.02)"; }}
           >
-            {loading ? (
-              <span className="w-5 h-5 border-2 border-[#4A080E] border-t-transparent rounded-full animate-spin"></span>
-            ) : (
-              <>
-                உள்நுழைய (Login) 🚩
-              </>
-            )}
+            {loading ? "சரிபார்க்கப்படுகிறது..." : "உள்நுழைய (Login) 🚩"}
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-white/5 text-center">
-          <p className="text-[10px] text-white/40 font-semibold tracking-wider">
+        <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.05)", textAlign: "center" }}>
+          <p style={{ margin: 0, fontSize: "0.65rem", color: "rgba(255,255,255,0.4)", fontWeight: "bold", letterSpacing: "0.05em" }}>
             © 2026 நாமக்கல் மேற்கு — தமிழக வெற்றிக் கழகம்
           </p>
         </div>
       </div>
+
+      {/* Render the Custom Whistle Cursor here */}
+      <WhistleCursor />
     </div>
   );
 }

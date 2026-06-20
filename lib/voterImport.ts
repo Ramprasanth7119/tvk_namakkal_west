@@ -197,6 +197,7 @@ export function normalizeVoterRow(
       constituency: cellValue(row, mapping.constituency),
       wardNo: parseWardNo(cellValue(row, mapping.wardNo)),
       wardName: cellValue(row, mapping.wardName),
+      doorNo: mapping.doorNo ? cellValue(row, mapping.doorNo) : undefined,
     },
   };
 }

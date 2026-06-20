@@ -20,10 +20,6 @@ export function useWhistleCursor(options: WhistleCursorOptions = {}) {
 
     if (!cursorOn) return;
 
-    let wcur = document.getElementById("wcur");
-    const clabel = document.getElementById("clabel");
-    if (!wcur || !clabel) return;
-
     document.body.dataset.ctheme = theme;
 
     let mx = window.innerWidth / 2;
@@ -40,9 +36,10 @@ export function useWhistleCursor(options: WhistleCursorOptions = {}) {
 
     const handleMouseOver = (e: MouseEvent) => {
       const hoverSel =
-        "a,button,input,select,textarea,.fchip,.uchip,.hot,.spot,.kpi,.insight-card,.const-stat-card,.timeline-item,.tfilt";
+        "a,button,input,select,textarea,.fchip,.uchip,.hot,.spot,.kpi,.insight-card,.const-stat-card,.timeline-item,.tfilt,td,tr,.card";
       const t = (e.target as HTMLElement).closest(hoverSel) as HTMLElement | null;
       document.body.classList.toggle("chover", !!t);
+      const clabel = document.getElementById("clabel");
       if (t && clabel) {
         clabel.textContent =
           t.dataset.clabel || t.closest("[data-clabel]")?.getAttribute("data-clabel") || "தொடு";
@@ -56,13 +53,14 @@ export function useWhistleCursor(options: WhistleCursorOptions = {}) {
     };
 
     document.body.classList.add("cursor-on");
-    window.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseover", handleMouseOver);
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    document.addEventListener("mouseover", handleMouseOver, { passive: true });
     window.addEventListener("touchstart", handleTouchStart, { once: true, passive: true });
 
     const clampVal = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
     const loop = () => {
+      const wcur = document.getElementById("wcur");
       if (cursorOn && wcur) {
         const ox = cx;
         cx += (mx - cx) * 0.18;

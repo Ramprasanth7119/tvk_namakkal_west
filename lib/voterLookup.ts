@@ -10,6 +10,7 @@ export interface Voter {
   Constituency: string;
   Mobile: string;
   Address: string;
+  DoorNo?: string;
 }
 
 /**
@@ -36,6 +37,7 @@ export async function lookupVoter(voterId: string): Promise<Voter | null> {
       Constituency: doc.constituency || "",
       Mobile: doc.mobile || "",
       Address: doc.address || "",
+      DoorNo: doc.doorNo || "",
     };
   } catch (error) {
     console.error("Error looking up voter in database:", error);

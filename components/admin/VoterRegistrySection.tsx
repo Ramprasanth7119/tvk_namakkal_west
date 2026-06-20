@@ -31,6 +31,7 @@ type VoterRow = {
   voterId: string;
   name: string;
   dob: string;
+  doorNo?: string;
   mobile: string;
   address: string;
   constituency: string;
@@ -342,7 +343,7 @@ export default function VoterRegistrySection() {
                 onClick={handleAnalyze}
                 disabled={!selectedFile || isAnalyzing}
               >
-                {isAnalyzing ? "பகுப்பாய்வு..." : "📋 கோப்பை பகுப்பாய்வு செய்"}
+                {isAnalyzing ? "பகுப்பாய்வு..." : " கோப்பை பகுப்பாய்வு செய்"}
               </button>
               {showConfirm && analyzeResult?.canImport && (
                 <button
@@ -351,7 +352,7 @@ export default function VoterRegistrySection() {
                   onClick={handleImport}
                   disabled={isImporting}
                 >
-                  {isImporting ? "Import செய்கிறது..." : "✅ உறுதிப்படுத்தி Import செய்"}
+                  {isImporting ? "Import செய்கிறது..." : "உறுதிப்படுத்தி Import செய்"}
                 </button>
               )}
             </div>
@@ -360,7 +361,7 @@ export default function VoterRegistrySection() {
 
             {importSummary && (
               <div className="admin-form-message success">
-                ✅ Import முடிந்தது — மொத்தம்: {importSummary.totalRows} · புதிய: {importSummary.imported} ·
+                Import முடிந்தது — மொத்தம்: {importSummary.totalRows} · புதிய: {importSummary.imported} ·
                 புதுப்பிப்பு: {importSummary.updated} · தவிர்க்கப்பட்டது: {importSummary.skipped}
                 {importSummary.durationMs ? ` · ${importSummary.durationMs}ms` : ""}
               </div>
@@ -421,7 +422,7 @@ export default function VoterRegistrySection() {
         <div className="card table-card">
           <div className="tc-head">
             <div>
-              <h3>📜 Import வரலாறு</h3>
+              <h3> Import வரலாறு</h3>
             </div>
           </div>
           <div className="tbl-scroll">
@@ -483,7 +484,7 @@ export default function VoterRegistrySection() {
         <div className="card table-card">
           <div className="tc-head">
             <div>
-              <h3>🔍 வாக்காளர் தேடல்</h3>
+              <h3> வாக்காளர் தேடல்</h3>
               <span className="sub" style={{ display: "block", marginTop: "0.35rem", color: "var(--ink-soft)", fontSize: "0.88rem" }}>
                 Voter ID · பெயர் · மொபைல் · தொகுதி · வார்டு — {totalVoters} பதிவுகள்
               </span>
@@ -548,6 +549,7 @@ export default function VoterRegistrySection() {
                   <th>Voter ID</th>
                   <th>பெயர்</th>
                   <th>பிறந்த தேதி</th>
+                  <th>கதவு எண்</th>
                   <th>மொபைல்</th>
                   <th>தொகுதி</th>
                   <th>வார்டு</th>
@@ -558,11 +560,11 @@ export default function VoterRegistrySection() {
               <tbody>
                 {isVotersLoading ? (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: "center", padding: "2rem" }}>ஏற்றப்படுகிறது...</td>
+                    <td colSpan={9} style={{ textAlign: "center", padding: "2rem" }}>ஏற்றப்படுகிறது...</td>
                   </tr>
                 ) : voters.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: "center", padding: "2rem", color: "var(--ink-soft)" }}>
+                    <td colSpan={9} style={{ textAlign: "center", padding: "2rem", color: "var(--ink-soft)" }}>
                       பதிவுகள் இல்லை
                     </td>
                   </tr>
@@ -572,6 +574,7 @@ export default function VoterRegistrySection() {
                       <td className="t-id">{v.voterId}</td>
                       <td style={{ fontWeight: 700 }}>{v.name || "—"}</td>
                       <td className="t-meta">{v.dob || "—"}</td>
+                      <td className="t-meta">{v.doorNo || "—"}</td>
                       <td className="t-meta">{v.mobile || "—"}</td>
                       <td className="t-meta">{v.constituency || "—"}</td>
                       <td className="t-meta">{v.wardNo ?? "—"}</td>
