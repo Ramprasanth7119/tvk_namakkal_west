@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import './analytics.css';
+import { CONSTITUENCIES } from '@/lib/constituencies';
 
 const CATEGORIES: Record<string, string[]> = {
   "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
@@ -23,12 +24,7 @@ const CATEGORIES: Record<string, string[]> = {
 // Reference data matching the original page exactly
 const AREAS = [
   "அனைத்தும்",
-  "குமாரபாளையம்",
-  "திருச்செங்கோடு",
-  "பரமத்தி வேலூர்",
-  "மல்லசமுத்திரம்",
-  "சேந்தமங்கலம்",
-  "ராசிபுரம்"
+  ...CONSTITUENCIES
 ];
 
 const SECTORS = [
@@ -571,7 +567,7 @@ export default function AnalyticsDashboard() {
               return {
                 id: item.trackingId || 'NMK-0000',
                 sector,
-                area: item.constituency || 'குமாரபாளையம்',
+                area: item.constituency || CONSTITUENCIES[0],
                 title: `${item.complaintDetails?.subcategory || ''} — ${item.complaintDetails?.description || ''}`,
                 by: `${item.citizenDetails?.name || ''}, ${item.citizenDetails?.areaStreet || ''}`,
                 month: m,
@@ -625,7 +621,7 @@ export default function AnalyticsDashboard() {
               return {
                 id: item.trackingId || 'NMK-0000',
                 sector,
-                area: item.constituency || 'குமாரபாளையம்',
+                area: item.constituency || CONSTITUENCIES[0],
                 title: `${item.complaintDetails?.subcategory || ''} — ${item.complaintDetails?.description || ''}`,
                 by: `${item.citizenDetails?.name || ''}, ${item.citizenDetails?.areaStreet || ''}`,
                 month: m,

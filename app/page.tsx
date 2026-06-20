@@ -4,6 +4,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import './home.css';
+import { CONSTITUENCIES } from '@/lib/constituencies';
 
 export default function Home() {
   const [loaderDone, setLoaderDone] = useState(false);
@@ -16,9 +17,9 @@ export default function Home() {
 
   // Stats numbers state
   const [stats, setStats] = useState({ year: 0, members: 0, seats: 0, votes: 0 });
-  const [unionWards, setUnionWards] = useState(20);
-  const [unionBooths, setUnionBooths] = useState(95);
-  const [unionVols, setUnionVols] = useState(510);
+  const [unionWards, setUnionWards] = useState(22);
+  const [unionBooths, setUnionBooths] = useState(105);
+  const [unionVols, setUnionVols] = useState(580);
 
   const pollenCanvasRef = useRef(null);
   const confettiCanvasRef = useRef(null);
@@ -32,12 +33,12 @@ export default function Home() {
   };
 
   const unions = [
-    ['குமாரபாளையம்', 20, 95, 510],
-    ['திருச்செங்கோடு', 24, 118, 640],
-    ['பரமத்தி வேலூர்', 18, 86, 420],
-    ['மல்லசமுத்திரம்', 12, 58, 280],
-    ['சேந்தமங்கலம்', 15, 70, 340],
-    ['ராசிபுரம்', 22, 105, 580]
+    [CONSTITUENCIES[0], 22, 105, 580],
+    [CONSTITUENCIES[1], 15, 70, 340],
+    [CONSTITUENCIES[2], 12, 58, 280],
+    [CONSTITUENCIES[3], 18, 86, 420],
+    [CONSTITUENCIES[4], 24, 118, 640],
+    [CONSTITUENCIES[5], 20, 95, 510]
   ];
 
   useEffect(() => {
@@ -1083,12 +1084,9 @@ export default function Home() {
       </div>
       <div>
         <h4>தொடர்பு / புகார்</h4>
-        <a href="#contact">📍 குமாரபாளையம்</a>
-        <a href="#contact">📍 திருச்செங்கோடு</a>
-        <a href="#contact">📍 பரமத்தி வேலூர்</a>
-        <a href="#contact">📍 மல்லசமுத்திரம்</a>
-        <a href="#contact">📍 சேந்தமங்கலம்</a>
-        <a href="#contact">📍 ராசிபுரம்</a>
+        {CONSTITUENCIES.map((c, idx) => (
+          <a key={idx} href="#contact">📍 {c}</a>
+        ))}
       </div>
     </div>
     <div className="f-bottom">© 2026 நாமக்கல் மேற்கு — தமிழக வெற்றிக் கழகம் · <b>பிறப்பொக்கும் எல்லா உயிர்க்கும்</b> ·

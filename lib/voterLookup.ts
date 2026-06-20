@@ -32,15 +32,21 @@ export function loadVoters(): Voter[] {
     const sheet = workbook.Sheets[sheetName];
     const rawData = xlsx.utils.sheet_to_json(sheet) as any[];
 
-    cachedVoters = rawData.map((row) => ({
-      VoterID: String(row.VoterID || "").trim(),
-      VoterName: String(row.VoterName || "").trim(),
-      WardNo: Number(row.WardNo || 0),
-      WardName: String(row.WardName || "").trim(),
-      Constituency: String(row.Constituency || "").trim(),
-      Mobile: String(row.Mobile || "").trim(),
-      Address: String(row.Address || "").trim(),
-    }));
+    cachedVoters = rawData.map((row) => {
+      let constituency = String(row.Constituency || "").trim();
+      if (constituency === "மல்லசமுத்திரம்") {
+        constituency = "நாமக்கல்";
+      }
+      return {
+        VoterID: String(row.VoterID || "").trim(),
+        VoterName: String(row.VoterName || "").trim(),
+        WardNo: Number(row.WardNo || 0),
+        WardName: String(row.WardName || "").trim(),
+        Constituency: constituency,
+        Mobile: String(row.Mobile || "").trim(),
+        Address: String(row.Address || "").trim(),
+      };
+    });
 
     return cachedVoters;
   } catch (error) {
