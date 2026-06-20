@@ -1,7 +1,7 @@
 import { MongoClient } from "mongodb";
 import { seedDatabase, syncRepresentativeConstituencies } from "./dbSeed";
 
-const uri = "mongodb://localhost:27017/tvk-west";
+const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/tvk-west";
 const options = {
   maxPoolSize: 10,
 };
