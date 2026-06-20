@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { getDb } from "@/lib/mongodb";
+import { hashPassword, signSession, UserSession } from "@/lib/session";
+import { logAuditEvent } from "@/lib/auditLog";
 import {
   getClientIp,
   validateRequestHeaders,
@@ -29,17 +32,51 @@ export async function POST(request: Request) {
     // 3. Sanitize input
     const rawBody = await request.json();
     const body = sanitizeInput(rawBody);
-    const { password } = body;
+    const { username, password } = body;
 
-    const correctPassword = process.env.SITE_PASSWORD || "thalapathy";
+    let userSession: UserSession | null = null;
 
-    if (password === correctPassword) {
-      await logSecurityEvent(ip, "ADMIN_LOGIN_SUCCESS", { message: "Successful admin login" });
+    if (username && username.trim() !== "") {
+      const cleanUsername = username.trim().toLowerCase();
+      const db = await getDb();
+      const user = await db.collection("users").findOne({ username: cleanUsername, active: true });
 
-      const response = NextResponse.json({ success: true });
+      if (user) {
+        const computedHash = hashPassword(password);
+        if (user.passwordHash === computedHash) {
+          userSession = {
+            username: user.username,
+            role: user.role,
+            constituency: user.constituency || null,
+          };
+        }
+      }
+    } else {
+      // Legacy login / Single password login
+      const correctPassword = process.env.SITE_PASSWORD || "thalapathy";
+      if (password === correctPassword) {
+        userSession = {
+          username: "admin",
+          role: "SUPER_ADMIN",
+          constituency: null,
+        };
+      }
+    }
+
+    if (userSession) {
+      await logSecurityEvent(ip, "ADMIN_LOGIN_SUCCESS", { message: `Successful login for user: ${userSession.username}` });
+      await logAuditEvent({
+        username: userSession.username,
+        role: userSession.role,
+        constituency: userSession.constituency,
+        action: "LOGIN",
+      });
+
+      const response = NextResponse.json({ success: true, user: userSession });
+      const signedToken = signSession(userSession);
       
       // Set secure cookie
-      response.cookies.set("site_auth", "authenticated", {
+      response.cookies.set("site_auth", signedToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
@@ -51,10 +88,10 @@ export async function POST(request: Request) {
     }
 
     // Log failed login attempt
-    await logSecurityEvent(ip, "ADMIN_LOGIN_FAILED", { passwordAttempt: password ? "[REDACTED]" : "empty" });
+    await logSecurityEvent(ip, "ADMIN_LOGIN_FAILED", { usernameAttempt: username || "empty", passwordAttempt: password ? "[REDACTED]" : "empty" });
 
     return NextResponse.json(
-      { error: "தவறான கடவுச்சொல் (Incorrect password)" },
+      { error: "தவறான பயனர் பெயர் அல்லது கடவுச்சொல் (Incorrect username or password)" },
       { status: 401 }
     );
   } catch (error) {

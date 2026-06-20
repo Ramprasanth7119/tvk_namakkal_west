@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
+import { TVK_LOGO } from "@/lib/brand";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,7 +20,7 @@ export default function LoginPage() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username: username.trim(), password }),
       });
 
       const data = await res.json();
@@ -49,7 +51,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10">
         <div className="flex flex-col items-center mb-8">
           <img 
-            src="/tvk-logo.png" 
+            src={TVK_LOGO} 
             alt="TVK Logo" 
             className="w-24 h-24 object-contain mb-4 drop-shadow-[0_4px_10px_rgba(254,203,2,0.3)]"
           />
@@ -62,6 +64,25 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label 
+              htmlFor="username" 
+              className="block text-sm font-bold text-white/80 mb-2"
+            >
+              பயனர் பெயர் (Username)
+            </label>
+            <input
+              id="username"
+              type="text"
+              placeholder="e.g. rep_namakkal"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#FECB02] focus:ring-2 focus:ring-[#FECB02]/20 transition-all text-center text-lg font-semibold"
+              disabled={loading}
+              autoFocus
+            />
+          </div>
+
           <div>
             <label 
               htmlFor="password" 
@@ -78,7 +99,6 @@ export default function LoginPage() {
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#FECB02] focus:ring-2 focus:ring-[#FECB02]/20 transition-all text-center text-lg tracking-widest"
               required
               disabled={loading}
-              autoFocus
             />
           </div>
 

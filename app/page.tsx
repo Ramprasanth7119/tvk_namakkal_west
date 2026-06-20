@@ -1,19 +1,383 @@
 // @ts-nocheck
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import './home.css';
-import { CONSTITUENCIES } from '@/lib/constituencies';
+import './analytics/analytics.css';
+import { CONSTITUENCIES, ALL_AREAS } from '@/lib/constituencies';
+import { TVK_LOGO } from '@/lib/brand';
+import { calculateAgeFromDob } from '@/lib/voterRegistry';
+
+const CATEGORIES = {
+  "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
+  "சாலை": ["சாலை சேதம்", "புதிய சாலை தேவை", "வேகத்தடை தேவை", "பிற"],
+  "குடிநீர்": ["குடிநீர் குழாய் உடைப்பு", "குடிநீர் வராமை", "அசுத்தமான குடிநீர்", "பிற"],
+  "கழிவுநீர்": ["சாக்கடை அடைப்பு", "கழிவுநீர் தேக்கம்", "பிற"],
+  "சுகாதாரம்": ["குப்பை அள்ளப்படவில்லை", "கொசு மருந்து தெளிக்க வேண்டும்", "பிற"],
+  "போக்குவரத்து": ["பேருந்து வசதி குறைபாடு", "போக்குவரத்து நெரிசல்", "பிற"],
+  "தெருவிளக்கு": ["தெருவிளக்கு எரியவில்லை", "புதிய தெருவிளக்கு கம்பம் தேவை", "பிற"],
+  "கல்வி": ["பள்ளி கட்டிட பழுது", "பள்ளி கழிப்பறை வசதி", "பிற"],
+  "மருத்துவம்": ["ஆரம்ப சுகாதார நிலையம்", "மருந்து தட்டுப்பாடு", "பிற"],
+  "அரசு நலத்திட்டம்": ["முதியோர் உதவித்தொகை", "ரேஷன் கடை குறைபாடு", "பிற"],
+  "வருவாய் துறை": ["பட்டா மாறுதல்", "சான்றிதழ் கோரிக்கை", "பிற"],
+  "காவல்துறை": ["பாதுகாப்பு குறைபாடு", "புகார் மனு மீது நடவடிக்கை", "பிற"],
+  "சுற்றுச்சூழல்": ["நீர்நிலை மாசுபடுதல்", "காற்று மாசுபடுதல்", "பிற"],
+  "பிற": ["பிற குறைபாடுகள்"]
+};
 
 export default function Home() {
   const [loaderDone, setLoaderDone] = useState(false);
   const [loaderHidden, setLoaderHidden] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+
+  // Complaint Popup Form State
+  const [isComplaintOpen, setIsComplaintOpen] = useState(false);
+  const [voterId, setVoterId] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [voterVerified, setVoterVerified] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
+
+  const [name, setName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [aadhaar, setAadhaar] = useState('');
+  const [gender, setGender] = useState('ஆண்');
+  const [age, setAge] = useState('');
+  const [dob, setDob] = useState('');
+  const [address, setAddress] = useState('');
+  const [constituency, setConstituency] = useState<string>(CONSTITUENCIES[0]);
+  const [ward, setWard] = useState('');
+  const [areaStreet, setAreaStreet] = useState('');
+  const [category, setCategory] = useState(Object.keys(CATEGORIES)[0]);
+  const [subcategory, setSubcategory] = useState(CATEGORIES[Object.keys(CATEGORIES)[0]][0]);
+  const [description, setDescription] = useState('');
+  const [emailHoneypot, setEmailHoneypot] = useState('');
+  const [urgency, setUrgency] = useState('சாதாரண');
+
+  // Media state - Support multiple photos!
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [video, setVideo] = useState<string | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+
+  // Geolocation state
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [isIpLocating, setIsIpLocating] = useState(false);
+
+  // Submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [trackingId, setTrackingId] = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState('');
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  // Update subcategory list when category changes
+  useEffect(() => {
+    setSubcategory(CATEGORIES[category][0]);
+  }, [category]);
+
+  // Lock scroll and restore native cursor while complaint modal is open
+  useEffect(() => {
+    document.body.classList.toggle('modal-open', isComplaintOpen);
+    if (isComplaintOpen) {
+      document.body.classList.remove('chover');
+    }
+    return () => document.body.classList.remove('modal-open', 'chover');
+  }, [isComplaintOpen]);
+
+  // Fetch IP Geolocation to auto-fill address automatically when modal opens
+  useEffect(() => {
+    if (isComplaintOpen && !voterVerified) {
+      const fetchIpLocation = async () => {
+        setIsIpLocating(true);
+        try {
+          const res = await fetch('https://ipapi.co/json/');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.latitude && data.longitude) {
+              const lat = data.latitude;
+              const lon = data.longitude;
+              setLatitude(lat);
+              setLongitude(lon);
+              
+              // Use Nominatim to reverse-geocode the IP coordinates to get a real address name!
+              const geocodeUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ta,en`;
+              const geoRes = await fetch(geocodeUrl, {
+                headers: {
+                  'User-Agent': 'TVK-Namakkal-West-Grievance-Platform'
+                }
+              });
+              if (geoRes.ok) {
+                const geoData = await geoRes.json();
+                if (geoData.display_name) {
+                  setAddress(geoData.display_name);
+                  
+                  // Auto-detect constituency from address
+                  const addressLower = geoData.display_name.toLowerCase();
+                  for (const constName of CONSTITUENCIES) {
+                    if (addressLower.includes(constName.toLowerCase())) {
+                      setConstituency(constName);
+                      break;
+                    }
+                  }
+                }
+              } else {
+                setAddress(`${data.city}, ${data.region}, India`);
+              }
+            } else if (data.city && data.region) {
+              setAddress(`${data.city}, ${data.region}, India`);
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching IP Geolocation:", err);
+        } finally {
+          setIsIpLocating(false);
+        }
+      };
+      fetchIpLocation();
+    }
+  }, [isComplaintOpen, voterVerified]);
+
+  // Handle voter verification lookup
+  const handleVerifyVoter = async () => {
+    if (!voterId.trim()) {
+      setVerificationError('வாக்காளர் அடையாள எண் தேவை');
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerificationError('');
+    setVoterVerified(false);
+
+    try {
+      const res = await fetch('/api/voter/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voterId: voterId.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.found) {
+        setVoterVerified(true);
+        setName(data.voter.VoterName);
+        setMobile(data.voter.Mobile);
+        setWard(String(data.voter.WardNo));
+        setAddress(data.voter.Address);
+        const voterDob = data.voter.DOB || '';
+        setDob(voterDob);
+        setAge(calculateAgeFromDob(voterDob));
+        
+        const matchedConstituency = CONSTITUENCIES.find(
+          (c) => c.toLowerCase() === data.voter.Constituency.toLowerCase()
+        );
+        if (matchedConstituency) {
+          setConstituency(matchedConstituency);
+        }
+      } else {
+        setVerificationError(data.message || 'வாக்காளர் அடையாளம் கண்டறியப்படவில்லை');
+      }
+    } catch (err) {
+      console.error(err);
+      setVerificationError('சரிபார்ப்பதில் பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Geolocation lookup with Nominatim reverse geocoding to get real Tamil address!
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert('உங்கள் உலாவி இருப்பிட சேவையை ஆதரிக்கவில்லை.');
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        setLatitude(lat);
+        setLongitude(lon);
+
+        try {
+          // Fetch real Tamil address from OpenStreetMap Nominatim API
+          const geocodeUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ta,en`;
+          const geoRes = await fetch(geocodeUrl, {
+            headers: {
+              'User-Agent': 'TVK-Namakkal-West-Grievance-Platform'
+            }
+          });
+          if (geoRes.ok) {
+            const geoData = await geoRes.json();
+            if (geoData.display_name) {
+              setAddress(geoData.display_name);
+              
+              // Try to auto-detect and set constituency from the Tamil address!
+              const addressLower = geoData.display_name.toLowerCase();
+              for (const constName of CONSTITUENCIES) {
+                if (addressLower.includes(constName.toLowerCase())) {
+                  setConstituency(constName);
+                  break;
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error reverse geocoding GPS coordinates:", err);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        console.error(error);
+        alert('இருப்பிடத்தைப் பெறுவதில் தோல்வி. அனுமதி வழங்கப்பட்டுள்ளதா எனச் சரிபார்க்கவும்.');
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // Camera capture methods
+  const startCamera = async () => {
+    setIsCameraActive(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error(err);
+      alert('கேமராவை இயக்க முடியவில்லை.');
+      setIsCameraActive(false);
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const videoEl = videoRef.current;
+      const canvasEl = canvasRef.current;
+      const context = canvasEl.getContext('2d');
+
+      if (context) {
+        canvasEl.width = videoEl.videoWidth;
+        canvasEl.height = videoEl.videoHeight;
+        context.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+        const dataUrl = canvasEl.toDataURL('image/jpeg', 0.7);
+        setPhotos(prev => [...prev, dataUrl]); // Add to multiple photos array!
+        stopCamera();
+      }
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  // File uploads
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPhotos(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert('வீдео கோப்பு அளவு 10MB ஐ விடக் குறைவாக இருக்க வேண்டும்.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVideo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Submit form
+  const handleSubmitComplaint = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!voterVerified) {
+      alert('வாக்காளர் அடையாளம் சரிபார்க்கப்பட வேண்டும்.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmissionError('');
+
+    const payload = {
+      voterId: voterId.trim(),
+      voterVerified,
+      ward,
+      constituency,
+      citizenDetails: {
+        name,
+        mobile,
+        aadhaar: aadhaar.trim() || undefined,
+        gender,
+        age: age ? parseInt(age, 10) : undefined,
+        address,
+        areaStreet,
+      },
+      complaintDetails: {
+        category,
+        subcategory,
+        description,
+        urgency,
+      },
+      mediaUrls: {
+        photos: photos.length > 0 ? photos : undefined,
+        video: video || undefined,
+      },
+      geolocation: latitude && longitude ? { latitude, longitude } : undefined,
+      email_honeypot: emailHoneypot,
+    };
+
+    try {
+      const res = await fetch('/api/complaints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setTrackingId(data.trackingId);
+      } else {
+        setSubmissionError(data.error || 'புகாரைச் சமர்ப்பிப்பதில் பிழை ஏற்பட்டது.');
+      }
+    } catch (err) {
+      console.error(err);
+      setSubmissionError('புகாரைச் சமர்ப்பிப்பதில் பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   const [flagPart, setFlagPart] = useState('none');
   const [selectedUnion, setSelectedUnion] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [websiteHoneypot, setWebsiteHoneypot] = useState('');
+  const [resolvedShowcase, setResolvedShowcase] = useState<any[]>([]);
 
   // Stats numbers state
   const [stats, setStats] = useState({ year: 0, members: 0, seats: 0, votes: 0 });
@@ -33,13 +397,24 @@ export default function Home() {
   };
 
   const unions = [
-    [CONSTITUENCIES[0], 22, 105, 580],
-    [CONSTITUENCIES[1], 15, 70, 340],
-    [CONSTITUENCIES[2], 12, 58, 280],
-    [CONSTITUENCIES[3], 18, 86, 420],
-    [CONSTITUENCIES[4], 24, 118, 640],
-    [CONSTITUENCIES[5], 20, 95, 510]
+    [CONSTITUENCIES[0], 20, 95, 510],
+    [CONSTITUENCIES[1], 12, 58, 280],
+    [CONSTITUENCIES[2], 18, 86, 420],
   ];
+
+  useEffect(() => {
+    const fetchResolved = async () => {
+      try {
+        const res = await fetch('/api/public/resolved?limit=6');
+        if (res.ok) {
+          setResolvedShowcase(await res.json());
+        }
+      } catch (err) {
+        console.error('Error fetching resolved showcase:', err);
+      }
+    };
+    fetchResolved();
+  }, []);
 
   useEffect(() => {
     /* ================= LOADER ================= */
@@ -549,7 +924,7 @@ export default function Home() {
           setLoaderHidden(true);
         }
       }}>
-        <img src="/tvk-logo.png" alt="" />
+        <img src={TVK_LOGO} alt="" />
         <b>தமிழக வெற்றிக் கழகம்</b>
         <span>Namakkal West</span>
       </div>
@@ -580,17 +955,18 @@ export default function Home() {
       <nav className="nav" id="nav">
         <div className="nav-inner">
           <a className="brand" href="#top">
-            <Image src="/tvk-logo.png" alt="TVK" width={36} height={36} style={{ objectFit: 'contain' }} />
+            <Image src={TVK_LOGO} alt="TVK" width={36} height={36} style={{ objectFit: 'contain' }} />
             <span className="brand-text"><small>TVK · Namakkal West</small><b>தமிழக வெற்றிக் கழகம்</b></span>
           </a>
           <button className="nav-toggle" id="navToggle" aria-label="Menu" onClick={() => setNavOpen(!navOpen)}>☰</button>
           <div className={`nav-links ${navOpen ? 'open' : ''}`} id="navLinks">
-            <a href="#top" onClick={() => setNavOpen(false)}>முகப்பு</a>
+            {/* <a href="#top" onClick={() => setNavOpen(false)}>முகப்பு</a> */}
             <a href="#ideology" onClick={() => setNavOpen(false)}>கொடி & கொள்கை</a>
             <a href="#leaders" onClick={() => setNavOpen(false)}>தலைவர்கள்</a>
             <a href="#plan" onClick={() => setNavOpen(false)}>என் தெரு, என் திட்டம்</a>
             <a href="#events" onClick={() => setNavOpen(false)}>நிகழ்வுகள்</a>
-            <a href="/analytics" onClick={() => setNavOpen(false)}>பகுப்பாய்வு</a>
+            <a href="#complaint" onClick={(e) => { e.preventDefault(); setNavOpen(false); setIsComplaintOpen(true); }}>குறைதீர் மனு</a>
+            <a href="/track" onClick={() => setNavOpen(false)}>மனு நிலை அறிதல்</a>
             <a href="#contact" onClick={() => setNavOpen(false)}>தொடர்பு</a>
             <a href="#join" className="cta" onClick={() => setNavOpen(false)}>இணையுங்கள் 🚩</a>
           </div>
@@ -647,8 +1023,8 @@ export default function Home() {
         <span>திருக்குறள் · 972</span>
       </div>
       <div className="h-ctas">
-        <a className="btn btn-gold magnetic" href="#join">இப்போதே இணையுங்கள் 🚩</a>
-        <a className="btn btn-ghost magnetic" href="#ideology">கொடியின் கதை</a>
+        <a className="btn btn-gold magnetic" href="#complaint" onClick={(e) => { e.preventDefault(); setIsComplaintOpen(true); }}>குறைதீர் மனு சமர்ப்பிக்க 📋</a>
+        <a className="btn btn-ghost magnetic" href="#join">இப்போதே இணையுங்கள் 🚩</a>
       </div>
       <div className="h-cue" id="hCue">Scroll</div>
     </div>
@@ -680,6 +1056,43 @@ export default function Home() {
   </section>
 
   {/* SERVICES */}
+  {/* RESOLVED COMPLAINTS SHOWCASE */}
+  <section className="sec-pad" data-cursor="gold" data-rail="தீர்வுகள்" id="resolved-showcase">
+    <div className="wrap">
+      <div className="sec-head center">
+        <span className="sec-eyebrow">பொது வெளிப்படைத்தன்மை</span>
+        <h2>தீர்க்கப்பட்ட மக்கள் குறைகள்</h2>
+        <p>தமிழக வெற்றிக் கழகம் தீர்த்த வெற்றிகரமான மக்கள் குறைகளின் சில உதாரணங்கள் — குடிமக்கள் அடையாளம் மறைக்கப்பட்டுள்ளது.</p>
+      </div>
+      {resolvedShowcase.length > 0 ? (
+        <div className="svc-grid" style={{ marginTop: '2rem' }}>
+          {resolvedShowcase.map((item, idx) => (
+            <div key={item.trackingId || idx} className="svc spot rv" style={{ minHeight: '280px' }}>
+              <div className="svc-ic" style={{ fontSize: '1.5rem' }}>✅</div>
+              <h3>{item.category}{item.subcategory ? ` · ${item.subcategory}` : ''}</h3>
+              <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.75)' }}>📍 {item.constituency}</p>
+              <p style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{item.summary || 'மக்கள் குறை வெற்றிகரமாக தீர்க்கப்பட்டது.'}</p>
+              {(item.beforeImage || item.afterImage) && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.75rem' }}>
+                  {item.beforeImage && <img src={item.beforeImage} alt="முன்" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />}
+                  {item.afterImage && <img src={item.afterImage} alt="பின்" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />}
+                </div>
+              )}
+              <p style={{ fontSize: '0.8rem', marginTop: '0.75rem', opacity: 0.8 }}>
+                தீர்வு: {item.resolutionDate ? new Date(item.resolutionDate).toLocaleDateString('ta-IN') : '-'}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p style={{ textAlign: 'center', marginTop: '2rem', opacity: 0.7 }}>தீர்க்கப்பட்ட புகார்கள் விரைவில் இங்கே காட்டப்படும்.</p>
+      )}
+      <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+        <a className="btn btn-ghost magnetic" href="/track">உங்கள் மனு நிலையை அறிய 🔍</a>
+      </div>
+    </div>
+  </section>
+
   {/* ANALYTICS LINK */}
   <section className="sec-pad" data-cursor="gold" data-rail="பகுப்பாய்வு" id="analytics-link">
     <div className="wrap">
@@ -1069,7 +1482,7 @@ export default function Home() {
     <div className="f-inner">
       <div className="f-brand">
         <a className="brand" href="#top">
-          <Image src="/tvk-logo.png" alt="TVK" width={36} height={36} style={{ objectFit: 'contain' }} />
+          <Image src={TVK_LOGO} alt="TVK" width={36} height={36} style={{ objectFit: 'contain' }} />
           <span><small>TVK · Namakkal West</small><b style={{ color: 'var(--gold-3)' }}>தமிழக வெற்றிக் கழகம்</b></span>
         </a>
         <p>நாமக்கல் மேற்கு மாவட்டம் — கட்சி அலுவலக முகவரி, அலைபேசி எண் மற்றும் மின்னஞ்சல் இங்கே இணைக்கப்படும்.</p>
@@ -1078,7 +1491,7 @@ export default function Home() {
         <h4>விரைவு இணைப்புகள்</h4>
         <a href="#top">முகப்பு</a>
         <a href="#events">நிகழ்வுகள்</a>
-        <a href="/analytics">பகுப்பாய்வு</a>
+        <a href="#complaint" onClick={(e) => { e.preventDefault(); setIsComplaintOpen(true); }}>குறைதீர் மனு</a>
         <a href="#plan">என் தெரு, என் திட்டம்</a>
         <a href="#join">இணையுங்கள்</a>
       </div>
@@ -1092,6 +1505,508 @@ export default function Home() {
     <div className="f-bottom">© 2026 நாமக்கல் மேற்கு — தமிழக வெற்றிக் கழகம் · <b>பிறப்பொக்கும் எல்லா உயிர்க்கும்</b> ·
       Premium demo build</div>
   </footer>
+
+  {/* COMPLAINT POPUP MODAL */}
+  {isComplaintOpen && (
+    <div className="modal-overlay complaint-modal-overlay">
+      <div className="modal-content complaint-modal-content">
+        <div className="complaint-modal-header">
+          <img src={TVK_LOGO} alt="" className="complaint-modal-whistle" aria-hidden="true" />
+          <div>
+            <small style={{ color: '#FECB02', fontWeight: 800, letterSpacing: '0.05em' }}>TVK · NAMAKKAL WEST</small>
+            <h2 style={{ margin: '0.25rem 0 0', fontSize: '1.25rem', fontWeight: 900, color: '#fff' }}>பொதுமக்கள் குறைதீர் மனு</h2>
+          </div>
+          <button
+            className="modal-close-btn"
+            onClick={() => {
+              setIsComplaintOpen(false);
+              if (isCameraActive) stopCamera();
+            }}
+            aria-label="மூடு"
+            style={{ position: 'static', background: 'rgba(255,255,255,0.15)', color: '#fff' }}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="complaint-modal-body">
+
+        {trackingId ? (
+          <div className="form-card success-card">
+            <div className="success-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </div>
+            <h2 style={{ color: 'var(--ok)', fontSize: '1.6rem', fontWeight: 800, marginBottom: '1rem' }}>
+              மனு வெற்றிகரமாகச் சமர்ப்பிக்கப்பட்டது!
+            </h2>
+            <p style={{ color: 'var(--ink-soft)', fontSize: '1rem', marginBottom: '1.25rem' }}>
+              உங்கள் மனுவின் கண்காணிப்பு எண் கீழே தரப்பட்டுள்ளது. இதைப் பயன்படுத்தி உங்கள் மனுவின் நிலையை அறிந்து கொள்ளலாம்.
+            </p>
+            <div className="tracking-id-box">{trackingId}</div>
+            <a
+              className="verify-btn"
+              href={`/track?trackingId=${encodeURIComponent(trackingId)}`}
+              style={{ padding: '0.8rem 2rem', fontSize: '1rem', marginTop: '1rem', display: 'inline-block', textDecoration: 'none' }}
+            >
+              மனு நிலையை அறிய 🔍
+            </a>
+            <button
+              className="verify-btn"
+              style={{ padding: '0.8rem 2rem', fontSize: '1rem', marginTop: '1.25rem', display: 'block', margin: '0 auto' }}
+              onClick={() => {
+                setTrackingId(null);
+                setVoterVerified(false);
+                setVoterId('');
+                setName('');
+                setMobile('');
+                setAadhaar('');
+                setAge('');
+                setAddress('');
+                setAreaStreet('');
+                setDescription('');
+                setPhotos([]);
+                setVideo(null);
+                setLatitude(null);
+                setLongitude(null);
+              }}
+            >
+              புதிய மனுவைச் சமர்ப்பிக்க
+            </button>
+          </div>
+        ) : (
+          <div className="form-card">
+            <div className="form-header">
+              <h1>பொதுமக்கள் குறைதீர் மனு</h1>
+              <p>உங்கள் குறைகளைத் தொகுதி வாரியாகப் பதிவு செய்து தீர்வு காணுங்கள்</p>
+            </div>
+
+            <form onSubmit={handleSubmitComplaint} autoComplete="off">
+              {/* Honeypot field for bot protection */}
+              <div style={{ display: 'none' }} aria-hidden="true">
+                <input
+                  type="text"
+                  name="email_honeypot"
+                  value={emailHoneypot}
+                  onChange={(e) => setEmailHoneypot(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+              </div>
+              {/* SECTION 1: VOTER VERIFICATION */}
+              <div className="form-section">
+                <div className="form-section-title">
+                  <span>1. வாக்காளர் சரிபார்ப்பு</span>
+                </div>
+                <div className="input-group">
+                  <label htmlFor="voterId">வாக்காளர் அடையாள எண் (Voter ID) *</label>
+                  <div className="verify-box">
+                    <input
+                      id="voterId"
+                      type="text"
+                      placeholder="எ.கா. TN0010001"
+                      value={voterId}
+                      onChange={(e) => setVoterId(e.target.value)}
+                      disabled={voterVerified}
+                      required
+                    />
+                    {!voterVerified ? (
+                      <button
+                        type="button"
+                        className="verify-btn"
+                        onClick={handleVerifyVoter}
+                        disabled={isVerifying}
+                      >
+                        {isVerifying ? 'சரிபார்க்கிறது...' : 'சரிபார்'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="verify-btn"
+                        style={{ background: '#777' }}
+                        onClick={() => {
+                          setVoterVerified(false);
+                          setName('');
+                          setMobile('');
+                          setWard('');
+                          setAddress('');
+                          setDob('');
+                          setAge('');
+                        }}
+                      >
+                        மாற்று
+                      </button>
+                    )}
+                  </div>
+
+                  {voterVerified && (
+                    <div className="status-badge success">
+                      <span>✅ வாக்காளர் அடையாளம் சரிபார்க்கப்பட்டது</span>
+                    </div>
+                  )}
+
+                  {verificationError && (
+                    <div className="status-badge error">
+                      <span>❌ {verificationError}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SECTION 2: CITIZEN DETAILS */}
+              <div className="form-section">
+                <div className="form-section-title">
+                  <span>2. பொதுமக்கள் விவரங்கள்</span>
+                </div>
+
+                <div className="input-row">
+                  <div className="input-group">
+                    <label htmlFor="name">பெயர் *</label>
+                    <input
+                      id="name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      readOnly={voterVerified}
+                      required
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label htmlFor="mobile">மொபைல் எண் *</label>
+                    <input
+                      id="mobile"
+                      type="tel"
+                      value={mobile}
+                      onChange={(e) => setMobile(e.target.value)}
+                      readOnly={voterVerified}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="input-row">
+                  <div className="input-group">
+                    <label htmlFor="dob">பிறந்த தேதி (Date of Birth)</label>
+                    <input
+                      id="dob"
+                      type="text"
+                      value={dob}
+                      readOnly
+                      placeholder={voterVerified ? "" : "வாக்காளர் சரிபார்ப்புக்குப் பிறகு நிரப்பப்படும்"}
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label htmlFor="aadhaar">ஆதார் எண் (விருப்பத்தேர்வு)</label>
+                    <input
+                      id="aadhaar"
+                      type="text"
+                      placeholder="XXXX XXXX XXXX"
+                      value={aadhaar}
+                      onChange={(e) => setAadhaar(e.target.value)}
+                    />
+                  </div>
+                  <div className="input-row" style={{ gap: '1rem' }}>
+                    <div className="input-group">
+                      <label htmlFor="gender">பாலினம் *</label>
+                      <select
+                        id="gender"
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        required
+                      >
+                        <option value="ஆண்">ஆண்</option>
+                        <option value="பெண்">பெண்</option>
+                        <option value="இதர">இதர</option>
+                      </select>
+                    </div>
+                    <div className="input-group">
+                      <label htmlFor="age">வயது *</label>
+                      <input
+                        id="age"
+                        type="number"
+                        min="18"
+                        max="120"
+                        value={age}
+                        onChange={(e) => setAge(e.target.value)}
+                        readOnly={voterVerified && !!dob}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <label htmlFor="address">முகவரி *</label>
+                  <textarea
+                    id="address"
+                    rows={3}
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    readOnly={voterVerified}
+                    placeholder={isIpLocating ? "இருப்பிட முகவரியைக் கண்டறிகிறது..." : "உங்கள் முகவரி"}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* SECTION 3: LOCATION DETAILS */}
+              <div className="form-section">
+                <div className="form-section-title">
+                  <span>3. இருப்பிட விவரங்கள்</span>
+                </div>
+
+                <div className="input-row">
+                  <div className="input-group">
+                    <label htmlFor="constituency">தொகுதி *</label>
+                    <select
+                      id="constituency"
+                      value={constituency}
+                      onChange={(e) => setConstituency(e.target.value)}
+                      disabled={voterVerified}
+                      required
+                    >
+                      {CONSTITUENCIES.map((c, i) => (
+                        <option key={i} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label htmlFor="ward">வார்டு எண் *</label>
+                    <input
+                      id="ward"
+                      type="text"
+                      value={ward}
+                      onChange={(e) => setWard(e.target.value)}
+                      readOnly={voterVerified}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <label htmlFor="areaStreet">பகுதி / தெரு பெயர் *</label>
+                  <input
+                    id="areaStreet"
+                    type="text"
+                    placeholder="எ.கா. காந்தி நகர், மெயின் ரோடு"
+                    value={areaStreet}
+                    onChange={(e) => setAreaStreet(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label>தற்போதைய இருப்பிடம் (GPS)</label>
+                  <div className="geo-box">
+                    <button
+                      type="button"
+                      className="geo-btn"
+                      onClick={handleGetLocation}
+                      disabled={isLocating}
+                    >
+                      <svg viewBox="0 0 24 24" style={{ width: 18, height: 18, fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}>
+                        <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
+                      {isLocating ? 'கண்டறிகிறது...' : 'இருப்பிடத்தை கண்டறி'}
+                    </button>
+                    {latitude && longitude && (
+                      <span style={{ fontSize: '0.9rem', color: 'var(--ok)', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span>📍 {latitude.toFixed(5)}, {longitude.toFixed(5)}</span>
+                        {address && <span style={{ fontSize: '0.8rem', color: 'var(--ink)', fontWeight: 'normal' }}>{address}</span>}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 4: COMPLAINT DETAILS */}
+              <div className="form-section">
+                <div className="form-section-title">
+                  <span>4. குறைபாடு விவரங்கள்</span>
+                </div>
+
+                <div className="input-row">
+                  <div className="input-group">
+                    <label htmlFor="category">குறைபாடு வகை *</label>
+                    <select
+                      id="category"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      required
+                    >
+                      {Object.keys(CATEGORIES).map((cat, i) => (
+                        <option key={i} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label htmlFor="subcategory">குறைபாடு துணை வகை *</label>
+                    <select
+                      id="subcategory"
+                      value={subcategory}
+                      onChange={(e) => setSubcategory(e.target.value)}
+                      required
+                    >
+                      {CATEGORIES[category].map((sub, i) => (
+                        <option key={i} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="input-row">
+                  <div className="input-group">
+                    <label htmlFor="urgency">அவசர நிலை *</label>
+                    <select
+                      id="urgency"
+                      value={urgency}
+                      onChange={(e) => setUrgency(e.target.value)}
+                      required
+                    >
+                      <option value="சாதாரண">சாதாரண</option>
+                      <option value="முக்கியம்">முக்கியம்</option>
+                      <option value="அதி அவசரம்">அதி அவசரம்</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <label htmlFor="description">குறைபாடு விவரம் *</label>
+                  <textarea
+                    id="description"
+                    rows={4}
+                    placeholder="உங்கள் குறைபாட்டைப் பற்றி விரிவாக எழுதவும்..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* SECTION 5: CAMERA & MEDIA SUPPORT */}
+              <div className="form-section">
+                <div className="form-section-title">
+                  <span>5. புகைப்படங்கள் & வீடியோக்கள்</span>
+                </div>
+
+                <div className="input-row">
+                  {/* Photo Section */}
+                  <div className="media-box">
+                    <label style={{ marginBottom: '1rem' }}>புகைப்படங்கள் (Photos)</label>
+                    {isCameraActive ? (
+                      <div>
+                        <video ref={videoRef} autoPlay playsInline className="camera-preview" />
+                        <div className="media-actions">
+                          <button type="button" className="media-btn" style={{ background: 'var(--ok)', color: '#fff' }} onClick={capturePhoto}>
+                            படம் எடு
+                          </button>
+                          <button type="button" className="media-btn" onClick={stopCamera}>
+                            நிறுத்து
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '1rem' }}>
+                          கேமரா மூலம் படம் எடுக்கவும் அல்லது கோப்புகளைப் பதிவேற்றவும் (பல புகைப்படங்கள் சேர்க்கலாம்)
+                        </p>
+                        <div className="media-actions">
+                          <button type="button" className="media-btn" onClick={startCamera}>
+                            📷 கேமரா
+                          </button>
+                          <button type="button" className="media-btn" onClick={() => fileInputRef.current?.click()}>
+                            📁 பதிவேற்று
+                          </button>
+                        </div>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          accept="image/*"
+                          multiple
+                          style={{ display: 'none' }}
+                          onChange={handlePhotoUpload}
+                          title="புகைப்படம் பதிவேற்று"
+                        />
+
+                        {/* Multiple Photos Preview Grid */}
+                        {photos.length > 0 && (
+                          <div className="preview-grid">
+                            {photos.map((p, idx) => (
+                              <div key={idx} className="preview-thumbnail-wrapper">
+                                <img src={p} alt={`Preview ${idx}`} className="preview-thumbnail" />
+                                <button
+                                  type="button"
+                                  className="remove-thumbnail-btn"
+                                  onClick={() => setPhotos(prev => prev.filter((_, i) => i !== idx))}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+                  </div>
+
+                  {/* Video Section */}
+                  <div className="media-box">
+                    <label style={{ marginBottom: '1rem' }}>வீடியோ (Video)</label>
+                    {video ? (
+                      <div>
+                        <video src={video} controls className="preview-video" />
+                        <div className="media-actions">
+                          <button type="button" className="media-btn" onClick={() => setVideo(null)}>
+                            நீக்கு
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '1rem' }}>
+                          குறுகிய வீடியோ பதிவேற்றவும் (அதிகபட்சம் 10MB)
+                        </p>
+                        <div className="media-actions">
+                          <button type="button" className="media-btn" onClick={() => videoInputRef.current?.click()}>
+                            📹 வீடியோ பதிவேற்று
+                          </button>
+                        </div>
+                        <input
+                          type="file"
+                          ref={videoInputRef}
+                          accept="video/mp4,video/quicktime"
+                          style={{ display: 'none' }}
+                          onChange={handleVideoUpload}
+                          title="வீடியோ பதிவேற்று"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {submissionError && (
+                <div className="status-badge error" style={{ marginBottom: '1.5rem' }}>
+                  <span>❌ {submissionError}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="submit-btn"
+                disabled={isSubmitting || !voterVerified}
+              >
+                {isSubmitting ? 'சமர்ப்பிக்கப்படுகிறது...' : 'மனுவைச் சமர்ப்பி 🚩'}
+              </button>
+            </form>
+          </div>
+        )}
+        </div>
+      </div>
+    </div>
+  )}
 
   
 

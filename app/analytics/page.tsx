@@ -2,7 +2,9 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import './analytics.css';
-import { CONSTITUENCIES } from '@/lib/constituencies';
+import { CONSTITUENCIES, ALL_AREAS } from '@/lib/constituencies';
+import { TVK_LOGO } from '@/lib/brand';
+import TvkAppFooter from '@/components/TvkAppFooter';
 
 const CATEGORIES: Record<string, string[]> = {
   "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
@@ -20,12 +22,6 @@ const CATEGORIES: Record<string, string[]> = {
   "சுற்றுச்சூழல்": ["நீர்நிலை மாசுபடுதல்", "காற்று மாசுபடுதல்", "பிற"],
   "பிற": ["பிற குறைபாடுகள்"]
 };
-
-// Reference data matching the original page exactly
-const AREAS = [
-  "அனைத்தும்",
-  ...CONSTITUENCIES
-];
 
 const SECTORS = [
   { key: "road", name: "சாலை & போக்குவரத்து", color: "#A00000" },
@@ -87,7 +83,7 @@ interface Complaint {
 function genData(): Complaint[] {
   const rows: Complaint[] = [];
   let id = 1042;
-  const areas = AREAS.slice(1);
+  const areas = [...CONSTITUENCIES];
   for (let i = 0; i < 78; i++) {
     const sec = pick(SECTORS).key;
     const area = pick(areas);
@@ -151,6 +147,66 @@ export default function AnalyticsDashboard() {
   const [curSearch, setCurSearch] = useState("");
   const [demoMode, setDemoMode] = useState(true);
   const [dbData, setDbData] = useState<Complaint[]>([]);
+  const [sessionUser, setSessionUser] = useState<any>(null);
+  const [isSessionLoading, setIsSessionLoading] = useState(true);
+  const [publicAnalytics, setPublicAnalytics] = useState<any>(null);
+  const [isPublicLoading, setIsPublicLoading] = useState(false);
+  const isPublicView = !isSessionLoading && !sessionUser;
+
+  // Memoize allowed areas based on user role
+  const allowedAreas = useMemo(() => {
+    if (sessionUser && sessionUser.role === "REPRESENTATIVE") {
+      return ALL_AREAS.filter(a => a === sessionUser.constituency);
+    }
+    return ALL_AREAS;
+  }, [sessionUser]);
+
+  // Fetch current user session on mount
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            setSessionUser(data.user);
+            if (data.user.role === "REPRESENTATIVE") {
+              setDemoMode(false);
+              setCurArea(data.user.constituency);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching session:", err);
+      } finally {
+        setIsSessionLoading(false);
+      }
+    };
+    fetchSession();
+  }, []);
+
+  // Fetch public analytics for unauthenticated visitors
+  useEffect(() => {
+    if (!isSessionLoading && !sessionUser) {
+      const fetchPublicAnalytics = async () => {
+        setIsPublicLoading(true);
+        try {
+          const areaParam = curArea !== "அனைத்தும்" ? `?constituency=${encodeURIComponent(curArea)}` : "";
+          const res = await fetch(`/api/public/analytics${areaParam}`);
+          if (res.ok) {
+            const data = await res.json();
+            setPublicAnalytics(data);
+            setDemoMode(false);
+          }
+        } catch (err) {
+          console.error("Error fetching public analytics:", err);
+        } finally {
+          setIsPublicLoading(false);
+        }
+      };
+      fetchPublicAnalytics();
+    }
+  }, [isSessionLoading, sessionUser, curArea]);
 
   // Whistle Cursor effect
   useEffect(() => {
@@ -232,7 +288,7 @@ export default function AnalyticsDashboard() {
   const [gender, setGender] = useState('ஆண்');
   const [age, setAge] = useState('');
   const [address, setAddress] = useState('');
-  const [constituency, setConstituency] = useState(AREAS[1]); // Default to first constituency
+  const [constituency, setConstituency] = useState<string>(CONSTITUENCIES[0]);
   const [ward, setWard] = useState('');
   const [areaStreet, setAreaStreet] = useState('');
   const [category, setCategory] = useState(Object.keys(CATEGORIES)[0]);
@@ -296,7 +352,7 @@ export default function AnalyticsDashboard() {
                   
                   // Auto-detect constituency from address
                   const addressLower = geoData.display_name.toLowerCase();
-                  for (const constName of AREAS.slice(1)) {
+                  for (const constName of CONSTITUENCIES) {
                     if (addressLower.includes(constName.toLowerCase())) {
                       setConstituency(constName);
                       break;
@@ -347,8 +403,8 @@ export default function AnalyticsDashboard() {
         setWard(String(data.voter.WardNo));
         setAddress(data.voter.Address);
         
-        const matchedConstituency = AREAS.find(
-          c => c.toLowerCase() === data.voter.Constituency.toLowerCase()
+        const matchedConstituency = CONSTITUENCIES.find(
+          (c) => c.toLowerCase() === data.voter.Constituency.toLowerCase()
         );
         if (matchedConstituency) {
           setConstituency(matchedConstituency);
@@ -394,7 +450,7 @@ export default function AnalyticsDashboard() {
               
               // Try to auto-detect and set constituency from the Tamil address!
               const addressLower = geoData.display_name.toLowerCase();
-              for (const constName of AREAS.slice(1)) {
+              for (const constName of CONSTITUENCIES) {
                 if (addressLower.includes(constName.toLowerCase())) {
                   setConstituency(constName);
                   break;
@@ -560,9 +616,9 @@ export default function AnalyticsDashboard() {
               const yearShort = String(createdDate.getFullYear()).slice(-2);
 
               let status: 'ok' | 'warn' | 'pend' = 'pend';
-              if (item.complaintDetails?.urgency === 'அதி அவசரம்') {
-                status = 'warn';
-              }
+              if (item.status === 'ok') status = 'ok';
+              else if (item.status === 'warn') status = 'warn';
+              else if (item.complaintDetails?.urgency === 'அதி அவசரம்') status = 'warn';
 
               return {
                 id: item.trackingId || 'NMK-0000',
@@ -614,9 +670,9 @@ export default function AnalyticsDashboard() {
               const yearShort = String(createdDate.getFullYear()).slice(-2);
 
               let status: 'ok' | 'warn' | 'pend' = 'pend';
-              if (item.complaintDetails?.urgency === 'அதி அவசரம்') {
-                status = 'warn';
-              }
+              if (item.status === 'ok') status = 'ok';
+              else if (item.status === 'warn') status = 'warn';
+              else if (item.complaintDetails?.urgency === 'அதி அவசரம்') status = 'warn';
 
               return {
                 id: item.trackingId || 'NMK-0000',
@@ -640,14 +696,20 @@ export default function AnalyticsDashboard() {
     }
   }, [demoMode]);
 
-  const activeData = useMemo(() => {
+  const activeData = useMemo((): Complaint[] => {
+    if (isPublicView && publicAnalytics?.recentActivity) {
+      return publicAnalytics.recentActivity as Complaint[];
+    }
     return demoMode ? DATA : dbData;
-  }, [demoMode, dbData]);
+  }, [demoMode, dbData, isPublicView, publicAnalytics]);
 
   // Filters computed in React
-  const areaFilteredData = useMemo(() => {
-    return curArea === "அனைத்தும்" ? activeData : activeData.filter(d => d.area === curArea);
-  }, [curArea, activeData]);
+  const areaFilteredData = useMemo((): Complaint[] => {
+    if (isPublicView && publicAnalytics?.recentActivity) {
+      return publicAnalytics.recentActivity as Complaint[];
+    }
+    return curArea === "அனைத்தும்" ? activeData : activeData.filter((d) => d.area === curArea);
+  }, [curArea, activeData, isPublicView, publicAnalytics]);
 
   const filteredData = useMemo(() => {
     let d = areaFilteredData;
@@ -666,13 +728,23 @@ export default function AnalyticsDashboard() {
 
   // KPI Calculations
   const stats = useMemo(() => {
+    if (isPublicView && publicAnalytics?.summary) {
+      const s = publicAnalytics.summary;
+      return {
+        total: s.total,
+        ok: s.resolved,
+        warn: s.inProgress,
+        pend: s.pending,
+        rate: s.resolutionRate,
+      };
+    }
     const total = areaFilteredData.length;
     const ok = areaFilteredData.filter(x => x.status === 'ok').length;
     const warn = areaFilteredData.filter(x => x.status === 'warn').length;
     const pend = areaFilteredData.filter(x => x.status === 'pend').length;
     const rate = total ? Math.round(ok / total * 100) : 0;
     return { total, ok, warn, pend, rate };
-  }, [areaFilteredData]);
+  }, [areaFilteredData, isPublicView, publicAnalytics]);
 
   // Sector maximum calculation for bar chart scaling
   const maxSectorCount = useMemo(() => {
@@ -754,7 +826,7 @@ export default function AnalyticsDashboard() {
 
     // 2. Find constituency with highest resolution rate
     if (curArea === 'அனைத்தும்') {
-      const constStats = AREAS.slice(1).map(c => {
+      const constStats = CONSTITUENCIES.map(c => {
         const items = activeData.filter(d => d.area === c);
         const total = items.length;
         const ok = items.filter(d => d.status === 'ok').length;
@@ -826,8 +898,25 @@ export default function AnalyticsDashboard() {
   }, [areaFilteredData, activeData, curArea]);
 
   // Constituency Analytics Data
-  const constituencyStats = useMemo(() => {
-    return AREAS.slice(1).map(c => {
+  const constituencyStats = useMemo((): Array<{ name: string; total: number; ok: number; warn: number; pend: number; rate: number; topCat: string }> => {
+    if (isPublicView && publicAnalytics?.constituencyStats) {
+      const statsMap = Object.fromEntries(
+        publicAnalytics.constituencyStats.map((c: any) => [c.constituency, c])
+      );
+      return CONSTITUENCIES.map((c) => {
+        const found = statsMap[c];
+        return {
+          name: c,
+          total: found?.total ?? 0,
+          ok: found?.resolved ?? 0,
+          warn: 0,
+          pend: found?.pending ?? 0,
+          rate: found?.rate ?? 0,
+          topCat: (found?.total ?? 0) > 0 ? "பொது" : "இல்லை",
+        };
+      });
+    }
+    return CONSTITUENCIES.map(c => {
       const items = activeData.filter(d => d.area === c);
       const total = items.length;
       const ok = items.filter(d => d.status === 'ok').length;
@@ -858,8 +947,8 @@ export default function AnalyticsDashboard() {
         rate,
         topCat
       };
-    }).sort((a, b) => b.rate - a.rate);
-  }, [activeData]);
+    });
+  }, [activeData, isPublicView, publicAnalytics]);
 
   // Recent Activity Feed
   const recentActivities = useMemo(() => {
@@ -874,23 +963,31 @@ export default function AnalyticsDashboard() {
       <header className="topbar">
         <div className="topbar-in">
           <a className="tb-brand" href="#top">
-            <img src="/tvk-logo.png" alt="TVK" />
+            <img src={TVK_LOGO} alt="TVK" className="tvk-brand-logo" />
             <span>
               <small>TVK · Namakkal West</small>
               <b>மக்கள் குரல் மையம்</b>
             </span>
           </a>
           <div className="tb-actions">
-            <a
-              className="tb-back"
-              href="#complaint"
-              onClick={(e) => {
-                e.preventDefault();
-                setIsComplaintOpen(true);
-              }}
-            >
-              குறைதீர் மனு
+            <a className="tb-back" href="/track" style={{ color: '#FECB02', borderColor: '#FECB02' }}>
+              🔍 மனு நிலை அறிதல்
             </a>
+            {sessionUser?.role === "SUPER_ADMIN" && (
+              <a className="tb-back" href="/admin" style={{ color: '#FECB02', borderColor: '#FECB02' }}>
+                ⚙️ நிர்வாகக் கட்டுப்பாடு
+              </a>
+            )}
+            {sessionUser && (
+              <a className="tb-back" href="/complaints" style={{ color: '#FECB02', borderColor: '#FECB02' }}>
+                📋 புகார்கள் மேலாண்மை
+              </a>
+            )}
+            {!sessionUser && (
+              <a className="tb-back" href="/login?redirect=/analytics">
+                🔐 பிரதிநிதி உள்நுழைவு
+              </a>
+            )}
             <a className="tb-back" href="/">
               <svg viewBox="0 0 24 24">
                 <path d="M15 18l-6-6 6-6" />
@@ -903,9 +1000,28 @@ export default function AnalyticsDashboard() {
 
       {/* PAGE HERO */}
       <section className="phero" id="top">
-        <img className="ph-medal" src="/tvk-logo.jpeg" alt="" />
-        <div className="wrap">
+        <img className="ph-medal-whistle" src={TVK_LOGO} alt="" aria-hidden="true" />
+        <div className="wrap flex flex-col items-start gap-4">
           <span className="ph-eyebrow">மக்கள் புகார் & தீர்வு பகுப்பாய்வு</span>
+          {sessionUser && (
+            <div className="session-user-badge" style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              padding: '0.4rem 0.9rem',
+              borderRadius: '2rem',
+              color: '#FECB02',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+            }}>
+              <span>👤</span>
+              <span>வரவேற்கிறோம், {sessionUser.username} ({sessionUser.role === "SUPER_ADMIN" ? "நிர்வாகி" : `பிரதிநிதி - ${sessionUser.constituency}`})</span>
+            </div>
+          )}
           <h1>நாமக்கல் மேற்கு — மக்கள் குரல் முகப்புப்பலகை</h1>
           <p>ஒவ்வொரு ஒன்றியத்திலும் மக்கள் பதிவு செய்த புகார்கள், அவற்றின் துறை வாரியான பிரிவு, மற்றும் தமிழக வெற்றிக் கழகம் தீர்த்த பணிகள் — அனைத்தும் ஒரே இடத்தில்.</p>
           <span className="ph-live"><i></i> நேரடித் தரவு · கடைசி புதுப்பிப்பு இன்று</span>
@@ -916,18 +1032,22 @@ export default function AnalyticsDashboard() {
       <div className="filterbar">
         <div className="wrap">
           <div className="fb-row">
-            <span className="fb-label">பகுதி</span>
-            <div className="area-chips" id="areaChips">
-              {AREAS.map((a, i) => (
-                <button
-                  key={i}
-                  className={`achip ${curArea === a ? 'active' : ''}`}
-                  onClick={() => setCurArea(a)}
-                >
-                  {a}
-                </button>
-              ))}
-            </div>
+            {(!sessionUser || sessionUser.role !== "REPRESENTATIVE") && (
+              <>
+                <span className="fb-label">பகுதி</span>
+                <div className="area-chips" id="areaChips">
+                  {allowedAreas.map((a, i) => (
+                    <button
+                      key={i}
+                      className={`achip ${curArea === a ? 'active' : ''}`}
+                      onClick={() => setCurArea(a)}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <div className="fb-search">
               <div className="fb-search-input-wrapper">
                 <svg viewBox="0 0 24 24">
@@ -943,16 +1063,18 @@ export default function AnalyticsDashboard() {
                   onChange={(e) => setCurSearch(e.target.value)}
                 />
               </div>
-              <div className="fb-toggle-wrapper">
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--m-800)', whiteSpace: 'nowrap' }}>டெமோ தரவு</span>
-                <button
-                  className={`achip ${demoMode ? 'active' : ''}`}
-                  onClick={() => setDemoMode(!demoMode)}
-                  style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem' }}
-                >
-                  {demoMode ? 'ஆன்' : 'ஆஃப்'}
-                </button>
-              </div>
+              {sessionUser && sessionUser.role !== "REPRESENTATIVE" && (
+                <div className="fb-toggle-wrapper">
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--m-800)', whiteSpace: 'nowrap' }}>டெமோ தரவு</span>
+                  <button
+                    className={`achip ${demoMode ? 'active' : ''}`}
+                    onClick={() => setDemoMode(!demoMode)}
+                    style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem' }}
+                  >
+                    {demoMode ? 'ஆன்' : 'ஆஃப்'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1318,20 +1440,22 @@ export default function AnalyticsDashboard() {
                           </td>
                           <td className="t-title">
                             {x.title}
-                            <small>
-                              பதிவு: {x.by}
-                              {x.resolver && (
-                                <>
-                                  {' · '}
-                                  <span className="resolver">
-                                    <svg viewBox="0 0 24 24" style={{ width: 13, height: 13, stroke: 'var(--ok)', fill: 'none', strokeWidth: 2.4 }}>
-                                      <path d="M20 6L9 17l-5-5"/>
-                                    </svg>
-                                    {x.resolver}
-                                  </span>
-                                </>
-                              )}
-                            </small>
+                            {sessionUser && (
+                              <small>
+                                பதிவு: {x.by}
+                                {x.resolver && (
+                                  <>
+                                    {' · '}
+                                    <span className="resolver">
+                                      <svg viewBox="0 0 24 24" style={{ width: 13, height: 13, stroke: 'var(--ok)', fill: 'none', strokeWidth: 2.4 }}>
+                                        <path d="M20 6L9 17l-5-5"/>
+                                      </svg>
+                                      {x.resolver}
+                                    </span>
+                                  </>
+                                )}
+                              </small>
+                            )}
                           </td>
                           <td className="t-meta">{x.area}</td>
                           <td className="t-meta">{x.date}</td>
@@ -1357,484 +1481,9 @@ export default function AnalyticsDashboard() {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="dfoot">
-        © 2026 நாமக்கல் மேற்கு — தமிழக வெற்றிக் கழகம் · <b>பிறப்பொக்கும் எல்லா உயிர்க்கும்</b>
-        <br />
-        <span className="demo">Demo dashboard · மாதிரித் தரவு (sample data)</span>
-      </footer>
+      <TvkAppFooter tagline="Demo dashboard · மாதிரித் தரவு (sample data)" />
 
-      {/* COMPLAINT POPUP MODAL */}
-      {isComplaintOpen && (
-        <div className="modal-overlay" data-cursor="whistle" data-clabel="தொடு">
-          <div className="modal-content">
-            <button
-              className="modal-close-btn"
-              onClick={() => {
-                setIsComplaintOpen(false);
-                if (isCameraActive) stopCamera();
-              }}
-              aria-label="மூடு"
-            >
-              ✕
-            </button>
-
-            {trackingId ? (
-              <div className="form-card success-card">
-                <div className="success-icon">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
-                </div>
-                <h2 style={{ color: 'var(--ok)', fontSize: '1.6rem', fontWeight: 800, marginBottom: '1rem' }}>
-                  மனு வெற்றிகரமாகச் சமர்ப்பிக்கப்பட்டது!
-                </h2>
-                <p style={{ color: 'var(--ink-soft)', fontSize: '1rem', marginBottom: '1.25rem' }}>
-                  உங்கள் மனுவின் கண்காணிப்பு எண் கீழே தரப்பட்டுள்ளது. இதைப் பயன்படுத்தி உங்கள் மனுவின் நிலையை அறிந்து கொள்ளலாம்.
-                </p>
-                <div className="tracking-id-box">{trackingId}</div>
-                <button
-                  className="verify-btn"
-                  style={{ padding: '0.8rem 2rem', fontSize: '1rem', marginTop: '1.25rem', display: 'block', margin: '0 auto' }}
-                  onClick={() => {
-                    setTrackingId(null);
-                    setVoterVerified(false);
-                    setVoterId('');
-                    setName('');
-                    setMobile('');
-                    setAadhaar('');
-                    setAge('');
-                    setAddress('');
-                    setAreaStreet('');
-                    setDescription('');
-                    setPhotos([]);
-                    setVideo(null);
-                    setLatitude(null);
-                    setLongitude(null);
-                  }}
-                >
-                  புதிய மனுவைச் சமர்ப்பிக்க
-                </button>
-              </div>
-            ) : (
-              <div className="form-card">
-                <div className="form-header">
-                  <h1>பொதுமக்கள் குறைதீர் மனு</h1>
-                  <p>உங்கள் குறைகளைத் தொகுதி வாரியாகப் பதிவு செய்து தீர்வு காணுங்கள்</p>
-                </div>
-
-                <form onSubmit={handleSubmitComplaint} autoComplete="off">
-                  {/* Honeypot field for bot protection */}
-                  <div style={{ display: 'none' }} aria-hidden="true">
-                    <input
-                      type="text"
-                      name="email_honeypot"
-                      value={emailHoneypot}
-                      onChange={(e) => setEmailHoneypot(e.target.value)}
-                      tabIndex={-1}
-                      autoComplete="off"
-                    />
-                  </div>
-                  {/* SECTION 1: VOTER VERIFICATION */}
-                  <div className="form-section">
-                    <div className="form-section-title">
-                      <span>1. வாக்காளர் சரிபார்ப்பு</span>
-                    </div>
-                    <div className="input-group">
-                      <label htmlFor="voterId">வாக்காளர் அடையாள எண் (Voter ID) *</label>
-                      <div className="verify-box">
-                        <input
-                          id="voterId"
-                          type="text"
-                          placeholder="எ.கா. TN0010001"
-                          value={voterId}
-                          onChange={(e) => setVoterId(e.target.value)}
-                          disabled={voterVerified}
-                          required
-                        />
-                        {!voterVerified ? (
-                          <button
-                            type="button"
-                            className="verify-btn"
-                            onClick={handleVerifyVoter}
-                            disabled={isVerifying}
-                          >
-                            {isVerifying ? 'சரிபார்க்கிறது...' : 'சரிபார்'}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="verify-btn"
-                            style={{ background: '#777' }}
-                            onClick={() => {
-                              setVoterVerified(false);
-                              setName('');
-                              setMobile('');
-                              setWard('');
-                              setAddress('');
-                            }}
-                          >
-                            மாற்று
-                          </button>
-                        )}
-                      </div>
-
-                      {voterVerified && (
-                        <div className="status-badge success">
-                          <span>✅ வாக்காளர் அடையாளம் சரிபார்க்கப்பட்டது</span>
-                        </div>
-                      )}
-
-                      {verificationError && (
-                        <div className="status-badge error">
-                          <span>❌ {verificationError}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* SECTION 2: CITIZEN DETAILS */}
-                  <div className="form-section">
-                    <div className="form-section-title">
-                      <span>2. பொதுமக்கள் விவரங்கள்</span>
-                    </div>
-
-                    <div className="input-row">
-                      <div className="input-group">
-                        <label htmlFor="name">பெயர் *</label>
-                        <input
-                          id="name"
-                          type="text"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          readOnly={voterVerified}
-                          required
-                        />
-                      </div>
-                      <div className="input-group">
-                        <label htmlFor="mobile">மொபைல் எண் *</label>
-                        <input
-                          id="mobile"
-                          type="tel"
-                          value={mobile}
-                          onChange={(e) => setMobile(e.target.value)}
-                          readOnly={voterVerified}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="input-row">
-                      <div className="input-group">
-                        <label htmlFor="aadhaar">ஆதார் எண் (விருப்பத்தேர்வு)</label>
-                        <input
-                          id="aadhaar"
-                          type="text"
-                          placeholder="XXXX XXXX XXXX"
-                          value={aadhaar}
-                          onChange={(e) => setAadhaar(e.target.value)}
-                        />
-                      </div>
-                      <div className="input-row" style={{ gap: '1rem' }}>
-                        <div className="input-group">
-                          <label htmlFor="gender">பாலினம் *</label>
-                          <select
-                            id="gender"
-                            value={gender}
-                            onChange={(e) => setGender(e.target.value)}
-                            required
-                          >
-                            <option value="ஆண்">ஆண்</option>
-                            <option value="பெண்">பெண்</option>
-                            <option value="இதர">இதர</option>
-                          </select>
-                        </div>
-                        <div className="input-group">
-                          <label htmlFor="age">வயது *</label>
-                          <input
-                            id="age"
-                            type="number"
-                            min="18"
-                            max="120"
-                            value={age}
-                            onChange={(e) => setAge(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="input-group">
-                      <label htmlFor="address">முகவரி *</label>
-                      <textarea
-                        id="address"
-                        rows={3}
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        readOnly={voterVerified}
-                        placeholder={isIpLocating ? "இருப்பிட முகவரியைக் கண்டறிகிறது..." : "உங்கள் முகவரி"}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* SECTION 3: LOCATION DETAILS */}
-                  <div className="form-section">
-                    <div className="form-section-title">
-                      <span>3. இருப்பிட விவரங்கள்</span>
-                    </div>
-
-                    <div className="input-row">
-                      <div className="input-group">
-                        <label htmlFor="constituency">தொகுதி *</label>
-                        <select
-                          id="constituency"
-                          value={constituency}
-                          onChange={(e) => setConstituency(e.target.value)}
-                          disabled={voterVerified}
-                          required
-                        >
-                          {AREAS.slice(1).map((c, i) => (
-                            <option key={i} value={c}>{c}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="input-group">
-                        <label htmlFor="ward">வார்டு எண் *</label>
-                        <input
-                          id="ward"
-                          type="text"
-                          value={ward}
-                          onChange={(e) => setWard(e.target.value)}
-                          readOnly={voterVerified}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="input-group">
-                      <label htmlFor="areaStreet">பகுதி / தெரு பெயர் *</label>
-                      <input
-                        id="areaStreet"
-                        type="text"
-                        placeholder="எ.கா. காந்தி நகர், மெயின் ரோடு"
-                        value={areaStreet}
-                        onChange={(e) => setAreaStreet(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="input-group">
-                      <label>தற்போதைய இருப்பிடம் (GPS)</label>
-                      <div className="geo-box">
-                        <button
-                          type="button"
-                          className="geo-btn"
-                          onClick={handleGetLocation}
-                          disabled={isLocating}
-                        >
-                          <svg viewBox="0 0 24 24" style={{ width: 18, height: 18, fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}>
-                            <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
-                            <circle cx="12" cy="10" r="3" />
-                          </svg>
-                          {isLocating ? 'கண்டறிகிறது...' : 'இருப்பிடத்தை கண்டறி'}
-                        </button>
-                        {latitude && longitude && (
-                          <span style={{ fontSize: '0.9rem', color: 'var(--ok)', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <span>📍 {latitude.toFixed(5)}, {longitude.toFixed(5)}</span>
-                            {address && <span style={{ fontSize: '0.8rem', color: 'var(--ink)', fontWeight: 'normal' }}>{address}</span>}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SECTION 4: COMPLAINT DETAILS */}
-                  <div className="form-section">
-                    <div className="form-section-title">
-                      <span>4. குறைபாடு விவரங்கள்</span>
-                    </div>
-
-                    <div className="input-row">
-                      <div className="input-group">
-                        <label htmlFor="category">குறைபாடு வகை *</label>
-                        <select
-                          id="category"
-                          value={category}
-                          onChange={(e) => setCategory(e.target.value)}
-                          required
-                        >
-                          {Object.keys(CATEGORIES).map((cat, i) => (
-                            <option key={i} value={cat}>{cat}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="input-group">
-                        <label htmlFor="subcategory">குறைபாடு துணை வகை *</label>
-                        <select
-                          id="subcategory"
-                          value={subcategory}
-                          onChange={(e) => setSubcategory(e.target.value)}
-                          required
-                        >
-                          {CATEGORIES[category].map((sub, i) => (
-                            <option key={i} value={sub}>{sub}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="input-row">
-                      <div className="input-group">
-                        <label htmlFor="urgency">அவசர நிலை *</label>
-                        <select
-                          id="urgency"
-                          value={urgency}
-                          onChange={(e) => setUrgency(e.target.value)}
-                          required
-                        >
-                          <option value="சாதாரண">சாதாரண</option>
-                          <option value="முக்கியம்">முக்கியம்</option>
-                          <option value="அதி அவசரம்">அதி அவசரம்</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="input-group">
-                      <label htmlFor="description">குறைபாடு விவரம் *</label>
-                      <textarea
-                        id="description"
-                        rows={4}
-                        placeholder="உங்கள் குறைபாட்டைப் பற்றி விரிவாக எழுதவும்..."
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* SECTION 5: CAMERA & MEDIA SUPPORT */}
-                  <div className="form-section">
-                    <div className="form-section-title">
-                      <span>5. புகைப்படங்கள் & வீடியோக்கள்</span>
-                    </div>
-
-                    <div className="input-row">
-                      {/* Photo Section */}
-                      <div className="media-box">
-                        <label style={{ marginBottom: '1rem' }}>புகைப்படங்கள் (Photos)</label>
-                        {isCameraActive ? (
-                          <div>
-                            <video ref={videoRef} autoPlay playsInline className="camera-preview" />
-                            <div className="media-actions">
-                              <button type="button" className="media-btn" style={{ background: 'var(--ok)', color: '#fff' }} onClick={capturePhoto}>
-                                படம் எடு
-                              </button>
-                              <button type="button" className="media-btn" onClick={stopCamera}>
-                                நிறுத்து
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '1rem' }}>
-                              கேமரா மூலம் படம் எடுக்கவும் அல்லது கோப்புகளைப் பதிவேற்றவும் (பல புகைப்படங்கள் சேர்க்கலாம்)
-                            </p>
-                            <div className="media-actions">
-                              <button type="button" className="media-btn" onClick={startCamera}>
-                                📷 கேமரா
-                              </button>
-                              <button type="button" className="media-btn" onClick={() => fileInputRef.current?.click()}>
-                                📁 பதிவேற்று
-                              </button>
-                            </div>
-                            <input
-                              type="file"
-                              ref={fileInputRef}
-                              accept="image/*"
-                              multiple
-                              style={{ display: 'none' }}
-                              onChange={handlePhotoUpload}
-                              title="புகைப்படம் பதிவேற்று"
-                            />
-
-                            {/* Multiple Photos Preview Grid */}
-                            {photos.length > 0 && (
-                              <div className="preview-grid">
-                                {photos.map((p, idx) => (
-                                  <div key={idx} className="preview-thumbnail-wrapper">
-                                    <img src={p} alt={`Preview ${idx}`} className="preview-thumbnail" />
-                                    <button
-                                      type="button"
-                                      className="remove-thumbnail-btn"
-                                      onClick={() => setPhotos(prev => prev.filter((_, i) => i !== idx))}
-                                    >
-                                      ✕
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <canvas ref={canvasRef} style={{ display: 'none' }} />
-                      </div>
-
-                      {/* Video Section */}
-                      <div className="media-box">
-                        <label style={{ marginBottom: '1rem' }}>வீடியோ (Video)</label>
-                        {video ? (
-                          <div>
-                            <video src={video} controls className="preview-video" />
-                            <div className="media-actions">
-                              <button type="button" className="media-btn" onClick={() => setVideo(null)}>
-                                நீக்கு
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '1rem' }}>
-                              குறுகிய வீடியோ பதிவேற்றவும் (அதிகபட்சம் 10MB)
-                            </p>
-                            <div className="media-actions">
-                              <button type="button" className="media-btn" onClick={() => videoInputRef.current?.click()}>
-                                📹 வீடியோ பதிவேற்று
-                              </button>
-                            </div>
-                            <input
-                              type="file"
-                              ref={videoInputRef}
-                              accept="video/mp4,video/quicktime"
-                              style={{ display: 'none' }}
-                              onChange={handleVideoUpload}
-                              title="வீடியோ பதிவேற்று"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {submissionError && (
-                    <div className="status-badge error" style={{ marginBottom: '1.5rem' }}>
-                      <span>❌ {submissionError}</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    className="submit-btn"
-                    disabled={isSubmitting || !voterVerified}
-                  >
-                    {isSubmitting ? 'சமர்ப்பிக்கப்படுகிறது...' : 'மனுவைச் சமர்ப்பி 🚩'}
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* COMPLAINT POPUP MODAL MOVED TO HOME PAGE */}
     
       {/* WHISTLE CURSOR */}
       <div className="wcur" id="wcur">

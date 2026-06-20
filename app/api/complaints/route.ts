@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getDb } from "@/lib/mongodb";
+import { verifySession } from "@/lib/session";
+import { logAuditEvent } from "@/lib/auditLog";
+import { buildInitialTimeline, normalizeStatus } from "@/lib/complaintStatus";
+import { isCloudinaryConfigured, uploadMediaListToCloudinary } from "@/lib/cloudinary";
+import { normalizeComplaintMedia } from "@/lib/complaintMedia";
 import {
   getClientIp,
   validateRequestHeaders,
@@ -31,14 +37,53 @@ export async function GET(request: Request) {
       );
     }
 
+    // 3. Authenticate and authorize session
+    const cookieStore = await cookies();
+    const authCookie = cookieStore.get("site_auth");
+    let filter: any = {};
+
+    if (authCookie) {
+      const session = verifySession(authCookie.value);
+      if (!session) {
+        return NextResponse.json(
+          { error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized access)" },
+          { status: 401 }
+        );
+      }
+
+      if (session.role === "REPRESENTATIVE") {
+        if (session.constituency) {
+          filter.constituency = session.constituency;
+        } else {
+          // Representative with no constituency gets no data
+          return NextResponse.json([]);
+        }
+      }
+    } else {
+      return NextResponse.json(
+        { error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized access)" },
+        { status: 401 }
+      );
+    }
+
     const db = await getDb();
     const complaints = await db
       .collection("citizenComplaints")
-      .find({})
+      .find(filter)
       .sort({ createdAt: -1 })
       .toArray();
 
-    return NextResponse.json(complaints);
+    const normalized = complaints.map((complaint) => {
+      const media = normalizeComplaintMedia(complaint as Parameters<typeof normalizeComplaintMedia>[0]);
+      return {
+        ...complaint,
+        photoUrls: media.photos,
+        videoUrls: media.video ? [media.video] : [],
+        mediaUrls: media.mediaUrls,
+      };
+    });
+
+    return NextResponse.json(normalized);
   } catch (error) {
     console.error("Error fetching complaints:", error);
     await logSecurityEvent(ip, "ANALYTICS_API_ERROR", { error: String(error) });
@@ -181,6 +226,31 @@ export async function POST(request: Request) {
 
     const trackingId = `${prefix}${String(nextNum).padStart(5, "0")}`;
 
+    // Upload media to Cloudinary (do not store base64 in MongoDB)
+    let photoUrls: string[] = [];
+    let videoUrls: string[] = [];
+
+    if (totalUploadsInPayload > 0) {
+      if (!isCloudinaryConfigured()) {
+        return NextResponse.json(
+          { error: "மீடியா பதிவேற்றம் தற்போது கிடைக்கவில்லை. Cloudinary கட்டமைக்கப்படவில்லை." },
+          { status: 503 }
+        );
+      }
+
+      try {
+        if (photosList.length > 0) {
+          photoUrls = await uploadMediaListToCloudinary(photosList, "complaints/photos", "image");
+        }
+        if (videoFile) {
+          videoUrls = await uploadMediaListToCloudinary([videoFile], "complaints/videos", "video");
+        }
+      } catch (uploadErr) {
+        console.error("Cloudinary upload error:", uploadErr);
+        return NextResponse.json({ error: "மீடியா பதிவேற்றத்தில் பிழை ஏற்பட்டது" }, { status: 500 });
+      }
+    }
+
     const newComplaint = {
       trackingId,
       voterVerified,
@@ -189,9 +259,18 @@ export async function POST(request: Request) {
       constituency: sanitizeInput(constituency),
       citizenDetails: sanitizeInput(citizenDetails),
       complaintDetails: sanitizeInput(complaintDetails),
-      mediaUrls: sanitizeInput(mediaUrls),
+      photoUrls,
+      videoUrls,
+      mediaUrls: {
+        photos: photoUrls,
+        video: videoUrls[0] || undefined,
+      },
       geolocation: sanitizeInput(geolocation),
+      status: "pend",
+      approvalStatus: "APPROVED",
+      timeline: buildInitialTimeline(),
       createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     await db.collection("citizenComplaints").insertOne(newComplaint);
@@ -210,5 +289,70 @@ export async function POST(request: Request) {
       { error: "புகாரைப் பதிவு செய்வதில் பிழை ஏற்பட்டது" },
       { status: 500 }
     );
+  }
+}
+
+export async function PATCH(request: Request) {
+  const ip = getClientIp(request);
+  try {
+    const rawBody = await request.json();
+    const body = sanitizeInput(rawBody);
+    const { trackingId, status } = body;
+
+    if (!trackingId || !status) {
+      return NextResponse.json({ error: "தேவையான அளவுருக்கள் இல்லை (Missing parameters)" }, { status: 400 });
+    }
+
+    const cookieStore = await cookies();
+    const authCookie = cookieStore.get("site_auth");
+    if (!authCookie) {
+      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல்" }, { status: 401 });
+    }
+    const session = verifySession(authCookie.value);
+    if (!session) {
+      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல்" }, { status: 401 });
+    }
+
+    const db = await getDb();
+    
+    // If REPRESENTATIVE, ensure they can only update complaints within their constituency
+    const complaint = await db.collection("citizenComplaints").findOne({ trackingId });
+    if (!complaint) {
+      return NextResponse.json({ error: "புகார் கண்டறியப்படவில்லை (Complaint not found)" }, { status: 404 });
+    }
+
+    if (session.role === "REPRESENTATIVE" && complaint.constituency !== session.constituency) {
+      return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது (Access Forbidden)" }, { status: 403 });
+    }
+
+    const normalizedStatus = normalizeStatus(status);
+    const timelineEntry = {
+      status: normalizedStatus,
+      updatedAt: new Date(),
+      updatedBy: session.username,
+    };
+
+    await db.collection("citizenComplaints").updateOne(
+      { trackingId },
+      {
+        $set: { status: normalizedStatus, updatedAt: new Date() },
+        $push: { timeline: timelineEntry } as any,
+      }
+    );
+
+    await logSecurityEvent(ip, "COMPLAINT_STATUS_UPDATED", { trackingId, status: normalizedStatus, updatedBy: session.username });
+    await logAuditEvent({
+      username: session.username,
+      role: session.role,
+      constituency: session.constituency,
+      action: "COMPLAINT_STATUS_CHANGE",
+      trackingId,
+      metadata: { status: normalizedStatus },
+    });
+
+    return NextResponse.json({ success: true, message: "புகாரின் நிலை வெற்றிகரமாக புதுப்பிக்கப்பட்டது (Status updated successfully)" });
+  } catch (error) {
+    console.error("Error updating complaint status:", error);
+    return NextResponse.json({ error: "நிலை புதுப்பிப்பதில் பிழை ஏற்பட்டது" }, { status: 500 });
   }
 }

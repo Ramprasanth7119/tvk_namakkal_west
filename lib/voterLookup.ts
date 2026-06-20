@@ -1,63 +1,44 @@
-import path from "path";
-import fs from "fs";
-import * as xlsx from "xlsx";
+import { getDb } from "./mongodb";
+import { readWardNo, formatVoterDob } from "./voterRegistry";
 
 export interface Voter {
   VoterID: string;
   VoterName: string;
-  WardNo: number;
+  DOB: string;
+  WardNo: number | string;
   WardName: string;
   Constituency: string;
   Mobile: string;
   Address: string;
 }
 
-let cachedVoters: Voter[] | null = null;
-
-export function loadVoters(): Voter[] {
-  if (cachedVoters) {
-    return cachedVoters;
-  }
+/**
+ * Looks up a voter in the MongoDB voterRegistry collection.
+ */
+export async function lookupVoter(voterId: string): Promise<Voter | null> {
+  const searchId = voterId.trim().toUpperCase();
+  if (!searchId) return null;
 
   try {
-    const filePath = path.join(process.cwd(), "lib", "Voter_List.xlsx");
-    if (!fs.existsSync(filePath)) {
-      console.error("Voter_List.xlsx not found at:", filePath);
-      return [];
-    }
+    const db = await getDb();
+    const doc = await db.collection("voterRegistry").findOne({ voterId: searchId });
 
-    const fileBuffer = fs.readFileSync(filePath);
-    const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const rawData = xlsx.utils.sheet_to_json(sheet) as any[];
+    if (!doc) return null;
 
-    cachedVoters = rawData.map((row) => {
-      let constituency = String(row.Constituency || "").trim();
-      if (constituency === "மல்லசமுத்திரம்") {
-        constituency = "நாமக்கல்";
-      }
-      return {
-        VoterID: String(row.VoterID || "").trim(),
-        VoterName: String(row.VoterName || "").trim(),
-        WardNo: Number(row.WardNo || 0),
-        WardName: String(row.WardName || "").trim(),
-        Constituency: constituency,
-        Mobile: String(row.Mobile || "").trim(),
-        Address: String(row.Address || "").trim(),
-      };
-    });
+    const wardNo = readWardNo(doc as Record<string, unknown>);
 
-    return cachedVoters;
+    return {
+      VoterID: doc.voterId,
+      VoterName: doc.name || "",
+      DOB: formatVoterDob(doc.dob),
+      WardNo: wardNo,
+      WardName: doc.wardName || "",
+      Constituency: doc.constituency || "",
+      Mobile: doc.mobile || "",
+      Address: doc.address || "",
+    };
   } catch (error) {
-    console.error("Error loading Voter_List.xlsx:", error);
-    return [];
+    console.error("Error looking up voter in database:", error);
+    return null;
   }
-}
-
-export async function lookupVoter(voterId: string): Promise<Voter | null> {
-  const voters = loadVoters();
-  const searchId = voterId.trim().toUpperCase();
-  const voter = voters.find((v) => v.VoterID.toUpperCase() === searchId);
-  return voter || null;
 }

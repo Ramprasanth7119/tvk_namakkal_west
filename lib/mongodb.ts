@@ -1,6 +1,7 @@
 import { MongoClient } from "mongodb";
+import { seedDatabase, syncRepresentativeConstituencies } from "./dbSeed";
 
-const uri = process.env.MONGODB_URI || "mongodb+srv://ramprasanth7119:ramprasanth7119@notes.o9jx6pu.mongodb.net/?appName=notes";
+const uri = "mongodb://localhost:27017/tvk-west";
 const options = {
   maxPoolSize: 10,
 };
@@ -29,7 +30,24 @@ if (process.env.NODE_ENV === "development") {
 
 export default clientPromise;
 
+let seeded = false;
+
 export async function getDb() {
   const client = await clientPromise;
-  return client.db();
+  const db = client.db();
+  
+  if (!seeded) {
+    seeded = true;
+    // Perform database seeding and constituency sync in background
+    Promise.resolve().then(async () => {
+      try {
+        await syncRepresentativeConstituencies(db);
+        await seedDatabase(db);
+      } catch (err) {
+        console.error("Lazy database seeding error:", err);
+      }
+    });
+  }
+  
+  return db;
 }
