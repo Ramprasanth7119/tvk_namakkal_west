@@ -1,0 +1,407 @@
+/* ============================================================
+   LaunchReveal — site inauguration overlay (TVK Namakkal West)
+   Ribbon-cut + confetti opening, then an auto-scrolling
+   commemorative letter over a blurred backdrop.
+   Self-contained + deletable: remove the component, this file,
+   and the <LaunchReveal/> mount in app/page.tsx to retire it.
+   All colours come from the committed TVK tokens in home.css.
+   ============================================================ */
+
+.lr-overlay {
+  position: fixed;
+  inset: 0;
+  /* sits above everything (modal=10000, cursor=9000 in the z-scale) */
+  z-index: 20000;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 2.5rem);
+  background:
+    radial-gradient(120% 80% at 50% 38%, rgba(254, 203, 2, 0.16), transparent 60%),
+    rgba(34, 3, 5, 0.92);
+  -webkit-backdrop-filter: blur(9px) saturate(120%);
+  backdrop-filter: blur(9px) saturate(120%);
+  opacity: 1;
+  transition: opacity 0.55s var(--ease, cubic-bezier(0.22, 1, 0.36, 1));
+  overflow: hidden;
+}
+
+.lr-overlay.lr-closing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The site hides the native cursor globally (cursor:none) and renders a custom
+   whistle cursor. While the overlay is up we add body.modal-open (which hides the
+   whistle cursor and restores the native one); these rules make the native cursor
+   visible over the overlay deterministically, matching .complaint-modal-overlay. */
+.lr-overlay,
+.lr-overlay * {
+  cursor: auto !important;
+}
+.lr-close {
+  cursor: pointer !important;
+}
+
+/* faint celebratory rays behind the stage */
+.lr-overlay::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    conic-gradient(
+      from 0deg at 50% 42%,
+      transparent 0 8deg,
+      rgba(254, 203, 2, 0.05) 8deg 9deg,
+      transparent 9deg 18deg
+    );
+  opacity: 0.5;
+  animation: lr-spin 60s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes lr-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- confetti canvas ---------- */
+.lr-confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ============================================================
+   RIBBON
+   ============================================================ */
+.lr-ribbon {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: clamp(58px, 9vh, 92px);
+  transform: translateY(-50%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.lr-ribbon-half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 52%;
+  background:
+    linear-gradient(
+      180deg,
+      var(--gold-2, #ffdd55) 0 3px,
+      var(--red-2, #c01515) 3px 22%,
+      var(--red, #a00000) 50%,
+      var(--m-900, #4a080e) 100%
+    );
+  box-shadow: 0 16px 38px rgba(34, 3, 5, 0.5);
+  transition:
+    transform 1.6s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    opacity 1.4s ease;
+  will-change: transform, opacity;
+}
+
+/* satin sheen */
+.lr-ribbon-half::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+}
+
+.lr-ribbon-half.left {
+  left: 0;
+  transform-origin: left center;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 26px) 50%, 100% 100%, 0 100%);
+}
+
+.lr-ribbon-half.right {
+  right: 0;
+  transform-origin: right center;
+  clip-path: polygon(26px 0, 100% 0, 100% 100%, 26px 100%, 0 50%);
+}
+
+/* the cut gleam — a bright sweep down the centre seam */
+.lr-gleam {
+  position: absolute;
+  top: -30%;
+  left: 50%;
+  width: 3px;
+  height: 160%;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    var(--gold-3, #fff1be),
+    #fff,
+    var(--gold-3, #fff1be),
+    transparent
+  );
+  filter: blur(1px);
+  opacity: 0;
+  z-index: 4;
+}
+
+/* rosette / seal at the seam */
+.lr-rosette {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(76px, 12vw, 108px);
+  height: clamp(76px, 12vw, 108px);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 40%, var(--gold-2, #ffdd55), var(--gold, #fecb02) 55%, #d8a400 100%);
+  border: 3px solid var(--gold-3, #fff1be);
+  box-shadow:
+    0 0 0 4px rgba(160, 0, 0, 0.55),
+    0 14px 34px rgba(34, 3, 5, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 5;
+  transition:
+    transform 1.3s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    opacity 1s ease;
+  will-change: transform, opacity;
+}
+
+.lr-rosette img {
+  width: 66%;
+  height: 66%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+/* --- OPEN STATE: ribbon parts, rosette drops away --- */
+.lr-overlay[data-phase="letter"] .lr-ribbon-half.left,
+.lr-overlay[data-phase="closing"] .lr-ribbon-half.left {
+  transform: translateX(-118%) translateY(22px) rotate(-7deg);
+  opacity: 0;
+}
+.lr-overlay[data-phase="letter"] .lr-ribbon-half.right,
+.lr-overlay[data-phase="closing"] .lr-ribbon-half.right {
+  transform: translateX(118%) translateY(22px) rotate(7deg);
+  opacity: 0;
+}
+.lr-overlay[data-phase="letter"] .lr-rosette,
+.lr-overlay[data-phase="closing"] .lr-rosette {
+  transform: translate(-50%, 60px) scale(0.55);
+  opacity: 0;
+}
+
+/* gleam plays once while the ribbon is whole */
+.lr-overlay[data-phase="ribbon"] .lr-gleam {
+  animation: lr-gleam-sweep 0.9s ease-in 0.4s 1 both;
+}
+
+@keyframes lr-gleam-sweep {
+  0% { opacity: 0; transform: translateX(-50%) scaleY(0.6); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) scaleY(1.1); }
+}
+
+/* ============================================================
+   LETTER CARD
+   ============================================================ */
+.lr-letter {
+  position: relative;
+  z-index: 6;
+  width: min(640px, 100%);
+  max-height: min(82vh, 760px);
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, #fffaf0 0%, var(--cream, #faf1dc) 100%);
+  border: 2px solid var(--gold, #fecb02);
+  border-radius: var(--r-lg, 24px);
+  box-shadow:
+    0 0 0 6px rgba(74, 8, 14, 0.55),
+    0 40px 90px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(26px) scale(0.96);
+  transition:
+    opacity 0.7s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)) 0.25s,
+    transform 0.7s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)) 0.25s;
+}
+
+.lr-overlay[data-phase="letter"] .lr-letter {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.lr-overlay[data-phase="closing"] .lr-letter {
+  opacity: 0;
+  transform: translateY(18px) scale(0.97);
+  transition-delay: 0s;
+}
+
+/* header */
+.lr-letter-head {
+  position: relative;
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 1.6rem 1.5rem 1.1rem;
+  background:
+    radial-gradient(130% 100% at 50% 0%, rgba(254, 203, 2, 0.18), transparent 70%);
+  border-bottom: 1px solid var(--gline, rgba(254, 203, 2, 0.28));
+}
+
+.lr-seal {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 0.6rem;
+  border-radius: 50%;
+  object-fit: contain;
+  background: #fff;
+  border: 2px solid var(--gold, #fecb02);
+  box-shadow: 0 6px 16px rgba(74, 8, 14, 0.25);
+}
+
+.lr-title {
+  margin: 0;
+  font-family: var(--f-disp, "Anek Tamil"), sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.5rem, 4.5vw, 2.1rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--m-900, #4a080e);
+  text-wrap: balance;
+}
+
+.lr-occasion {
+  margin: 0.4rem 0 0;
+  font-family: var(--f-body, "Hind Madurai"), sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft, #6b4f3c);
+}
+
+/* close button */
+.lr-close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--m-900, #4a080e);
+  color: var(--gold, #fecb02);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+.lr-close:hover { transform: scale(1.08); background: var(--m-800, #6e0a10); }
+.lr-close:focus-visible { outline: 3px solid var(--gold-2, #ffdd55); outline-offset: 2px; }
+
+/* scrolling body */
+.lr-letter-body {
+  position: relative;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 1.4rem clamp(1.2rem, 4vw, 2.1rem) 1.6rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold, #fecb02) transparent;
+}
+.lr-letter-body::-webkit-scrollbar { width: 8px; }
+.lr-letter-body::-webkit-scrollbar-thumb {
+  background: var(--gold, #fecb02);
+  border-radius: 8px;
+}
+
+.lr-salutation {
+  margin: 0 0 0.9rem;
+  font-family: var(--f-head, "Catamaran"), sans-serif;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--m-800, #6e0a10);
+}
+
+.lr-letter-body p {
+  margin: 0 0 1.05rem;
+  max-width: 62ch;
+  font-family: var(--f-body, "Hind Madurai"), sans-serif;
+  font-size: clamp(0.96rem, 2.4vw, 1.06rem);
+  line-height: 1.85;
+  color: var(--ink, #2a1108);
+  text-wrap: pretty;
+}
+
+.lr-sign {
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--line, rgba(160, 0, 0, 0.16));
+}
+.lr-sign .lr-sign-from {
+  margin: 0;
+  font-family: var(--f-body, "Hind Madurai"), sans-serif;
+  font-size: 0.95rem;
+  color: var(--ink-soft, #6b4f3c);
+}
+.lr-sign .lr-sign-name {
+  margin: 0.15rem 0 0;
+  font-family: var(--f-disp, "Anek Tamil"), sans-serif;
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--m-900, #4a080e);
+}
+.lr-sign .lr-sign-role {
+  margin: 0.1rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft, #6b4f3c);
+}
+
+/* footer hint */
+.lr-foot {
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 0.7rem 1rem;
+  font-family: var(--f-body, "Hind Madurai"), sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--ink-soft, #6b4f3c);
+  background: rgba(254, 203, 2, 0.1);
+  border-top: 1px solid var(--gline, rgba(254, 203, 2, 0.28));
+}
+
+/* ============================================================
+   REDUCED MOTION — crossfade only, no ribbon/confetti/auto-scroll
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .lr-overlay::before,
+  .lr-gleam,
+  .lr-ribbon { display: none; }
+
+  .lr-letter {
+    transition: opacity 0.3s ease;
+    transform: none;
+  }
+  .lr-overlay[data-phase="letter"] .lr-letter { transform: none; }
+}
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+@media (max-width: 560px) {
+  .lr-letter { max-height: 86vh; border-radius: var(--r-md, 16px); }
+  .lr-letter-head { padding: 1.3rem 1.1rem 0.9rem; }
+  .lr-seal { width: 54px; height: 54px; }
+  .lr-ribbon { height: clamp(46px, 8vh, 64px); }
+}

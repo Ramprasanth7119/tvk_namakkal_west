@@ -10,6 +10,7 @@ import { TVK_LOGO } from '@/lib/brand';
 import { WHISTLE_CURSOR_GOLD } from '@/lib/whistleCursorAssets';
 import { calculateAgeFromDob } from '@/lib/voterRegistry';
 import TvkHomeNav from '@/components/TvkHomeNav';
+import LaunchReveal from '@/components/LaunchReveal';
 
 const CATEGORIES = {
   "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
@@ -1207,6 +1208,9 @@ export default function Home() {
 
   return (
     <>
+      {/* LAUNCH REVEAL — birthday/launch ribbon-cut overlay (campaign-gated, self-removing) */}
+      <LaunchReveal />
+
       {/* LOADER */}
       <div className={`loader ${loaderDone ? 'done' : ''}`} id="loader" style={loaderHidden ? { display: 'none' } : undefined} onTransitionEnd={(e) => {
         if (e.propertyName === 'transform') {
