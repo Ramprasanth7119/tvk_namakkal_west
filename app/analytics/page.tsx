@@ -1,11 +1,41 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import './analytics.css';
 import { CONSTITUENCIES, ALL_AREAS } from '@/lib/constituencies';
 import { TVK_LOGO } from '@/lib/brand';
 import TvkAppFooter from '@/components/TvkAppFooter';
 import TvkTopBar, { type TopBarLink } from '@/components/TvkTopBar';
+import KpiCard from '@/components/analytics/KpiCard';
+import ChartSkeleton, { KpiSkeletonGrid } from '@/components/analytics/ChartSkeleton';
+import AnalyticsEmptyState from '@/components/analytics/AnalyticsEmptyState';
+import { buildRadialMetrics } from '@/components/analytics/ResolutionRadialCharts';
+import type { CategoryChartSlice } from '@/components/analytics/CategoryDoughnutChart';
+import type { TrendChartPoint } from '@/components/analytics/MonthlyTrendChart';
+
+const ConstituencyBarChart = dynamic(
+  () => import('@/components/analytics/ConstituencyBarChart'),
+  { loading: () => <ChartSkeleton variant="bar" />, ssr: false }
+);
+const CategoryDoughnutChart = dynamic(
+  () => import('@/components/analytics/CategoryDoughnutChart'),
+  { loading: () => <ChartSkeleton variant="donut" />, ssr: false }
+);
+const StatusDoughnutChart = dynamic(
+  () => import('@/components/analytics/StatusDoughnutChart'),
+  { loading: () => <ChartSkeleton variant="donut" />, ssr: false }
+);
+const MonthlyTrendChart = dynamic(
+  () => import('@/components/analytics/MonthlyTrendChart'),
+  { loading: () => <ChartSkeleton variant="area" />, ssr: false }
+);
+const ResolutionRadialCharts = dynamic(
+  () => import('@/components/analytics/ResolutionRadialCharts'),
+  { loading: () => <ChartSkeleton variant="radial" />, ssr: false }
+);
+
+const TAMIL_MONTHS = ['', 'ஜன', 'பிப்', 'மார்', 'ஏப்', 'மே', 'ஜூன்', 'ஜூலை', 'ஆக', 'செப்', 'அக்', 'நவ', 'டிச'];
 
 const CATEGORIES: Record<string, string[]> = {
   "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
@@ -105,43 +135,13 @@ function genData(): Complaint[] {
 
 const DATA = genData();
 
-// Animated counter component
-function AnimatedNumber({ value, dec = 0 }: { value: number; dec?: number }) {
-  const [displayVal, setDisplayVal] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    const start = performance.now();
-    const duration = 900;
-    const from = displayVal;
-
-    const step = (now: number) => {
-      if (!active) return;
-      const progress = Math.max(0, Math.min(1, (now - start) / duration));
-      const eased = 1 - Math.pow(1 - progress, 3); // easeOut
-      setDisplayVal(from + (value - from) * eased);
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else {
-        setDisplayVal(value);
-      }
-    };
-
-    requestAnimationFrame(step);
-    return () => {
-      active = false;
-    };
-  }, [value]);
-
-  return <span className="kpi-val">{displayVal.toFixed(dec)}</span>;
-}
-
 export default function AnalyticsDashboard() {
   const [curArea, setCurArea] = useState("அனைத்தும்");
   const [curStatus, setCurStatus] = useState("all");
   const [curSearch, setCurSearch] = useState("");
   const [demoMode, setDemoMode] = useState(true);
   const [liveAnalytics, setLiveAnalytics] = useState<any>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
   const [isLiveLoading, setIsLiveLoading] = useState(false);
   const [managedDemoData, setManagedDemoData] = useState<Complaint[]>([]);
   const [isManagedDemoLoading, setIsManagedDemoLoading] = useState(false);
@@ -195,14 +195,22 @@ export default function AnalyticsDashboard() {
         ? `?constituency=${encodeURIComponent(liveConstituencyParam)}`
         : "";
       const res = await fetch(`/api/public/analytics${q}`);
-      if (res.ok) {
-        setLiveAnalytics(await res.json());
-      } else {
+        if (res.ok) {
+          setLiveAnalytics(await res.json());
+          setLiveError(null);
+        } else {
+          const body = await res.json().catch(() => ({}));
+          setLiveAnalytics(null);
+          setLiveError(
+            typeof body.error === "string"
+              ? body.error
+              : "பகுப்பாய்வு தரவைப் பெறுவதில் பிழை"
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching live analytics:", err);
         setLiveAnalytics(null);
-      }
-    } catch (err) {
-      console.error("Error fetching live analytics:", err);
-      setLiveAnalytics(null);
+        setLiveError("தரவுத்தள இணைப்பு தோல்வி — இணையம் மற்றும் MongoDB URI சரிபார்க்கவும்.");
     } finally {
       setIsLiveLoading(false);
     }
@@ -712,50 +720,45 @@ export default function AnalyticsDashboard() {
     return { total, ok, warn, pend, rate };
   }, [areaFilteredData, demoMode, liveAnalytics]);
 
-  // Sector maximum calculation for bar chart scaling
-  const maxSectorCount = useMemo(() => {
-    const counts = SECTORS.map(s => areaFilteredData.filter(x => x.sector === s.key).length);
-    return Math.max(1, ...counts);
+  const isDashboardLoading =
+    isSessionLoading ||
+    (!demoMode && isLiveLoading) ||
+    (demoMode && !!sessionUser && isManagedDemoLoading);
+
+  const isLiveDataUnavailable =
+    !demoMode && !isLiveLoading && !isSessionLoading && !liveAnalytics && !!liveError;
+
+  const categoryChartData = useMemo((): CategoryChartSlice[] => {
+    return SECTORS.map((s) => {
+      const items = areaFilteredData.filter((x) => x.sector === s.key);
+      return {
+        key: s.key,
+        name: s.name,
+        value: items.length,
+        resolved: items.filter((x) => x.status === 'ok').length,
+        color: s.color,
+      };
+    });
   }, [areaFilteredData]);
 
-  // Donut SVG circumference and calculation
-  const C = 2 * Math.PI * 68;
-  const donutValues = useMemo(() => {
-    const { ok, warn, pend } = stats;
-    const t = Math.max(1, ok + warn + pend);
-    return {
-      okDash: `${(ok / t) * C} ${C}`,
-      okOffset: 0,
-      warnDash: `${(warn / t) * C} ${C}`,
-      warnOffset: -(ok / t) * C,
-      pendDash: `${(pend / t) * C} ${C}`,
-      pendOffset: -((ok + warn) / t) * C,
-    };
-  }, [stats, C]);
+  const trendChartData = useMemo((): TrendChartPoint[] => {
+    if (!demoMode && liveAnalytics?.monthlyTrends?.length) {
+      return liveAnalytics.monthlyTrends.slice(-6).map(
+        (item: { month: number; total: number; resolved: number }) => ({
+          label: TAMIL_MONTHS[item.month] || String(item.month),
+          registered: item.total,
+          resolved: item.resolved,
+        })
+      );
+    }
+    return MONTHS.map((label, i) => ({
+      label,
+      registered: areaFilteredData.filter((x) => x.month === i).length,
+      resolved: areaFilteredData.filter((x) => x.month === i && x.status === 'ok').length,
+    }));
+  }, [areaFilteredData, demoMode, liveAnalytics]);
 
-  // Trend SVG path calculations
-  const W = 900;
-  const H = 220;
-  const pad = 30;
-  const trendData = useMemo(() => {
-    const sub = MONTHS.map((_, i) => areaFilteredData.filter(x => x.month === i).length);
-    const res = MONTHS.map((_, i) => areaFilteredData.filter(x => x.month === i && x.status === 'ok').length);
-    const max = Math.max(1, ...sub) * 1.15;
-    const x = (i: number) => pad + i * ((W - 2 * pad) / (MONTHS.length - 1));
-    const y = (v: number) => H - pad - (v / max) * (H - 2 * pad);
-    const line = (arr: number[]) => arr.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
-    const areaP = (arr: number[]) => `${line(arr)} L${x(arr.length - 1)} ${H - pad} L${x(0)} ${H - pad} Z`;
-    
-    return {
-      sub,
-      res,
-      x,
-      y,
-      linePathSub: line(sub),
-      linePathRes: line(res),
-      areaPathSub: areaP(sub),
-    };
-  }, [areaFilteredData]);
+  const radialMetrics = useMemo(() => buildRadialMetrics(stats), [stats]);
 
   // Dynamic Insights Generator
   const insights = useMemo(() => {
@@ -916,6 +919,20 @@ export default function AnalyticsDashboard() {
     });
   }, [activeData, demoMode, liveAnalytics]);
 
+  const constituencyChartData = useMemo(
+    () =>
+      constituencyStats.map((c) => ({
+        name: c.name,
+        shortName: c.name,
+        total: c.total,
+        ok: c.ok,
+        warn: c.warn,
+        pend: c.pend,
+        rate: c.rate,
+      })),
+    [constituencyStats]
+  );
+
   // Recent Activity Feed
   const recentActivities = useMemo(() => {
     return [...areaFilteredData]
@@ -1055,70 +1072,67 @@ export default function AnalyticsDashboard() {
         </div>
       )}
 
-      {/* KPIs */}
-      <section className="section">
+      {/* KPIs & dashboard body */}
+      <section className="section analytics-dashboard-section">
         <div className="wrap">
-          <div className="kpi-grid" id="kpiGrid">
-            {/* Total complaints */}
-            <div className="kpi" style={{ '--accent': 'var(--red)', '--accent-bg': 'rgba(160,0,0,.1)' } as React.CSSProperties} data-clabel="மொத்தப் புகார்கள்">
-              <div className="kpi-ic">
-                <svg viewBox="0 0 24 24">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-              </div>
-              <b><AnimatedNumber value={stats.total} /></b>
-              <span>மொத்தப் புகார்கள்</span>
-            </div>
-            {/* Resolved */}
-            <div className="kpi" style={{ '--accent': 'var(--ok)', '--accent-bg': 'var(--ok-bg)' } as React.CSSProperties} data-clabel="தீர்க்கப்பட்டது">
-              <div className="kpi-ic">
-                <svg viewBox="0 0 24 24">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <path d="M22 4L12 14.01l-3-3" />
-                </svg>
-              </div>
-              <b><AnimatedNumber value={stats.ok} /></b>
-              <span>தீர்க்கப்பட்டது</span>
-            </div>
-            {/* In Progress */}
-            <div className="kpi" style={{ '--accent': 'var(--warn)', '--accent-bg': 'var(--warn-bg)' } as React.CSSProperties} data-clabel="நடவடிக்கையில்">
-              <div className="kpi-ic">
-                <svg viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-              </div>
-              <b><AnimatedNumber value={stats.warn} /></b>
-              <span>நடவடிக்கையில்</span>
-            </div>
-            {/* Registered */}
-            <div className="kpi" style={{ '--accent': 'var(--pend)', '--accent-bg': 'var(--pend-bg)' } as React.CSSProperties} data-clabel="பதிவில்">
-              <div className="kpi-ic">
-                <svg viewBox="0 0 24 24">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <polyline points="10 9 9 9 8 9" />
-                </svg>
-              </div>
-              <b><AnimatedNumber value={stats.pend} /></b>
-              <span>பதிவில்</span>
-            </div>
-            {/* Resolution Rate */}
-            <div className="kpi" style={{ '--accent': 'var(--gold)', '--accent-bg': 'rgba(254,203,2,.16)' } as React.CSSProperties} data-clabel="தீர்வு விகிதம்">
-              <div className="kpi-ic">
-                <svg viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                  <line x1="9" y1="9" x2="9.01" y2="9" />
-                  <line x1="15" y1="9" x2="15.01" y2="9" />
-                </svg>
-              </div>
-              <b><AnimatedNumber value={stats.rate} /><small>%</small></b>
-              <span>தீர்வு விகிதம்</span>
-            </div>
+          {isLiveDataUnavailable ? (
+            <AnalyticsEmptyState
+              title="தகவல்கள் தற்போது கிடைக்கவில்லை"
+              message={
+                liveError ||
+                "நேரடி தரவைப் பெற முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்."
+              }
+              onRetry={refreshLiveAnalytics}
+            />
+          ) : (
+            <>
+          {isDashboardLoading ? (
+            <KpiSkeletonGrid count={5} />
+          ) : (
+          <div className="kpi-grid" id="kpiGrid" role="list" aria-label="முக்கிய சுட்டிகள்">
+            <KpiCard
+              label="மொத்தப் புகார்கள்"
+              value={stats.total}
+              accent="var(--red)"
+              accentBg="rgba(160,0,0,.1)"
+              dataClabel="மொத்தப் புகார்கள்"
+              icon={<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>}
+            />
+            <KpiCard
+              label="தீர்க்கப்பட்டது"
+              value={stats.ok}
+              accent="var(--ok)"
+              accentBg="var(--ok-bg)"
+              dataClabel="தீர்க்கப்பட்டது"
+              icon={<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="M22 4L12 14.01l-3-3" /></svg>}
+            />
+            <KpiCard
+              label="நடவடிக்கையில்"
+              value={stats.warn}
+              accent="var(--warn)"
+              accentBg="var(--warn-bg)"
+              dataClabel="நடவடிக்கையில்"
+              icon={<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
+            />
+            <KpiCard
+              label="பதிவில்"
+              value={stats.pend}
+              accent="var(--pend)"
+              accentBg="var(--pend-bg)"
+              dataClabel="பதிவில்"
+              icon={<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>}
+            />
+            <KpiCard
+              label="தீர்வு விகிதம்"
+              value={stats.rate}
+              suffix="%"
+              accent="var(--gold)"
+              accentBg="rgba(254,203,2,.16)"
+              dataClabel="தீர்வு விகிதம்"
+              icon={<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></svg>}
+            />
           </div>
+          )}
 
           {/* DYNAMIC INSIGHTS */}
           <div className="insights-section">
@@ -1146,109 +1160,50 @@ export default function AnalyticsDashboard() {
             </div>
           </div>
 
+          {/* RESOLUTION PERFORMANCE */}
+          <div className="card analytics-performance-card" data-clabel="தீர்வு செயல்திறன்">
+            <div className="card-head">
+              <div>
+                <h3>தீர்வு செயல்திறன் (Resolution Performance)</h3>
+                <div className="sub">தீர்வு, பதிலளிப்பு மற்றும் சரிபார்ப்பு விகிதங்கள்</div>
+              </div>
+            </div>
+            {isDashboardLoading ? (
+              <ChartSkeleton variant="radial" />
+            ) : (
+              <ResolutionRadialCharts metrics={radialMetrics} />
+            )}
+          </div>
+
           {/* CHARTS */}
-          <div className="charts">
-            {/* Sector bars */}
-            <div className="card" data-clabel="துறை வாரியான புகார்கள்">
+          <div className="charts analytics-charts-grid">
+            <div className="card analytics-chart-card" data-clabel="துறை வாரியான புகார்கள்">
               <div className="card-head">
                 <div>
                   <h3>துறை வாரியான புகார்கள்</h3>
-                  <div className="sub">மொத்தம் vs தீர்க்கப்பட்டது</div>
+                  <div className="sub">வகை வாரியான பிரிவு — ஊடுருவல் விளக்கம்</div>
                 </div>
                 <span className="card-tag" id="sectorAreaTag">{curArea}</span>
               </div>
-              <div className="sbars" id="sbars">
-                {SECTORS.map((s) => {
-                  const items = areaFilteredData.filter(x => x.sector === s.key);
-                  const tot = items.length;
-                  const resolvedCount = items.filter(x => x.status === 'ok').length;
-                  
-                  return (
-                    <div className="sbar" key={s.key}>
-                      <div className="sbar-name">
-                        <span className="sbar-dot" style={{ background: s.color }}></span>
-                        {s.name}
-                      </div>
-                      <div className="sbar-track">
-                        <div className="sbar-fill" style={{ background: s.color, width: `${(tot / maxSectorCount) * 100}%` }}></div>
-                        <div className="sbar-resolved" style={{ width: tot ? `${(resolvedCount / maxSectorCount) * 100}%` : '0%' }}></div>
-                      </div>
-                      <div className="sbar-val">{tot}<small> · {resolvedCount} ✓</small></div>
-                    </div>
-                  );
-                })}
-              </div>
+              {isDashboardLoading ? (
+                <ChartSkeleton variant="donut" />
+              ) : (
+                <CategoryDoughnutChart data={categoryChartData} areaLabel={curArea} />
+              )}
             </div>
 
-            {/* Donut chart */}
-            <div className="card" data-clabel="தீர்வு நிலை">
+            <div className="card analytics-chart-card" data-clabel="தீர்வு நிலை">
               <div className="card-head">
                 <div>
                   <h3>தீர்வு நிலை</h3>
                   <div className="sub">மொத்தப் புகார்களின் நிலை</div>
                 </div>
               </div>
-              <div className="donut-wrap">
-                <div className="donut">
-                  <svg width="170" height="170" viewBox="0 0 170 170">
-                    <circle cx="85" cy="85" r="68" fill="none" stroke="var(--cream-2)" strokeWidth="20" />
-                    <circle
-                      id="arcOk"
-                      cx="85"
-                      cy="85"
-                      r="68"
-                      fill="none"
-                      stroke="var(--ok)"
-                      strokeWidth="20"
-                      strokeLinecap="round"
-                      style={{
-                        strokeDasharray: donutValues.okDash,
-                        strokeDashoffset: donutValues.okOffset,
-                        transition: 'stroke-dasharray 1s var(--ease), stroke-dashoffset 1s var(--ease)'
-                      }}
-                    />
-                    <circle
-                      id="arcWarn"
-                      cx="85"
-                      cy="85"
-                      r="68"
-                      fill="none"
-                      stroke="var(--warn)"
-                      strokeWidth="20"
-                      strokeLinecap="round"
-                      style={{
-                        strokeDasharray: donutValues.warnDash,
-                        strokeDashoffset: donutValues.warnOffset,
-                        transition: 'stroke-dasharray 1s var(--ease), stroke-dashoffset 1s var(--ease)'
-                      }}
-                    />
-                    <circle
-                      id="arcPend"
-                      cx="85"
-                      cy="85"
-                      r="68"
-                      fill="none"
-                      stroke="var(--pend)"
-                      strokeWidth="20"
-                      strokeLinecap="round"
-                      style={{
-                        strokeDasharray: donutValues.pendDash,
-                        strokeDashoffset: donutValues.pendOffset,
-                        transition: 'stroke-dasharray 1s var(--ease), stroke-dashoffset 1s var(--ease)'
-                      }}
-                    />
-                  </svg>
-                  <div className="donut-center">
-                    <b id="donutPct"><AnimatedNumber value={stats.rate} />%</b>
-                    <span>தீர்வு விகிதம்</span>
-                  </div>
-                </div>
-                <div className="legend" id="donutLegend">
-                  <div className="leg"><i style={{ background: 'var(--ok)' }}></i><span className="lname">தீர்க்கப்பட்டது</span><span className="lval">{stats.ok}</span></div>
-                  <div className="leg"><i style={{ background: 'var(--warn)' }}></i><span className="lname">நடவடிக்கையில்</span><span className="lval">{stats.warn}</span></div>
-                  <div className="leg"><i style={{ background: 'var(--pend)' }}></i><span className="lname">பதிவில்</span><span className="lval">{stats.pend}</span></div>
-                </div>
-              </div>
+              {isDashboardLoading ? (
+                <ChartSkeleton variant="donut" />
+              ) : (
+                <StatusDoughnutChart ok={stats.ok} warn={stats.warn} pend={stats.pend} rate={stats.rate} />
+              )}
             </div>
           </div>
 
@@ -1262,33 +1217,11 @@ export default function AnalyticsDashboard() {
                   <div className="sub">பதிவான புகார்கள் மற்றும் தீர்க்கப்பட்டவை (6 மாதம்)</div>
                 </div>
               </div>
-              <div className="trend-legend">
-                <span><i style={{ background: 'var(--red)' }}></i> பதிவானவை</span>
-                <span><i style={{ background: 'var(--ok)' }}></i> தீர்க்கப்பட்டவை</span>
-              </div>
-              <div className="trend-wrap">
-                <svg id="trendSvg" width="100%" height="220" viewBox="0 0 900 220" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="gsub" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0" stopColor="#A00000" stopOpacity=".22"/>
-                      <stop offset="1" stopColor="#A00000" stopOpacity="0"/>
-                    </linearGradient>
-                  </defs>
-                  {/* Grid Lines */}
-                  {Array.from({ length: 4 }).map((_, g) => {
-                    const yy = pad + g * ((H - 2 * pad) / 3);
-                    return <line key={g} x1={pad} y1={yy} x2={W - pad} y2={yy} stroke="rgba(160,0,0,.1)" strokeWidth="1"/>;
-                  })}
-                  <path d={trendData.areaPathSub} fill="url(#gsub)"/>
-                  <path d={trendData.linePathSub} fill="none" stroke="#A00000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d={trendData.linePathRes} fill="none" stroke="#3F8F4A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="2 0"/>
-                  {/* Dots */}
-                  {trendData.sub.map((v, i) => <circle key={`sub-${i}`} cx={trendData.x(i)} cy={trendData.y(v)} r="4" fill="#fff" stroke="#A00000" strokeWidth="2.5"/>)}
-                  {trendData.res.map((v, i) => <circle key={`res-${i}`} cx={trendData.x(i)} cy={trendData.y(v)} r="4" fill="#fff" stroke="#3F8F4A" strokeWidth="2.5"/>)}
-                  {/* Labels */}
-                  {MONTHS.map((m, i) => <text key={`lbl-${i}`} x={trendData.x(i)} y={H - 8} fontSize="13" fill="#6B4F3C" textAnchor="middle" fontFamily="Hind Madurai">{m}</text>)}
-                </svg>
-              </div>
+              {isDashboardLoading ? (
+                <ChartSkeleton variant="area" />
+              ) : (
+                <MonthlyTrendChart data={trendChartData} />
+              )}
             </div>
 
             {/* RECENT ACTIVITY FEED */}
@@ -1333,14 +1266,19 @@ export default function AnalyticsDashboard() {
 
           {/* CONSTITUENCY ANALYTICS */}
           <div className="constituency-analytics-section">
-            <div className="card constituency-card" data-clabel="தொகுதி பகுப்பாய்வு">
+            <div className="card constituency-card analytics-chart-card" data-clabel="தொகுதி பகுப்பாய்வு">
               <div className="card-head">
                 <div>
                   <h3>ஒன்றியங்கள் மற்றும் தொகுதிகள் பகுப்பாய்வு (Constituency Analysis)</h3>
-                  <div className="sub">ஒவ்வொரு தொகுதியின் ஒட்டுமொத்த செயல்பாடு மற்றும் தீர்வு விகிதம்</div>
+                  <div className="sub">மொத்தம், நிலைகள் மற்றும் தீர்வு விகிதம் — interactive bar chart</div>
                 </div>
               </div>
-              <div className="const-grid">
+              {isDashboardLoading ? (
+                <ChartSkeleton variant="bar" />
+              ) : (
+                <ConstituencyBarChart data={constituencyChartData} />
+              )}
+              <div className="const-grid analytics-const-summary">
                 {constituencyStats.map((c, idx) => (
                   <div key={idx} className="const-stat-card">
                     <div className="const-stat-header">
@@ -1435,6 +1373,8 @@ export default function AnalyticsDashboard() {
               <span>தனிநபர் பெயர், முகவரி, தொலைபேசி போன்ற விவரங்கள் பொது பகுப்பாய்வில் வெளியிடப்படாது.</span>
             </div>
           </div>
+            </>
+          )}
         </div>
       </section>
 

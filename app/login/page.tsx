@@ -200,7 +200,7 @@ export default function LoginPage() {
             onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.98)"; }}
             onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1.02)"; }}
           >
-            {loading ? "சரிபார்க்கப்படுகிறது..." : "உள்நுழைய (Login) 🚩"}
+            {loading ? "சரிபார்க்கப்படுகிறது..." : "உள்நுழைய (Login) "}
           </button>
         </form>
 
