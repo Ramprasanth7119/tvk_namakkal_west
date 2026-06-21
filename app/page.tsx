@@ -11,6 +11,7 @@ import { WHISTLE_CURSOR_GOLD } from '@/lib/whistleCursorAssets';
 import { calculateAgeFromDob } from '@/lib/voterRegistry';
 import TvkHomeNav from '@/components/TvkHomeNav';
 import LaunchReveal from '@/components/LaunchReveal';
+import SmoothScroll from '@/components/SmoothScroll';
 
 const CATEGORIES = {
   "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
@@ -1208,6 +1209,9 @@ export default function Home() {
 
   return (
     <>
+      {/* Desktop momentum wheel scrolling (touch keeps native momentum) */}
+      <SmoothScroll />
+
       {/* LAUNCH REVEAL — birthday/launch ribbon-cut overlay (campaign-gated, self-removing) */}
       <LaunchReveal />
 
