@@ -556,6 +556,15 @@ export default function AdminPage() {
     return null;
   }
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      /* ignore — clear client state regardless */
+    }
+    window.location.href = "/login";
+  };
+
   const adminTopBarLinks: TopBarLink[] = [
     ...(sessionUser.role === "SUPER_ADMIN"
       ? [{ href: "#voter-registry", label: "வாக்காளர் பதிவேடு" }]
@@ -571,6 +580,7 @@ export default function AdminPage() {
       : []),
     { href: "/analytics", label: "பகுப்பாய்வு" },
     { href: "/", label: "முகப்பு" },
+    { label: "வெளியேறு (Logout)", onClick: handleLogout },
   ];
 
   return (

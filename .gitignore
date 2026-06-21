@@ -5,10 +5,6 @@
 /.pnp
 .pnp.*
 .yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
 # testing
 /coverage
@@ -30,12 +26,23 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — NEVER commit secrets
+.env
+.env.*
+!.env.example
+
+# typescript
+*.tsbuildinfo
 
 # vercel
 .vercel
 
-# typescript
-*.tsbuildinfo
+# next.js generated types
 next-env.d.ts
+
+# local agent/editor tooling — not part of the app
+.agents/
+.claude/
+.impeccable/
+.cursor/
+.windsurf/

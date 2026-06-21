@@ -289,6 +289,15 @@ export default function MyTasksPage() {
     ? { lat: Number(selectedTask.geolocation.latitude), lon: Number(selectedTask.geolocation.longitude) }
     : null;
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      /* ignore — clear client state regardless */
+    }
+    window.location.href = "/login";
+  };
+
   return (
     <div className="analytics-body min-h-screen">
       <TvkTopBar
@@ -300,7 +309,7 @@ export default function MyTasksPage() {
             static: true,
             active: true,
           },
-          { href: "/login", label: "⚙️ வெளியேறு" },
+          { label: "⚙️ வெளியேறு (Logout)", onClick: handleLogout },
         ]}
       />
 
@@ -635,8 +644,9 @@ export default function MyTasksPage() {
                   marginTop: "1.25rem", 
                   padding: "0.75rem", 
                   borderRadius: "0.5rem", 
-                  background: submitMessage.includes("✅") ? "#DCFCE7" : "#FEE2E2",
-                  color: submitMessage.includes("✅") ? "#166534" : "#991B1B",
+                  // success vs error styling — error messages always contain "பிழை" (error); everything else is a success
+                  background: submitMessage.includes("பிழை") ? "#FEE2E2" : "#DCFCE7",
+                  color: submitMessage.includes("பிழை") ? "#991B1B" : "#166534",
                   fontWeight: "bold",
                   fontSize: "0.9rem",
                   textAlign: "center"

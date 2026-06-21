@@ -434,6 +434,15 @@ export default function ComplaintsManagementPage() {
     );
   }
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      /* ignore — clear client state regardless */
+    }
+    window.location.href = "/login";
+  };
+
   const topBarLinks: TopBarLink[] = [
     ...(sessionUser?.role === "SUPER_ADMIN"
       ? [{ href: "/admin", label: "⚙️ நிர்வாகக் கட்டுப்பாடு", highlight: true }]
@@ -441,6 +450,7 @@ export default function ComplaintsManagementPage() {
     { href: "/analytics", label: "பகுப்பாய்வு" },
     { href: "/complaints", label: "புகார்கள் மேலாண்மை", active: true },
     { href: "/", label: "முகப்புக்குத் திரும்பு" },
+    { label: "வெளியேறு (Logout)", onClick: handleLogout },
   ];
 
   return (
@@ -1305,8 +1315,9 @@ export default function ComplaintsManagementPage() {
                   marginTop: '1rem', 
                   padding: '0.75rem', 
                   borderRadius: '0.5rem', 
-                  background: statusUpdateMessage.includes("✅") ? '#DCFCE7' : '#FEE2E2',
-                  color: statusUpdateMessage.includes("✅") ? '#166534' : '#991B1B',
+                  // success vs error styling — error messages always contain "பிழை" (error); everything else is a success
+                  background: statusUpdateMessage.includes("பிழை") ? '#FEE2E2' : '#DCFCE7',
+                  color: statusUpdateMessage.includes("பிழை") ? '#991B1B' : '#166534',
                   fontWeight: 'bold',
                   fontSize: '0.9rem',
                   textAlign: 'center'
