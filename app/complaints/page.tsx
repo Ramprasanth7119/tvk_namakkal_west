@@ -445,7 +445,7 @@ export default function ComplaintsManagementPage() {
 
   const topBarLinks: TopBarLink[] = [
     ...(sessionUser?.role === "SUPER_ADMIN"
-      ? [{ href: "/admin", label: "⚙️ நிர்வாகக் கட்டுப்பாடு", highlight: true }]
+      ? [{ href: "/admin", label: "நிர்வாகக் கட்டுப்பாடு", highlight: true }]
       : []),
     { href: "/analytics", label: "பகுப்பாய்வு" },
     { href: "/complaints", label: "புகார்கள் மேலாண்மை", active: true },
@@ -1285,7 +1285,7 @@ export default function ComplaintsManagementPage() {
                         opacity: normalizeStatus(selectedComplaint.status) === "under_review" ? 1 : 0.8
                       }}
                     >
-                      ⚙️ நடவடிக்கையில்
+                      நடவடிக்கையில்
                     </button>
 
                     <button 

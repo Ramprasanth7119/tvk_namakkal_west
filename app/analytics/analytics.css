@@ -3410,6 +3410,12 @@ body.chover .wcur {
   pointer-events: none;
 }
 
+/* keep the percentage sized to the wrapper (not the large kpi-val) so it stays inside the ring */
+.analytics-radial-value .analytics-radial-num {
+  font: inherit;
+  line-height: 1;
+}
+
 .analytics-radial-label {
   display: block;
   margin-top: 0.5rem;

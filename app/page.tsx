@@ -1675,7 +1675,7 @@ export default function Home() {
               className="verify-btn"
               href={`/track?trackingId=${encodeURIComponent(trackingId)}`}
             >
-              மனு நிலையை அறிய 🔍
+              மனு நிலையை அறிய
             </a>
             <button
               type="button"
@@ -2134,10 +2134,10 @@ export default function Home() {
                         </p>
                         <div className="media-actions">
                           <button type="button" className="media-btn" onClick={startCamera}>
-                            📷 கேமரா
+                            கேமரா
                           </button>
                           <button type="button" className="media-btn" onClick={() => fileInputRef.current?.click()}>
-                            📁 பதிவேற்று
+                            பதிவேற்று
                           </button>
                         </div>
                         <input
@@ -2191,7 +2191,7 @@ export default function Home() {
                         </p>
                         <div className="media-actions">
                           <button type="button" className="media-btn" onClick={() => videoInputRef.current?.click()}>
-                            📹 வீடியோ பதிவேற்று
+                            வீடியோ பதிவேற்று
                           </button>
                         </div>
                         <input

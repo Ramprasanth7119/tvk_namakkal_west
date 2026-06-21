@@ -139,7 +139,7 @@ export default function AnalyticsDashboard() {
   const [curArea, setCurArea] = useState("அனைத்தும்");
   const [curStatus, setCurStatus] = useState("all");
   const [curSearch, setCurSearch] = useState("");
-  const [demoMode, setDemoMode] = useState(true);
+  const [demoMode, setDemoMode] = useState(false);
   const [liveAnalytics, setLiveAnalytics] = useState<any>(null);
   const [liveError, setLiveError] = useState<string | null>(null);
   const [isLiveLoading, setIsLiveLoading] = useState(false);
@@ -166,8 +166,7 @@ export default function AnalyticsDashboard() {
           if (data.authenticated && data.user) {
             setSessionUser(data.user);
             if (data.user.role === "REPRESENTATIVE") {
-              // REPRESENTATIVE starts in demo mode so they see managed demo data for their constituency
-              setDemoMode(true);
+              // Default to live data scoped to their constituency; demo data is available via the toggle.
               setCurArea(data.user.constituency);
             }
           }

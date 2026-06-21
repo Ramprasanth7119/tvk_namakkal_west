@@ -62,7 +62,9 @@ function ResolutionRadialCharts({ metrics }: ResolutionRadialChartsProps) {
               </RadialBarChart>
             </ResponsiveContainer>
             <div className="analytics-radial-value">
-              <AnimatedNumber value={metric.value} suffix="%" />
+              {/* explicit class — AnimatedNumber defaults to the large `kpi-val` style,
+                  which overflows the ring; this keeps the number inside the circle */}
+              <AnimatedNumber value={metric.value} suffix="%" className="analytics-radial-num" />
             </div>
           </div>
           <span className="analytics-radial-label">{metric.name}</span>

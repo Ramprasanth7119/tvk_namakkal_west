@@ -309,7 +309,7 @@ export default function MyTasksPage() {
             static: true,
             active: true,
           },
-          { label: "⚙️ வெளியேறு (Logout)", onClick: handleLogout },
+          { label: "வெளியேறு (Logout)", onClick: handleLogout },
         ]}
       />
 
@@ -477,7 +477,7 @@ export default function MyTasksPage() {
                     className="verify-btn"
                     style={{ padding: "0.75rem 2rem", fontSize: "0.95rem" }}
                   >
-                    {isSubmittingWork ? "பணி தொடங்கப்படுகிறது..." : "பணியைத் தொடங்கு (Start Work) ⚙️"}
+                    {isSubmittingWork ? "பணி தொடங்கப்படுகிறது..." : "பணியைத் தொடங்கு (Start Work)"}
                   </button>
                 </div>
               )}
@@ -514,7 +514,7 @@ export default function MyTasksPage() {
                       </div>
                       <div style={{ display: "flex", gap: "0.35rem" }}>
                         <button type="button" onClick={() => startCamera("before")} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>📸 கேமரா</button>
-                        <button type="button" onClick={() => beforeInputRef.current?.click()} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>📁 கோப்பு</button>
+                        <button type="button" onClick={() => beforeInputRef.current?.click()} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>கோப்பு</button>
                       </div>
                       <input type="file" accept="image/*" multiple ref={beforeInputRef} onChange={(e) => handleFileChange(e, "before")} style={{ display: "none" }} title="பணிக்கு முன் புகைப்படங்கள்" />
                     </div>
@@ -532,7 +532,7 @@ export default function MyTasksPage() {
                       </div>
                       <div style={{ display: "flex", gap: "0.35rem" }}>
                         <button type="button" onClick={() => startCamera("after")} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>📸 கேமரா</button>
-                        <button type="button" onClick={() => afterInputRef.current?.click()} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>📁 கோப்பு</button>
+                        <button type="button" onClick={() => afterInputRef.current?.click()} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>கோப்பு</button>
                       </div>
                       <input type="file" accept="image/*" multiple ref={afterInputRef} onChange={(e) => handleFileChange(e, "after")} style={{ display: "none" }} title="பணிக்கு பின் புகைப்படங்கள்" />
                     </div>
