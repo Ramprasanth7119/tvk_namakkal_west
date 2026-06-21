@@ -527,6 +527,25 @@ export default function Home() {
       return;
     }
 
+    // Validate required citizen + complaint details before submitting
+    const cleanMobile = (mobile || '').replace(/\D/g, '');
+    if (!name.trim()) {
+      alert('குடிமகன் பெயர் தேவை. (Citizen name is required.)');
+      return;
+    }
+    if (cleanMobile.length !== 10) {
+      alert('சரியான 10 இலக்க அலைபேசி எண் தேவை. (A valid 10-digit mobile number is required.)');
+      return;
+    }
+    if (!address.trim()) {
+      alert('முகவரி தேவை. (Address is required.)');
+      return;
+    }
+    if (!description.trim()) {
+      alert('குறை விளக்கம் தேவை. (Complaint description is required.)');
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmissionError('');
 
