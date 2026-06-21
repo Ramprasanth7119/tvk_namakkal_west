@@ -20,7 +20,10 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const constituency = searchParams.get("constituency");
-    const baseMatchStage: Record<string, unknown> = { approvalStatus: { $ne: "REJECTED" } };
+    // NOTE: previously filtered `approvalStatus: { $ne: "REJECTED" }`, but no code path ever
+    // sets approvalStatus to "REJECTED" (rejections loop back to work_in_progress), so it was
+    // a no-op. Removed to avoid implying an exclusion that never happens.
+    const baseMatchStage: Record<string, unknown> = {};
     const matchStage: Record<string, unknown> = { ...baseMatchStage };
 
     if (constituency && constituency !== "அனைத்தும்" && isConstituency(constituency)) {

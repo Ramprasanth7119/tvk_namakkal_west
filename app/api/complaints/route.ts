@@ -214,23 +214,40 @@ export async function POST(request: Request) {
     const currentYear = new Date().getFullYear(); // 2026
     const prefix = `ETT-${currentYear}-`;
 
-    // Find the latest complaint for this year to increment the sequence
-    const latestComplaint = await db
-      .collection("citizenComplaints")
-      .findOne(
-        { trackingId: { $regex: `^${prefix}` } },
-        { sort: { trackingId: -1 } }
-      );
+    // Generate a unique sequential tracking ID atomically to avoid collisions under
+    // concurrent submissions. A per-year counter in `counters` is incremented atomically;
+    // it is lazily seeded from the current max so it stays consistent with existing IDs.
+    const counters = db.collection("counters");
+    const counterId = `complaint-${currentYear}`;
 
-    let nextNum = 1;
-    if (latestComplaint && latestComplaint.trackingId) {
-      const lastPart = latestComplaint.trackingId.split("-")[2];
-      const parsedNum = parseInt(lastPart, 10);
-      if (!isNaN(parsedNum)) {
-        nextNum = parsedNum + 1;
+    const existingCounter = await counters.findOne({ _id: counterId as any });
+    if (!existingCounter) {
+      const latestComplaint = await db
+        .collection("citizenComplaints")
+        .findOne(
+          { trackingId: { $regex: `^${prefix}` } },
+          { sort: { trackingId: -1 } }
+        );
+      let seed = 0;
+      if (latestComplaint && latestComplaint.trackingId) {
+        const parsed = parseInt(String(latestComplaint.trackingId).split("-")[2], 10);
+        if (!isNaN(parsed)) seed = parsed;
       }
+      // Seed the counter to the current max — $setOnInsert is a no-op if another
+      // concurrent request already created it, so we never double-seed.
+      await counters.updateOne(
+        { _id: counterId as any },
+        { $setOnInsert: { seq: seed } },
+        { upsert: true }
+      );
     }
 
+    const counterDoc = await counters.findOneAndUpdate(
+      { _id: counterId as any },
+      { $inc: { seq: 1 } },
+      { upsert: true, returnDocument: "after" }
+    );
+    const nextNum = (counterDoc && (counterDoc as any).seq) || 1;
     const trackingId = `${prefix}${String(nextNum).padStart(5, "0")}`;
 
     // Upload media to Cloudinary (do not store base64 in MongoDB)

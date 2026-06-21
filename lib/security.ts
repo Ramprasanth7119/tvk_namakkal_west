@@ -111,7 +111,13 @@ export async function checkRateLimit(
     };
   } catch (error) {
     console.error("Rate limiting error:", error);
-    // Fallback to allow request in case of DB issues to avoid crashing the app
+    // DB unavailable: fail OPEN (allow the request) to preserve availability for citizens,
+    // but log the degradation so it is observable/auditable rather than silently bypassed.
+    try {
+      await logSecurityEvent(ip, "RATE_LIMIT_DEGRADED", { action, error: String(error) });
+    } catch {
+      /* logging is best-effort — never block the request on it */
+    }
     return {
       success: true,
       count: 1,
