@@ -48,8 +48,6 @@ const TITLES: Record<string, string[]> = {
   civic: ["பூங்கா பராமரிப்பு இல்லை", "பொதுக் கழிப்பிடம் சுத்தம் தேவை", "குளம் தூர்வாரம் கோரிக்கை", "மயானச் சாலை மேம்பாடு", "சந்தை கூடம் பழுது"],
 };
 
-const CITIZENS = ["முருகன்", "லட்சுமி", "கார்த்திக்", "அன்பரசி", "செல்வம்", "தமிழ்ச்செல்வி", "ராஜேஷ்", "கலைவாணி", "வடிவேல்", "பிரியா", "குமார்", "மீனா", "சிவா", "ஜோதி", "பாலா"];
-const RESOLVERS = ["மாவட்டச் செயலாளர் அணி", "ஒன்றிய ஒருங்கிணைப்பாளர்", "வார்டுப் பொறுப்பாளர்", "இளைஞரணி குழு", "மாவட்ட நிர்வாகி"];
 const MONTHS = ["ஜன", "பிப்", "மார்", "ஏப்", "மே", "ஜூன்"];
 const STATUSES = [
   ["all", "அனைத்தும்"],
@@ -74,11 +72,9 @@ interface Complaint {
   sector: string;
   area: string;
   title: string;
-  by: string;
   month: number;
   date: string;
   status: 'ok' | 'warn' | 'pend';
-  resolver: string | null;
 }
 
 function genData(): Complaint[] {
@@ -99,11 +95,9 @@ function genData(): Complaint[] {
       sector: sec,
       area,
       title,
-      by: pick(CITIZENS) + ", " + area.split(" ")[0],
       month: m,
       date: `${String(day).padStart(2, '0')}/${String(m + 1).padStart(2, '0')}/26`,
       status,
-      resolver: status === "ok" ? pick(RESOLVERS) : null
     });
   }
   return rows;
@@ -147,14 +141,12 @@ export default function AnalyticsDashboard() {
   const [curStatus, setCurStatus] = useState("all");
   const [curSearch, setCurSearch] = useState("");
   const [demoMode, setDemoMode] = useState(true);
-  const [dbData, setDbData] = useState<Complaint[]>([]);
+  const [liveAnalytics, setLiveAnalytics] = useState<any>(null);
+  const [isLiveLoading, setIsLiveLoading] = useState(false);
   const [managedDemoData, setManagedDemoData] = useState<Complaint[]>([]);
   const [isManagedDemoLoading, setIsManagedDemoLoading] = useState(false);
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
-  const [publicAnalytics, setPublicAnalytics] = useState<any>(null);
-  const [isPublicLoading, setIsPublicLoading] = useState(false);
-  const isPublicView = !isSessionLoading && !sessionUser;
 
   // Memoize allowed areas based on user role
   const allowedAreas = useMemo(() => {
@@ -189,28 +181,38 @@ export default function AnalyticsDashboard() {
     fetchSession();
   }, []);
 
-  // Fetch public analytics for unauthenticated visitors
-  useEffect(() => {
-    if (!isSessionLoading && !sessionUser) {
-      const fetchPublicAnalytics = async () => {
-        setIsPublicLoading(true);
-        try {
-          const areaParam = curArea !== "அனைத்தும்" ? `?constituency=${encodeURIComponent(curArea)}` : "";
-          const res = await fetch(`/api/public/analytics${areaParam}`);
-          if (res.ok) {
-            const data = await res.json();
-            setPublicAnalytics(data);
-            setDemoMode(false);
-          }
-        } catch (err) {
-          console.error("Error fetching public analytics:", err);
-        } finally {
-          setIsPublicLoading(false);
-        }
-      };
-      fetchPublicAnalytics();
+  const liveConstituencyParam = useMemo(() => {
+    if (sessionUser?.role === "REPRESENTATIVE" && sessionUser.constituency) {
+      return sessionUser.constituency;
     }
-  }, [isSessionLoading, sessionUser, curArea]);
+    return curArea !== "அனைத்தும்" ? curArea : "";
+  }, [sessionUser, curArea]);
+
+  const refreshLiveAnalytics = async () => {
+    setIsLiveLoading(true);
+    try {
+      const q = liveConstituencyParam
+        ? `?constituency=${encodeURIComponent(liveConstituencyParam)}`
+        : "";
+      const res = await fetch(`/api/public/analytics${q}`);
+      if (res.ok) {
+        setLiveAnalytics(await res.json());
+      } else {
+        setLiveAnalytics(null);
+      }
+    } catch (err) {
+      console.error("Error fetching live analytics:", err);
+      setLiveAnalytics(null);
+    } finally {
+      setIsLiveLoading(false);
+    }
+  };
+
+  // Fetch live analytics from DB when demo mode is off
+  useEffect(() => {
+    if (demoMode || isSessionLoading) return;
+    refreshLiveAnalytics();
+  }, [demoMode, isSessionLoading, liveConstituencyParam]);
 
   // Whistle Cursor effect
   useEffect(() => {
@@ -598,46 +600,8 @@ export default function AnalyticsDashboard() {
 
       if (res.ok && data.success) {
         setTrackingId(data.trackingId);
-        // Refresh complaints list if demoMode is off
         if (!demoMode) {
-          const freshRes = await fetch('/api/complaints');
-          if (freshRes.ok) {
-            const raw = await freshRes.json();
-            const mapped: Complaint[] = raw.map((item: any) => {
-              let sector = 'civic';
-              const cat = item.complaintDetails?.category;
-              if (cat === 'மின்சாரம்') sector = 'power';
-              else if (cat === 'சாலை' || cat === 'போக்குவரத்து') sector = 'road';
-              else if (cat === 'குடிநீர்') sector = 'water';
-              else if (cat === 'கழிவுநீர்' || cat === 'சுகாதாரம்') sector = 'drain';
-              else if (cat === 'தெருவிளக்கு') sector = 'light';
-              else if (cat === 'கல்வி') sector = 'edu';
-              else if (cat === 'மருத்துவம்' || cat === 'சுற்றுச்சூழல்') sector = 'health';
-
-              const createdDate = new Date(item.createdAt || Date.now());
-              const m = createdDate.getMonth() % 6;
-              const day = createdDate.getDate();
-              const yearShort = String(createdDate.getFullYear()).slice(-2);
-
-              let status: 'ok' | 'warn' | 'pend' = 'pend';
-              if (item.status === 'ok') status = 'ok';
-              else if (item.status === 'warn') status = 'warn';
-              else if (item.complaintDetails?.urgency === 'அதி அவசரம்') status = 'warn';
-
-              return {
-                id: item.trackingId || 'NMK-0000',
-                sector,
-                area: item.constituency || CONSTITUENCIES[0],
-                title: `${item.complaintDetails?.subcategory || ''} — ${item.complaintDetails?.description || ''}`,
-                by: `${item.citizenDetails?.name || ''}, ${item.citizenDetails?.areaStreet || ''}`,
-                month: m,
-                date: `${String(day).padStart(2, '0')}/${String(m + 1).padStart(2, '0')}/${yearShort}`,
-                status,
-                resolver: null,
-              };
-            });
-            setDbData(mapped);
-          }
+          await refreshLiveAnalytics();
         }
       } else {
         setSubmissionError(data.error || 'புகாரைச் சமர்ப்பிப்பதில் பிழை ஏற்பட்டது.');
@@ -662,15 +626,13 @@ export default function AnalyticsDashboard() {
           if (res.ok) {
             const raw = await res.json();
             const mapped: Complaint[] = raw.map((item: any) => ({
-              id: item._id || `DEMO-${Math.random().toString(36).slice(2,6).toUpperCase()}`,
+              id: item._id || `DEMO-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
               sector: item.sector || "civic",
               area: item.constituency || CONSTITUENCIES[0],
               title: item.title,
-              by: item.by || "பொது",
               month: typeof item.month === "number" ? item.month : 0,
               date: item.date || "01/01/26",
               status: (item.status as "ok" | "warn" | "pend") || "pend",
-              resolver: item.resolver || null,
             }));
             setManagedDemoData(mapped);
           }
@@ -686,79 +648,34 @@ export default function AnalyticsDashboard() {
     }
   }, [demoMode, sessionUser, curArea]);
 
-  useEffect(() => {
-    if (!demoMode) {
-      const fetchDbData = async () => {
-        try {
-          const res = await fetch('/api/complaints');
-          if (res.ok) {
-            const raw = await res.json();
-            const mapped: Complaint[] = raw.map((item: any) => {
-              let sector = 'civic';
-              const cat = item.complaintDetails?.category;
-              if (cat === 'மின்சாரம்') sector = 'power';
-              else if (cat === 'சாலை' || cat === 'போக்குவரத்து') sector = 'road';
-              else if (cat === 'குடிநீர்') sector = 'water';
-              else if (cat === 'கழிவுநீர்' || cat === 'சுகாதாரம்') sector = 'drain';
-              else if (cat === 'தெருவிளக்கு') sector = 'light';
-              else if (cat === 'கல்வி') sector = 'edu';
-              else if (cat === 'மருத்துவம்' || cat === 'சுற்றுச்சூழல்') sector = 'health';
-
-              const createdDate = new Date(item.createdAt || Date.now());
-              const m = createdDate.getMonth() % 6; // Keep within 0..5
-              const day = createdDate.getDate();
-              const yearShort = String(createdDate.getFullYear()).slice(-2);
-
-              let status: 'ok' | 'warn' | 'pend' = 'pend';
-              if (item.status === 'ok') status = 'ok';
-              else if (item.status === 'warn') status = 'warn';
-              else if (item.complaintDetails?.urgency === 'அதி அவசரம்') status = 'warn';
-
-              return {
-                id: item.trackingId || 'NMK-0000',
-                sector,
-                area: item.constituency || CONSTITUENCIES[0],
-                title: `${item.complaintDetails?.subcategory || ''} — ${item.complaintDetails?.description || ''}`,
-                by: `${item.citizenDetails?.name || ''}, ${item.citizenDetails?.areaStreet || ''}`,
-                month: m,
-                date: `${String(day).padStart(2, '0')}/${String(m + 1).padStart(2, '0')}/${yearShort}`,
-                status,
-                resolver: null,
-              };
-            });
-            setDbData(mapped);
-          }
-        } catch (err) {
-          console.error("Error fetching db data:", err);
-        }
-      };
-      fetchDbData();
+  const demoSourceData = useMemo((): Complaint[] => {
+    if (sessionUser && managedDemoData.length > 0) {
+      return managedDemoData;
     }
-  }, [demoMode]);
+    if (sessionUser?.role === "REPRESENTATIVE" && sessionUser.constituency) {
+      return DATA.filter((d) => d.area === sessionUser.constituency);
+    }
+    return DATA;
+  }, [managedDemoData, sessionUser]);
 
   const activeData = useMemo((): Complaint[] => {
-    if (isPublicView && publicAnalytics?.recentActivity) {
-      return publicAnalytics.recentActivity as Complaint[];
+    if (!demoMode) {
+      return (liveAnalytics?.records as Complaint[]) || [];
     }
-    if (demoMode && sessionUser) {
-      // Prefer managed demo data from DB; fall back to static generated data
-      if (managedDemoData.length > 0) return managedDemoData;
-      // Static fallback: filter by constituency for REPRESENTATIVE
-      if (sessionUser.role === "REPRESENTATIVE" && sessionUser.constituency) {
-        return DATA.filter(d => d.area === sessionUser.constituency);
-      }
-      return DATA;
-    }
-    return demoMode ? DATA : dbData;
-  }, [demoMode, dbData, managedDemoData, sessionUser, isPublicView, publicAnalytics]);
+    return demoSourceData;
+  }, [demoMode, liveAnalytics, demoSourceData]);
 
-  // Filters computed in React
   const areaFilteredData = useMemo((): Complaint[] => {
-    if (isPublicView && publicAnalytics?.recentActivity) {
-      return publicAnalytics.recentActivity as Complaint[];
+    if (!demoMode) {
+      return activeData;
     }
-    return curArea === "அனைத்தும்" ? activeData : activeData.filter((d) => d.area === curArea);
-  }, [curArea, activeData, isPublicView, publicAnalytics]);
+    if (sessionUser?.role === "REPRESENTATIVE" && sessionUser.constituency) {
+      return activeData;
+    }
+    return curArea === "அனைத்தும்"
+      ? activeData
+      : activeData.filter((d) => d.area === curArea);
+  }, [curArea, activeData, demoMode, sessionUser]);
 
   const filteredData = useMemo(() => {
     let d = areaFilteredData;
@@ -777,8 +694,8 @@ export default function AnalyticsDashboard() {
 
   // KPI Calculations
   const stats = useMemo(() => {
-    if (isPublicView && publicAnalytics?.summary) {
-      const s = publicAnalytics.summary;
+    if (!demoMode && liveAnalytics?.summary) {
+      const s = liveAnalytics.summary;
       return {
         total: s.total,
         ok: s.resolved,
@@ -793,7 +710,7 @@ export default function AnalyticsDashboard() {
     const pend = areaFilteredData.filter(x => x.status === 'pend').length;
     const rate = total ? Math.round(ok / total * 100) : 0;
     return { total, ok, warn, pend, rate };
-  }, [areaFilteredData, isPublicView, publicAnalytics]);
+  }, [areaFilteredData, demoMode, liveAnalytics]);
 
   // Sector maximum calculation for bar chart scaling
   const maxSectorCount = useMemo(() => {
@@ -948,9 +865,9 @@ export default function AnalyticsDashboard() {
 
   // Constituency Analytics Data
   const constituencyStats = useMemo((): Array<{ name: string; total: number; ok: number; warn: number; pend: number; rate: number; topCat: string }> => {
-    if (isPublicView && publicAnalytics?.constituencyStats) {
+    if (!demoMode && liveAnalytics?.constituencyStats) {
       const statsMap = Object.fromEntries(
-        publicAnalytics.constituencyStats.map((c: any) => [c.constituency, c])
+        liveAnalytics.constituencyStats.map((c: any) => [c.constituency, c])
       );
       return CONSTITUENCIES.map((c) => {
         const found = statsMap[c];
@@ -958,7 +875,7 @@ export default function AnalyticsDashboard() {
           name: c,
           total: found?.total ?? 0,
           ok: found?.resolved ?? 0,
-          warn: 0,
+          warn: found?.inProgress ?? 0,
           pend: found?.pending ?? 0,
           rate: found?.rate ?? 0,
           topCat: (found?.total ?? 0) > 0 ? "பொது" : "இல்லை",
@@ -997,7 +914,7 @@ export default function AnalyticsDashboard() {
         topCat
       };
     });
-  }, [activeData, isPublicView, publicAnalytics]);
+  }, [activeData, demoMode, liveAnalytics]);
 
   // Recent Activity Feed
   const recentActivities = useMemo(() => {
@@ -1055,7 +972,7 @@ export default function AnalyticsDashboard() {
           )}
           <h1>நாமக்கல் மேற்கு — மக்கள் குரல் முகப்புப்பலகை</h1>
           <p>ஒவ்வொரு ஒன்றியத்திலும் மக்கள் பதிவு செய்த புகார்கள், அவற்றின் துறை வாரியான பிரிவு, மற்றும் தமிழக வெற்றிக் கழகம் தீர்த்த பணிகள் — அனைத்தும் ஒரே இடத்தில்.</p>
-          <span className="ph-live"><i></i> நேரடித் தரவு · கடைசி புதுப்பிப்பு இன்று</span>
+          <span className="ph-live"><i></i> {demoMode ? "மாதிரி தரவு · Demo" : "நேரடி தரவு · Live DB"}</span>
         </div>
       </section>
 
@@ -1088,40 +1005,45 @@ export default function AnalyticsDashboard() {
                 <input
                   type="text"
                   id="search"
-                  placeholder="புகாரைத் தேடு…"
+                  placeholder="வகை / தொகுதி / எண் தேடு…"
                   autoComplete="off"
                   value={curSearch}
                   onChange={(e) => setCurSearch(e.target.value)}
                 />
               </div>
-              {sessionUser && (
-                <div className="fb-toggle-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0.75rem', background: demoMode ? 'rgba(254,203,2,0.12)' : 'rgba(0,0,0,0.04)', border: `1.5px solid ${demoMode ? '#FECB02' : 'var(--line)'}`, borderRadius: '2rem', transition: 'all 0.2s' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: demoMode ? '#A06800' : 'var(--ink-soft)', whiteSpace: 'nowrap' }}>
-                    {demoMode ? ' மாதிரி தரவு (Demo)' : ' நேரடி தரவு (Live)'}
-                  </span>
-                  <button
-                    onClick={() => setDemoMode(!demoMode)}
-                    title={demoMode ? "மாதிரி தரவு இயக்கத்தில் — அணைக்க அழுத்தவும்" : "நேரடி தரவு — மாதிரி தரவுக்கு மாற்ற அழுத்தவும்"}
-                    style={{
-                      position: 'relative', width: '40px', height: '22px', borderRadius: '11px',
-                      background: demoMode ? '#FECB02' : '#ccc', border: 'none', cursor: 'pointer',
-                      transition: 'background 0.25s', flexShrink: 0, padding: 0,
-                    }}
-                  >
-                    <span aria-hidden="true" style={{
-                      position: 'absolute', top: '3px', left: demoMode ? '21px' : '3px',
-                      width: '16px', height: '16px', borderRadius: '50%', background: '#fff',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.25)', transition: 'left 0.25s',
-                    }} />
-                  </button>
-                </div>
-              )}
+              <div className="fb-toggle-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0.75rem', background: demoMode ? 'rgba(254,203,2,0.12)' : 'rgba(0,0,0,0.04)', border: `1.5px solid ${demoMode ? '#FECB02' : 'var(--line)'}`, borderRadius: '2rem', transition: 'all 0.2s' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: demoMode ? '#A06800' : 'var(--ink-soft)', whiteSpace: 'nowrap' }}>
+                  {demoMode ? ' மாதிரி தரவு (Demo)' : ' நேரடி தரவு (Live)'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDemoMode(!demoMode)}
+                  title={demoMode ? "மாதிரி தரவு இயக்கத்தில் — அணைக்க அழுத்தவும்" : "நேரடி தரவு — மாதிரி தரவுக்கு மாற்ற அழுத்தவும்"}
+                  aria-pressed={demoMode ? "true" : "false"}
+                  style={{
+                    position: 'relative', width: '40px', height: '22px', borderRadius: '11px',
+                    background: demoMode ? '#FECB02' : '#ccc', border: 'none', cursor: 'pointer',
+                    transition: 'background 0.25s', flexShrink: 0, padding: 0,
+                  }}
+                >
+                  <span aria-hidden="true" style={{
+                    position: 'absolute', top: '3px', left: demoMode ? '21px' : '3px',
+                    width: '16px', height: '16px', borderRadius: '50%', background: '#fff',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.25)', transition: 'left 0.25s',
+                  }} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Demo mode managed data status */}
+      {/* Data mode status */}
+      {!demoMode && isLiveLoading && (
+        <div style={{ textAlign: 'center', padding: '0.5rem', fontSize: '0.82rem', color: 'var(--ink-soft)', background: 'rgba(63,143,74,0.08)' }}>
+          நேரடி தரவு ஏற்றப்படுகிறது…
+        </div>
+      )}
       {demoMode && sessionUser && isManagedDemoLoading && (
         <div style={{ textAlign: 'center', padding: '0.5rem', fontSize: '0.82rem', color: 'var(--ink-soft)', background: 'rgba(254,203,2,0.07)' }}>
           மாதிரி தரவு ஏற்றப்படுகிறது…
@@ -1374,7 +1296,7 @@ export default function AnalyticsDashboard() {
               <div className="card-head">
                 <div>
                   <h3>சமீபத்திய செயல்பாடுகள் (Recent Activity)</h3>
-                  <div className="sub">கடைசியாகப் பெறப்பட்ட புகார்களின் நேரலை காலவரிசை</div>
+                  <div className="sub">வகை மற்றும் நிலை வாரியாக — தனிநபர் விவரங்கள் காட்டப்படாது</div>
                 </div>
               </div>
               <div className="activity-timeline">
@@ -1391,7 +1313,7 @@ export default function AnalyticsDashboard() {
                             <span className="timeline-id">{act.id}</span>
                             <span className="timeline-date">{act.date}</span>
                           </div>
-                          <p className="timeline-title">{act.title}</p>
+                          <p className="timeline-title">{SECMAP[act.sector]?.name || act.title}</p>
                           <div className="timeline-footer">
                             <span className="timeline-area"> {act.area}</span>
                             <span className={`timeline-status ${act.status}`}>
@@ -1451,7 +1373,7 @@ export default function AnalyticsDashboard() {
           {/* TABLE */}
           <div className="card table-card">
             <div className="tc-head">
-              <h3>புகார்கள் & வினவல்கள்</h3>
+              <h3>புகார் புள்ளிவிவரங்கள்</h3>
               <div className="tc-filters" id="statusFilters">
                 {STATUSES.map(([key, name]) => (
                   <button
@@ -1470,8 +1392,8 @@ export default function AnalyticsDashboard() {
                   <tr>
                     <th>எண்</th>
                     <th>துறை</th>
-                    <th>புகார்</th>
-                    <th>பகுதி</th>
+                    <th>வகை</th>
+                    <th>தொகுதி</th>
                     <th>தேதி</th>
                     <th>நிலை</th>
                   </tr>
@@ -1491,25 +1413,7 @@ export default function AnalyticsDashboard() {
                               {s.name}
                             </span>
                           </td>
-                          <td className="t-title">
-                            {x.title}
-                            {sessionUser && (
-                              <small>
-                                பதிவு: {x.by}
-                                {x.resolver && (
-                                  <>
-                                    {' · '}
-                                    <span className="resolver">
-                                      <svg viewBox="0 0 24 24" style={{ width: 13, height: 13, stroke: 'var(--ok)', fill: 'none', strokeWidth: 2.4 }}>
-                                        <path d="M20 6L9 17l-5-5"/>
-                                      </svg>
-                                      {x.resolver}
-                                    </span>
-                                  </>
-                                )}
-                              </small>
-                            )}
-                          </td>
+                          <td className="t-title">{x.title}</td>
                           <td className="t-meta">{x.area}</td>
                           <td className="t-meta">{x.date}</td>
                           <td>
@@ -1528,13 +1432,13 @@ export default function AnalyticsDashboard() {
               <span id="tblCount">
                 <b>{filteredData.length}</b> புகார்கள் காட்டப்படுகின்றன{filteredData.length > 40 ? ' (முதல் 40)' : ''}
               </span>
-              <span>தீர்க்கப்பட்ட புகார்கள் <b>தமிழக வெற்றிக் கழகம்</b> நிர்வாகிகளால் களத்தில் தீர்க்கப்பட்டவை.</span>
+              <span>தனிநபர் பெயர், முகவரி, தொலைபேசி போன்ற விவரங்கள் பொது பகுப்பாய்வில் வெளியிடப்படாது.</span>
             </div>
           </div>
         </div>
       </section>
 
-      <TvkAppFooter tagline="Demo dashboard · மாதிரித் தரவு (sample data)" />
+      <TvkAppFooter tagline={demoMode ? "மாதிரித் தரவு · Demo dashboard" : "நேரடி தரவு · Live database analytics"} />
 
       {/* COMPLAINT POPUP MODAL MOVED TO HOME PAGE */}
     

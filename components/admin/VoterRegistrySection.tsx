@@ -302,7 +302,7 @@ export default function VoterRegistrySection() {
         <div className="card table-card">
           <div className="tc-head">
             <div>
-              <h3>🗳️ வாக்காளர் பதிவேடு — Excel Import</h3>
+              <h3> வாக்காளர் பதிவேடு — Excel Import</h3>
               <span className="sub" style={{ display: "block", marginTop: "0.35rem", color: "var(--ink-soft)", fontSize: "0.88rem" }}>
                 xlsx · xls · csv — பகுப்பாய்வு → preview → உறுதிப்படுத்தல் → import
               </span>
@@ -357,7 +357,7 @@ export default function VoterRegistrySection() {
               )}
             </div>
 
-            {uploadError && <div className="admin-form-message error">⚠️ {uploadError}</div>}
+            {uploadError && <div className="admin-form-message error"> {uploadError}</div>}
 
             {importSummary && (
               <div className="admin-form-message success">
@@ -469,7 +469,7 @@ export default function VoterRegistrySection() {
                           onClick={() => handleDeleteHistory(h)}
                           title="இந்த import-ஐ நீக்கு"
                         >
-                          {deletingHistoryId === h._id ? "..." : "🗑️ நீக்கு"}
+                          {deletingHistoryId === h._id ? "..." : " நீக்கு"}
                         </button>
                       </td>
                     </tr>

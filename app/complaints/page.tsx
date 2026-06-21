@@ -259,11 +259,11 @@ export default function ComplaintsManagementPage() {
         // Refresh database data in background
         fetchComplaints();
       } else {
-        setStatusUpdateMessage(`❌ பிழை: ${data.error || "புதுப்பிக்க முடியவில்லை"}`);
+        setStatusUpdateMessage(` பிழை: ${data.error || "புதுப்பிக்க முடியவில்லை"}`);
       }
     } catch (err) {
       console.error(err);
-      setStatusUpdateMessage("❌ இணைப்புப் பிழை");
+      setStatusUpdateMessage(" இணைப்புப் பிழை");
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -300,10 +300,10 @@ export default function ComplaintsManagementPage() {
         setSelectedOfficerUsername("");
         fetchComplaints();
       } else {
-        setStatusUpdateMessage(`❌ பிழை: ${data.error || "ஒதுக்க முடியவில்லை"}`);
+        setStatusUpdateMessage(` பிழை: ${data.error || "ஒதுக்க முடியவில்லை"}`);
       }
     } catch {
-      setStatusUpdateMessage("❌ இணைப்புப் பிழை");
+      setStatusUpdateMessage(" இணைப்புப் பிழை");
     } finally {
       setIsAssigning(false);
     }
@@ -329,7 +329,7 @@ export default function ComplaintsManagementPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         const nextStatus = approve ? "pending_admin_approval" : "work_in_progress";
-        setStatusUpdateMessage(approve ? "மனு வெற்றிகரமாக அங்கீகரிக்கப்பட்டது!" : "❌ மனு நிராகரிக்கப்பட்டு மீண்டும் களப்பணிக்கு அனுப்பப்பட்டது.");
+        setStatusUpdateMessage(approve ? "மனு வெற்றிகரமாக அங்கீகரிக்கப்பட்டது!" : " மனு நிராகரிக்கப்பட்டு மீண்டும் களப்பணிக்கு அனுப்பப்பட்டது.");
         setComplaints((prev) =>
           prev.map((c) => (c.trackingId === trackingId ? { ...c, status: nextStatus } : c))
         );
@@ -339,10 +339,10 @@ export default function ComplaintsManagementPage() {
         setRejectionReason("");
         fetchComplaints();
       } else {
-        setStatusUpdateMessage(`❌ பிழை: ${data.error || "புதுப்பிக்க முடியவில்லை"}`);
+        setStatusUpdateMessage(` பிழை: ${data.error || "புதுப்பிக்க முடியவில்லை"}`);
       }
     } catch {
-      setStatusUpdateMessage("❌ இணைப்புப் பிழை");
+      setStatusUpdateMessage(" இணைப்புப் பிழை");
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -927,7 +927,7 @@ export default function ComplaintsManagementPage() {
                       {selectedCoords ? (
                         <div className="complaint-location-block">
                           <p style={{ margin: '0.2rem 0 0.5rem 0', fontSize: '0.85rem' }}>
-                            📍 Lat: <b>{selectedCoords.lat.toFixed(5)}</b>, Lon: <b>{selectedCoords.lon.toFixed(5)}</b>
+                             Lat: <b>{selectedCoords.lat.toFixed(5)}</b>, Lon: <b>{selectedCoords.lon.toFixed(5)}</b>
                             {selectedComplaint.geolocation.address && (
                               <span style={{ display: 'block', marginTop: '0.1rem', opacity: 0.8 }}>
                                 ({selectedComplaint.geolocation.address})

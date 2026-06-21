@@ -434,16 +434,16 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert(approve ? "மனு வெற்றிகரமாக தீர்க்கப்பட்டது!" : "❌ மனு நிராகரிக்கப்பட்டு மீண்டும் களப்பணிக்கு அனுப்பப்பட்டது.");
+        alert(approve ? "மனு வெற்றிகரமாக தீர்க்கப்பட்டது!" : " மனு நிராகரிக்கப்பட்டு மீண்டும் களப்பணிக்கு அனுப்பப்பட்டது.");
         setSelectedApproval(null);
         setAdminRejectionReason("");
         fetchPendingApprovals();
         fetchDashboardData(); // Refresh stats
       } else {
-        alert(`❌ பிழை: ${data.error || "புதுப்பிக்க முடியவில்லை"}`);
+        alert(` பிழை: ${data.error || "புதுப்பிக்க முடியவில்லை"}`);
       }
     } catch {
-      alert("❌ இணைப்புப் பிழை");
+      alert(" இணைப்புப் பிழை");
     } finally {
       setIsApproving(false);
     }
@@ -1224,7 +1224,7 @@ export default function AdminPage() {
                   <p style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}><b>தொகுதி:</b> {selectedApproval.constituency}, <b>வார்டு:</b> {selectedApproval.ward}</p>
                   {selectedApproval.geolocation?.latitude != null ? (
                     <div>
-                      <p style={{ fontSize: "0.8rem", margin: "0 0 0.5rem 0" }}>📍 Lat: <b>{Number(selectedApproval.geolocation.latitude).toFixed(5)}</b>, Lon: <b>{Number(selectedApproval.geolocation.longitude).toFixed(5)}</b></p>
+                      <p style={{ fontSize: "0.8rem", margin: "0 0 0.5rem 0" }}> Lat: <b>{Number(selectedApproval.geolocation.latitude).toFixed(5)}</b>, Lon: <b>{Number(selectedApproval.geolocation.longitude).toFixed(5)}</b></p>
                       <div className="complaint-map-wrap" style={{ height: "120px" }}>
                         <iframe
                           title="GPS map"

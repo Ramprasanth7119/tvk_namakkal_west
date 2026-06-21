@@ -1606,7 +1606,7 @@ export default function Home() {
       <div>
         <h4>தொடர்பு / புகார்</h4>
         {CONSTITUENCIES.map((c, idx) => (
-          <a key={idx} href="#contact">📍 {c}</a>
+          <a key={idx} href="#contact"> {c}</a>
         ))}
       </div>
     </div>
@@ -1828,7 +1828,7 @@ export default function Home() {
 
                   {verificationError && (
                     <div className="status-badge error" style={{ marginTop: '1rem' }}>
-                      <span>❌ {verificationError}</span>
+                      <span> {verificationError}</span>
                     </div>
                   )}
                 </div>
@@ -2014,7 +2014,7 @@ export default function Home() {
                     )}
                     {latitude && longitude && (
                       <span style={{ fontSize: '0.9rem', color: 'var(--ok)', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span>📍 {latitude.toFixed(5)}, {longitude.toFixed(5)}</span>
+                        <span> {latitude.toFixed(5)}, {longitude.toFixed(5)}</span>
                         {address && <span style={{ fontSize: '0.8rem', color: 'var(--ink)', fontWeight: 'normal' }}>{address}</span>}
                       </span>
                     )}
@@ -2191,7 +2191,7 @@ export default function Home() {
 
               {submissionError && (
                 <div className="status-badge error" style={{ marginBottom: '1.5rem' }}>
-                  <span>❌ {submissionError}</span>
+                  <span> {submissionError}</span>
                 </div>
               )}
 

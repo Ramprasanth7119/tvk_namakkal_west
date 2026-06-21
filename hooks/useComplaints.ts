@@ -47,11 +47,11 @@ export function useComplaints(initialArea = "அனைத்தும்") {
         fetchComplaints();
         return { success: true };
       } else {
-        setStatusUpdateMessage(`❌ பிழை: ${data.error || "புதுப்பிக்க முடியவில்லை"}`);
+        setStatusUpdateMessage(` பிழை: ${data.error || "புதுப்பிக்க முடியவில்லை"}`);
         return { success: false, error: data.error };
       }
     } catch (err) {
-      setStatusUpdateMessage("❌ இணைப்புப் பிழை");
+      setStatusUpdateMessage(" இணைப்புப் பிழை");
       return { success: false, error: "Connection error" };
     } finally {
       setIsUpdatingStatus(false);
@@ -80,11 +80,11 @@ export function useComplaints(initialArea = "அனைத்தும்") {
         fetchComplaints();
         return { success: true };
       } else {
-        setStatusUpdateMessage(`❌ பிழை: ${data.error || "ஒதுக்க முடியவில்லை"}`);
+        setStatusUpdateMessage(` பிழை: ${data.error || "ஒதுக்க முடியவில்லை"}`);
         return { success: false, error: data.error };
       }
     } catch {
-      setStatusUpdateMessage("❌ இணைப்புப் பிழை");
+      setStatusUpdateMessage(" இணைப்புப் பிழை");
       return { success: false, error: "Connection error" };
     } finally {
       setIsUpdatingStatus(false);
@@ -102,7 +102,7 @@ export function useComplaints(initialArea = "அனைத்தும்") {
       if (data.success) {
         const nextStatus = approve ? "pending_admin_approval" : "work_in_progress";
         setStatusUpdateMessage(
-          approve ? "மனு வெற்றிகரமாக அங்கீகரிக்கப்பட்டது!" : "❌ மனு நிராகரிக்கப்பட்டு மீண்டும் களப்பணிக்கு அனுப்பப்பட்டது."
+          approve ? "மனு வெற்றிகரமாக அங்கீகரிக்கப்பட்டது!" : " மனு நிராகரிக்கப்பட்டு மீண்டும் களப்பணிக்கு அனுப்பப்பட்டது."
         );
         setComplaints((prev) =>
           prev.map((c) => (c.trackingId === trackingId ? { ...c, status: nextStatus } : c))
@@ -111,11 +111,11 @@ export function useComplaints(initialArea = "அனைத்தும்") {
         fetchComplaints();
         return { success: true };
       } else {
-        setStatusUpdateMessage(`❌ பிழை: ${data.error || "புதுப்பிக்க முடியவில்லை"}`);
+        setStatusUpdateMessage(` பிழை: ${data.error || "புதுப்பிக்க முடியவில்லை"}`);
         return { success: false, error: data.error };
       }
     } catch {
-      setStatusUpdateMessage("❌ இணைப்புப் பிழை");
+      setStatusUpdateMessage(" இணைப்புப் பிழை");
       return { success: false, error: "Connection error" };
     } finally {
       setIsUpdatingStatus(false);
@@ -134,16 +134,16 @@ export function useComplaints(initialArea = "அனைத்தும்") {
         setStatusUpdateMessage(
           approve
             ? "மனு வெற்றிகரமாக தீர்க்கப்பட்டது!"
-            : "❌ மனு நிராகரிக்கப்பட்டு மீண்டும் களப்பணிக்கு அனுப்பப்பட்டது."
+            : " மனு நிராகரிக்கப்பட்டு மீண்டும் களப்பணிக்கு அனுப்பப்பட்டது."
         );
         fetchComplaints();
         return { success: true };
       } else {
-        setStatusUpdateMessage(`❌ பிழை: ${data.error || "ஒதுக்க முடியவில்லை"}`);
+        setStatusUpdateMessage(` பிழை: ${data.error || "ஒதுக்க முடியவில்லை"}`);
         return { success: false, error: data.error };
       }
     } catch {
-      setStatusUpdateMessage("❌ இணைப்புப் பிழை");
+      setStatusUpdateMessage(" இணைப்புப் பிழை");
       return { success: false, error: "Connection error" };
     } finally {
       setIsUpdatingStatus(false);

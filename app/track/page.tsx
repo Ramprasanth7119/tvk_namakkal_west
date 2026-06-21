@@ -117,7 +117,7 @@ function TrackPageContent() {
 
           {error && (
             <div className="status-badge error" style={{ marginTop: "1.5rem" }}>
-              <span>❌ {error}</span>
+              <span> {error}</span>
             </div>
           )}
 
@@ -134,7 +134,7 @@ function TrackPageContent() {
                 </div>
                 <div>
                   <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>தொகுதி</small>
-                  <p style={{ margin: "0.25rem 0 0", fontWeight: 700 }}>📍 {result.constituency}</p>
+                  <p style={{ margin: "0.25rem 0 0", fontWeight: 700 }}> {result.constituency}</p>
                 </div>
                 <div>
                   <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>தற்போதைய நிலை</small>

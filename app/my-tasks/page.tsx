@@ -155,10 +155,10 @@ export default function MyTasksPage() {
         setSelectedComplaint((prev: any) => prev ? { ...prev, status: "work_in_progress" } : null);
         fetchTasks();
       } else {
-        setSubmitMessage(`❌ பிழை: ${data.error || "தொடங்க முடியவில்லை"}`);
+        setSubmitMessage(` பிழை: ${data.error || "தொடங்க முடியவில்லை"}`);
       }
     } catch {
-      setSubmitMessage("❌ இணைப்புப் பிழை");
+      setSubmitMessage(" இணைப்புப் பிழை");
     } finally {
       setIsSubmittingWork(false);
     }
@@ -223,10 +223,10 @@ export default function MyTasksPage() {
           fetchTasks();
         }, 3500);
       } else {
-        setSubmitMessage(`❌ பிழை: ${data.error || "சமர்ப்பிக்க முடியவில்லை"}`);
+        setSubmitMessage(` பிழை: ${data.error || "சமர்ப்பிக்க முடியவில்லை"}`);
       }
     } catch {
-      setSubmitMessage("❌ இணைப்புப் பிழை");
+      setSubmitMessage(" இணைப்புப் பிழை");
     } finally {
       setIsSubmittingWork(false);
     }
@@ -359,14 +359,14 @@ export default function MyTasksPage() {
                       </h3>
 
                       <div style={{ display: "grid", gap: "0.5rem", fontSize: "0.82rem", color: "var(--ink-soft)", borderTop: "1px solid var(--line)", paddingTop: "0.75rem" }}>
-                        <div>📍 தொகுதி: <b style={{ color: "var(--ink)" }}>{task.constituency}</b>, வார்டு: <b style={{ color: "var(--ink)" }}>{task.ward}</b></div>
+                        <div> தொகுதி: <b style={{ color: "var(--ink)" }}>{task.constituency}</b>, வார்டு: <b style={{ color: "var(--ink)" }}>{task.ward}</b></div>
                         <div>குடிமகன்: <b style={{ color: "var(--ink)" }}>{task.citizenDetails?.name || "தெரியவில்லை"}</b></div>
                         <div>📅 ஒதுக்கப்பட்ட நாள்: <b style={{ color: "var(--ink)" }}>{assignedDate}</b></div>
                       </div>
 
                       {norm === "work_in_progress" && task.rejectionReason && (
                         <div style={{ color: "var(--red-2)", background: "rgba(160,0,0,0.05)", border: "1px solid rgba(160,0,0,0.15)", padding: "0.6rem", borderRadius: "0.4rem", fontSize: "0.75rem", fontWeight: "bold", marginTop: "0.75rem", lineHeight: "1.4" }}>
-                          ⚠️ பணி திருப்திகரமாக இல்லை: {task.rejectionReason}
+                           பணி திருப்திகரமாக இல்லை: {task.rejectionReason}
                         </div>
                       )}
                     </div>
@@ -408,7 +408,7 @@ export default function MyTasksPage() {
                   <h4 style={{ borderBottom: "2px solid #FECB02", paddingBottom: "0.35rem", marginBottom: "0.75rem", color: "var(--m-900)", fontWeight: 800 }}>GPS வரைபடம்</h4>
                   {selectedCoords ? (
                     <div>
-                      <p style={{ fontSize: "0.8rem", margin: "0 0 0.5rem 0" }}>📍 Lat: <b>{selectedCoords.lat.toFixed(5)}</b>, Lon: <b>{selectedCoords.lon.toFixed(5)}</b></p>
+                      <p style={{ fontSize: "0.8rem", margin: "0 0 0.5rem 0" }}> Lat: <b>{selectedCoords.lat.toFixed(5)}</b>, Lon: <b>{selectedCoords.lon.toFixed(5)}</b></p>
                       <div className="complaint-map-wrap" style={{ height: "140px" }}>
                         <iframe
                           title="Complaint GPS location map"
@@ -447,7 +447,7 @@ export default function MyTasksPage() {
               {/* REJECTION REASON NOTIFICATION IF REJECTED BY REPRESENTATIVE */}
               {normalizeStatus(selectedTask.status) === "work_in_progress" && selectedTask.rejectionReason && (
                 <div style={{ background: "rgba(160,0,0,0.06)", border: "1px solid rgba(160,0,0,0.15)", borderRadius: "0.75rem", padding: "1.2rem", marginBottom: "1.5rem" }}>
-                  <h4 style={{ margin: "0 0 0.4rem 0", color: "#A00000", fontSize: "0.95rem", fontWeight: 800 }}>⚠️ பிரதிநிதியால் பணி நிராகரிக்கப்பட்டது!</h4>
+                  <h4 style={{ margin: "0 0 0.4rem 0", color: "#A00000", fontSize: "0.95rem", fontWeight: 800 }}> பிரதிநிதியால் பணி நிராகரிக்கப்பட்டது!</h4>
                   <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.85rem", color: "var(--ink-soft)" }}>உள்விவரங்களைச் சரிசெய்து, புதிய புகைப்படங்கள் மற்றும் குறிப்புகளுடன் மீண்டும் சமர்ப்பிக்கவும்.</p>
                   <div style={{ background: "white", padding: "0.75rem", borderRadius: "0.5rem", borderLeft: "4px solid #A00000" }}>
                     <span style={{ fontSize: "0.8rem", color: "#666", fontWeight: 700, display: "block", marginBottom: "0.2rem" }}>நிராகரிப்புக்கான காரணம் (Reason):</span>

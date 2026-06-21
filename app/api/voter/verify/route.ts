@@ -104,7 +104,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
           found: false,
           case: 4,
-          message: "❌ உள்ளிடப்பட்ட விவரங்களுடன் எந்த வாக்காளர் பதிவும் கண்டறியப்படவில்லை.",
+          message: " உள்ளிடப்பட்ட விவரங்களுடன் எந்த வாக்காளர் பதிவும் கண்டறியப்படவில்லை.",
         });
       }
 
@@ -177,7 +177,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         found: false,
         case: 4,
-        message: "❌ உள்ளிடப்பட்ட விவரங்களுடன் எந்த வாக்காளர் பதிவும் கண்டறியப்படவில்லை.",
+        message: " உள்ளிடப்பட்ட விவரங்களுடன் எந்த வாக்காளர் பதிவும் கண்டறியப்படவில்லை.",
       });
     }
 
@@ -246,7 +246,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       found: false,
       case: 1,
-      message: "⚠️ விவரங்கள் பகுதியளவில் பொருந்துகின்றன. தயவுசெய்து வாக்காளர் பட்டியலில் உள்ள பெயரை சரியாக உள்ளிடவும்.",
+      message: " விவரங்கள் பகுதியளவில் பொருந்துகின்றன. தயவுசெய்து வாக்காளர் பட்டியலில் உள்ள பெயரை சரியாக உள்ளிடவும்.",
     });
 
   } catch (error) {
