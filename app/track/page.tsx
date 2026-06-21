@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import "../analytics/analytics.css";
 import { TVK_LOGO } from "@/lib/brand";
 import TvkAppFooter from "@/components/TvkAppFooter";
+import TvkTopBar from "@/components/TvkTopBar";
 import { normalizeStatus } from "@/lib/complaintStatus";
 
 const STATUS_STEPS = [
@@ -58,21 +58,14 @@ function TrackPageContent() {
 
   return (
     <div className="analytics-body min-h-screen">
-      <header className="topbar">
-        <div className="topbar-in">
-          <Link className="tb-brand" href="/">
-            <img src={TVK_LOGO} alt="TVK" className="tvk-brand-logo" />
-            <span>
-              <small>TVK · Namakkal West</small>
-              <b>மனு நிலை அறிதல்</b>
-            </span>
-          </Link>
-          <div className="tb-actions">
-            <Link className="tb-back" href="/analytics"> பகுப்பாய்வு</Link>
-            <Link className="tb-back" href="/">முகப்பு</Link>
-          </div>
-        </div>
-      </header>
+      <TvkTopBar
+        title="மனு நிலை அறிதல்"
+        brandHref="/"
+        links={[
+          { href: "/analytics", label: "பகுப்பாய்வு" },
+          { href: "/", label: "முகப்பு" },
+        ]}
+      />
 
       <section className="phero" style={{ paddingBottom: "2rem" }}>
         <img className="ph-medal-whistle" src={TVK_LOGO} alt="" aria-hidden="true" />

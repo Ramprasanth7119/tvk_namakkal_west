@@ -9,6 +9,7 @@ import { CONSTITUENCIES, ALL_AREAS } from '@/lib/constituencies';
 import { TVK_LOGO } from '@/lib/brand';
 import { WHISTLE_CURSOR_GOLD } from '@/lib/whistleCursorAssets';
 import { calculateAgeFromDob } from '@/lib/voterRegistry';
+import TvkHomeNav from '@/components/TvkHomeNav';
 
 const CATEGORIES = {
   "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
@@ -30,7 +31,6 @@ const CATEGORIES = {
 export default function Home() {
   const [loaderDone, setLoaderDone] = useState(false);
   const [loaderHidden, setLoaderHidden] = useState(false);
-  const [navOpen, setNavOpen] = useState(false);
 
   // Complaint Popup Form State
   const [isComplaintOpen, setIsComplaintOpen] = useState(false);
@@ -1132,27 +1132,7 @@ export default function Home() {
         <span className="sw-tip" id="swTip">மேலே</span>
       </button>
 
-      {/* NAV */}
-      <nav className="nav" id="nav">
-        <div className="nav-inner">
-          <a className="brand" href="#top">
-            <Image src={TVK_LOGO} alt="TVK" width={36} height={36} style={{ objectFit: 'contain' }} />
-            <span className="brand-text"><small>TVK · Namakkal West</small><b>தமிழக வெற்றிக் கழகம்</b></span>
-          </a>
-          <button className="nav-toggle" id="navToggle" aria-label="Menu" onClick={() => setNavOpen(!navOpen)}>☰</button>
-          <div className={`nav-links ${navOpen ? 'open' : ''}`} id="navLinks">
-            {/* <a href="#top" onClick={() => setNavOpen(false)}>முகப்பு</a> */}
-            <a href="#ideology" onClick={() => setNavOpen(false)}>கொடி & கொள்கை</a>
-            <a href="#leaders" onClick={() => setNavOpen(false)}>தலைவர்கள்</a>
-            <a href="#plan" onClick={() => setNavOpen(false)}>என் தெரு, என் திட்டம்</a>
-            <a href="#events" onClick={() => setNavOpen(false)}>நிகழ்வுகள்</a>
-            <a href="#complaint" onClick={(e) => { e.preventDefault(); setNavOpen(false); setIsComplaintOpen(true); }}>குறைதீர் மனு</a>
-            <a href="/track" onClick={() => setNavOpen(false)}>மனு நிலை அறிதல்</a>
-            <a href="#contact" onClick={() => setNavOpen(false)}>தொடர்பு</a>
-            <a href="#join" className="cta" onClick={() => setNavOpen(false)}>இணையுங்கள் </a>
-          </div>
-        </div>
-      </nav>
+      <TvkHomeNav onOpenComplaint={() => setIsComplaintOpen(true)} />
 
       {/* BODY CONTENT MARKUP GENERATED */}
       <header className="hero" id="top" data-cursor="gold">
@@ -1675,13 +1655,12 @@ export default function Home() {
             <a
               className="verify-btn"
               href={`/track?trackingId=${encodeURIComponent(trackingId)}`}
-              style={{ padding: '0.8rem 2rem', fontSize: '1rem', margin: '1rem', display: 'inline-block', textDecoration: 'none' }}
             >
-              மனு நிலையை அறிய 
+              மனு நிலையை அறிய 🔍
             </a>
             <button
-              className="verify-btn"
-              style={{ padding: '0.8rem 2rem', fontSize: '1rem', marginTop: '1.25rem', display: 'block', margin: '0 auto' }}
+              type="button"
+              className="verify-btn verify-btn-secondary"
               onClick={() => {
                 setTrackingId(null);
                 setVoterVerified(false);

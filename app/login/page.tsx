@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { TVK_LOGO } from "@/lib/brand";
 import { useRouter } from "next/navigation";
 import WhistleCursor, { useWhistleCursor } from "@/components/WhistleCursor";
+import TvkTopBar from "@/components/TvkTopBar";
 import "../analytics/analytics.css";
 
 export default function LoginPage() {
@@ -52,43 +53,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div 
-      className="font-sans"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        width: "100vw",
-        boxSizing: "border-box",
-        background: "linear-gradient(135deg, #220305 0%, #4A080E 50%, #110102 100%)",
-        position: "relative",
-        overflowX: "hidden",
-        margin: 0,
-        padding: "20px"
-      }}
-    >
-      {/* Decorative background elements */}
-      <div style={{ position: "absolute", top: "-10rem", right: "-10rem", width: "24rem", height: "24rem", borderRadius: "50%", background: "#FECB02", opacity: 0.1, filter: "blur(60px)" }} />
-      <div style={{ position: "absolute", bottom: "-10rem", left: "-10rem", width: "24rem", height: "24rem", borderRadius: "50%", background: "#A00000", opacity: 0.2, filter: "blur(60px)" }} />
+    <div className="analytics-body login-page-shell min-h-screen">
+      <TvkTopBar
+        title="பிரதிநிதி உள்நுழைவு"
+        brandHref="/"
+        links={[
+          { href: "/", label: "முகப்பு" },
+          { href: "/track", label: "மனு நிலை அறிதல்" },
+          { href: "/analytics", label: "பகுப்பாய்வு" },
+        ]}
+      />
 
-      {/* Styled card with high z-index and explicit inline-styles to prevent global overrides */}
-      <div 
-        style={{
-          boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
-          border: "1px solid rgba(255, 255, 255, 0.12)",
-          background: "rgba(17, 1, 2, 0.75)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          width: "100%",
-          maxWidth: "420px",
-          boxSizing: "border-box",
-          padding: "2.5rem 2rem",
-          borderRadius: "1rem",
-          position: "relative",
-          zIndex: 10
-        }}
-      >
+      <div className="login-page-main">
+      <div className="login-card font-sans">
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "2rem" }}>
           <img 
             src={TVK_LOGO} 
@@ -233,8 +210,8 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+      </div>
 
-      {/* Render the Custom Whistle Cursor here */}
       <WhistleCursor />
     </div>
   );

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CONSTITUENCIES } from "@/lib/constituencies";
 import { TVK_LOGO } from "@/lib/brand";
 import TvkAppFooter from "@/components/TvkAppFooter";
+import TvkTopBar, { type TopBarLink } from "@/components/TvkTopBar";
 import VoterRegistrySection from "@/components/admin/VoterRegistrySection";
 import WhistleCursor, { useWhistleCursor } from "@/components/WhistleCursor";
 import { getGoogleMapsEmbedUrl, getGoogleMapsOpenUrl } from "@/lib/maps";
@@ -555,33 +556,32 @@ export default function AdminPage() {
     return null;
   }
 
+  const adminTopBarLinks: TopBarLink[] = [
+    ...(sessionUser.role === "SUPER_ADMIN"
+      ? [{ href: "#voter-registry", label: "வாக்காளர் பதிவேடு" }]
+      : []),
+    {
+      href: "/admin",
+      label: sessionUser.role === "SUPER_ADMIN" ? "நிர்வாகக் கட்டுப்பாடு" : "மாதிரி தரவு",
+      active: true,
+      highlight: true,
+    },
+    ...(sessionUser.role === "SUPER_ADMIN"
+      ? [{ href: "/complaints", label: "புகார்கள் மேலாண்மை" }]
+      : []),
+    { href: "/analytics", label: "பகுப்பாய்வு" },
+    { href: "/", label: "முகப்பு" },
+  ];
+
   return (
     <div className="analytics-body">
-      {/* TOP NAVIGATION BAR */}
-      <header className="topbar admin-topbar">
-        <div className="topbar-in">
-          <a className="tb-brand" href="#top">
-            <img src={TVK_LOGO} alt="" className="tvk-brand-logo admin-topbar-whistle" aria-hidden="true" />
-            <span>
-              <small>TVK · Namakkal West</small>
-              <b style={{ color: "#FECB02" }}>கட்சி நிர்வாகப் பலகை (Admin Panel)</b>
-            </span>
-          </a>
-          <div className="tb-actions">
-            {sessionUser.role === "SUPER_ADMIN" && (
-              <a className="tb-back" href="#voter-registry">வாக்காளர் பதிவேடு</a>
-            )}
-            <a className="tb-back active" href="/admin" style={{ color: "#FECB02", borderColor: "#FECB02" }}>
-              {sessionUser.role === "SUPER_ADMIN" ? "நிர்வாகக் கட்டுப்பாடு" : "மாதிரி தரவு"}
-            </a>
-            {sessionUser.role === "SUPER_ADMIN" && (
-              <a className="tb-back" href="/complaints">புகார்கள் மேலாண்மை</a>
-            )}
-            <a className="tb-back" href="/analytics">பகுப்பாய்வு</a>
-            <a className="tb-back" href="/">முகப்பு</a>
-          </div>
-        </div>
-      </header>
+      <TvkTopBar
+        title="கட்சி நிர்வாகப் பலகை (Admin Panel)"
+        brandHref="#top"
+        className="admin-topbar"
+        logoClassName="tvk-brand-logo admin-topbar-whistle"
+        links={adminTopBarLinks}
+      />
 
       {/* ADMIN HERO BANNER */}
       <section className="phero" id="top" style={{ paddingBottom: "2rem" }}>

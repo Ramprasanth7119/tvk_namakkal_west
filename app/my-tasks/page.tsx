@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { TVK_LOGO } from "@/lib/brand";
 import TvkAppFooter from "@/components/TvkAppFooter";
+import TvkTopBar, { type TopBarLink } from "@/components/TvkTopBar";
 import WhistleCursor, { useWhistleCursor } from "@/components/WhistleCursor";
 import { getGoogleMapsEmbedUrl, getGoogleMapsOpenUrl } from "@/lib/maps";
 import { getStatusLabel, normalizeStatus } from "@/lib/complaintStatus";
@@ -290,23 +291,18 @@ export default function MyTasksPage() {
 
   return (
     <div className="analytics-body min-h-screen">
-      <header className="topbar">
-        <div className="topbar-in">
-          <div className="tb-brand">
-            <img src={TVK_LOGO} alt="TVK" className="tvk-brand-logo" />
-            <span>
-              <small>TVK · Namakkal West</small>
-              <b>களப்பணி போர்ட்டல்</b>
-            </span>
-          </div>
-          <div className="tb-actions">
-            <span className="tb-back active" style={{ background: "rgba(255,255,255,0.1)", color: "#FECB02" }}>
-              @{sessionUser?.username} (களப்பணியாளர்)
-            </span>
-            <a className="tb-back" href="/login">⚙️ வெளியேறு</a>
-          </div>
-        </div>
-      </header>
+      <TvkTopBar
+        title="களப்பணி போர்ட்டல்"
+        brandHref="/my-tasks"
+        links={[
+          {
+            label: `@${sessionUser?.username} (களப்பணியாளர்)`,
+            static: true,
+            active: true,
+          },
+          { href: "/login", label: "⚙️ வெளியேறு" },
+        ]}
+      />
 
       <section className="phero" style={{ paddingBottom: "2rem" }}>
         <img className="ph-medal-whistle" src={TVK_LOGO} alt="" aria-hidden="true" />

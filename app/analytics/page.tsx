@@ -5,6 +5,7 @@ import './analytics.css';
 import { CONSTITUENCIES, ALL_AREAS } from '@/lib/constituencies';
 import { TVK_LOGO } from '@/lib/brand';
 import TvkAppFooter from '@/components/TvkAppFooter';
+import TvkTopBar, { type TopBarLink } from '@/components/TvkTopBar';
 
 const CATEGORIES: Record<string, string[]> = {
   "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
@@ -1005,46 +1006,28 @@ export default function AnalyticsDashboard() {
       .slice(0, 5);
   }, [areaFilteredData]);
 
+  const topBarLinks = useMemo((): TopBarLink[] => {
+    const links: TopBarLink[] = [
+      { href: "/track", label: "மனு நிலை அறிதல்", highlight: true },
+    ];
+
+    if (sessionUser?.role === "SUPER_ADMIN") {
+      links.push({ href: "/admin", label: "நிர்வாகக் கட்டுப்பாடு", highlight: true });
+    }
+
+    if (sessionUser) {
+      links.push({ href: "/complaints", label: "புகார்கள் மேலாண்மை" });
+    } else {
+      links.push({ href: "/login?redirect=/analytics", label: "பிரதிநிதி உள்நுழைவு" });
+    }
+
+    links.push({ href: "/", label: "முகப்புக்குத் திரும்பு" });
+    return links;
+  }, [sessionUser]);
+
   return (
     <div className="analytics-body">
-      {/* TOP BAR */}
-      <header className="topbar">
-        <div className="topbar-in">
-          <a className="tb-brand" href="#top">
-            <img src={TVK_LOGO} alt="TVK" className="tvk-brand-logo" />
-            <span>
-              <small>TVK · Namakkal West</small>
-              <b>மக்கள் குரல் மையம்</b>
-            </span>
-          </a>
-          <div className="tb-actions">
-            <a className="tb-back" href="/track" style={{ color: '#FECB02', borderColor: '#FECB02' }}>
-              மனு நிலை அறிதல்
-            </a>
-            {sessionUser?.role === "SUPER_ADMIN" && (
-              <a className="tb-back" href="/admin" style={{ color: '#FECB02', borderColor: '#FECB02' }}>
-                நிர்வாகக் கட்டுப்பாடு
-              </a>
-            )}
-            {sessionUser && (
-              <a className="tb-back" href="/complaints" style={{ color: '#FECB02', borderColor: '#FECB02' }}>
-                புகார்கள் மேலாண்மை
-              </a>
-            )}
-            {!sessionUser && (
-              <a className="tb-back" href="/login?redirect=/analytics">
-                பிரதிநிதி உள்நுழைவு
-              </a>
-            )}
-            <a className="tb-back" href="/">
-              <svg viewBox="0 0 24 24">
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-              முகப்புக்குத் திரும்பு
-            </a>
-          </div>
-        </div>
-      </header>
+      <TvkTopBar title="மக்கள் குரல் மையம்" brandHref="#top" links={topBarLinks} />
 
       {/* PAGE HERO */}
       <section className="phero" id="top">

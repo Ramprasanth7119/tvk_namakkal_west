@@ -6,6 +6,7 @@ import "../analytics/analytics.css";
 import { CONSTITUENCIES, ALL_AREAS } from "@/lib/constituencies";
 import { TVK_LOGO } from "@/lib/brand";
 import TvkAppFooter from "@/components/TvkAppFooter";
+import TvkTopBar, { type TopBarLink } from "@/components/TvkTopBar";
 import { getComplaintPhotos, getComplaintVideo } from "@/lib/complaintMedia";
 import { getGoogleMapsEmbedUrl, getGoogleMapsOpenUrl } from "@/lib/maps";
 import { getStatusLabel, normalizeStatus } from "@/lib/complaintStatus";
@@ -433,39 +434,18 @@ export default function ComplaintsManagementPage() {
     );
   }
 
+  const topBarLinks: TopBarLink[] = [
+    ...(sessionUser?.role === "SUPER_ADMIN"
+      ? [{ href: "/admin", label: "⚙️ நிர்வாகக் கட்டுப்பாடு", highlight: true }]
+      : []),
+    { href: "/analytics", label: "பகுப்பாய்வு" },
+    { href: "/complaints", label: "புகார்கள் மேலாண்மை", active: true },
+    { href: "/", label: "முகப்புக்குத் திரும்பு" },
+  ];
+
   return (
     <div className="analytics-body">
-      {/* TOP BAR */}
-      <header className="topbar">
-        <div className="topbar-in">
-          <a className="tb-brand" href="/complaints">
-            <img src={TVK_LOGO} alt="TVK" className="tvk-brand-logo" />
-            <span>
-              <small>TVK · Namakkal West</small>
-              <b>மக்கள் குரல் மையம்</b>
-            </span>
-          </a>
-          <div className="tb-actions">
-            {sessionUser?.role === "SUPER_ADMIN" && (
-              <a className="tb-back" href="/admin" style={{ color: '#FECB02', borderColor: '#FECB02' }}>
-                ⚙️ நிர்வாகக் கட்டுப்பாடு
-              </a>
-            )}
-            <a className="tb-back" href="/analytics">
-               பகுப்பாய்வு
-            </a>
-            <a className="tb-back active" href="/complaints" style={{ background: 'rgba(255,255,255,0.1)' }}>
-               புகார்கள் மேலாண்மை
-            </a>
-            <a className="tb-back" href="/">
-              <svg viewBox="0 0 24 24">
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-              முகப்புக்குத் திரும்பு
-            </a>
-          </div>
-        </div>
-      </header>
+      <TvkTopBar title="மக்கள் குரல் மையம்" brandHref="/complaints" links={topBarLinks} />
 
       {/* PAGE HERO */}
       <section className="phero" style={{ background: 'linear-gradient(135deg, #3C060B 0%, #150102 100%)', padding: '2.5rem 1rem 2.5rem 1rem' }}>

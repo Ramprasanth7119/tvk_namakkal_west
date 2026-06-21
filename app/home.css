@@ -468,7 +468,8 @@
       border-radius: 999px;
       height: 62px;
       min-width: 0;
-      overflow: hidden;
+      position: relative;
+      overflow: visible;
       transition: .4s var(--ease)
     }
 
@@ -606,7 +607,38 @@
       padding: .4rem .7rem;
       font-size: 1rem;
       font-weight: 800;
-      flex: none
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 44px;
+      cursor: pointer;
+      position: relative;
+      z-index: calc(var(--z-nav, 2000) + 2);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .nav-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .45);
+      z-index: calc(var(--z-nav, 2000) - 1);
+      opacity: 0;
+      transition: opacity .25s ease;
+    }
+
+    .nav-backdrop.open {
+      display: block;
+      opacity: 1;
+    }
+
+    body.nav-menu-open {
+      overflow: hidden;
+    }
+
+    body.nav-menu-open .nav-toggle {
+      cursor: pointer !important;
     }
 
     /* ===================== HERO (scroll story) ===================== */
@@ -2118,15 +2150,20 @@
         display: none;
         position: absolute;
         top: calc(100% + .6rem);
-        left: 1rem;
-        right: 1rem;
+        left: 0;
+        right: 0;
         background: rgba(34, 3, 5, .97);
         flex-direction: column;
         align-items: stretch;
         border-radius: 22px;
         padding: 1rem;
         border: 1px solid var(--gline);
-        height: auto
+        height: auto;
+        z-index: calc(var(--z-nav, 2000) + 1);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+        max-height: min(70vh, calc(100dvh - 120px));
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       .nav-links.open {
@@ -2151,15 +2188,17 @@
       }
 
       .nav-toggle {
-        display: block
+        display: inline-flex
       }
 
       .nav .nav-inner {
         background: rgba(34, 3, 5, .78);
         backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
         border: 1px solid var(--gline);
         margin: .7rem .8rem 0;
-        height: 58px
+        height: 58px;
+        padding-right: .65rem;
       }
 
       .brand b {
