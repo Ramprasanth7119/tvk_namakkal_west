@@ -309,6 +309,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       trackingId,
+      photoUrls,
+      videoUrls,
       message: "புகார் வெற்றிகரமாகப் பதிவு செய்யப்பட்டது",
     });
   } catch (error) {

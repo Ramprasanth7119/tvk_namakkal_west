@@ -81,6 +81,7 @@ export default function Home() {
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [trackingId, setTrackingId] = useState<string | null>(null);
+  const [submittedComplaint, setSubmittedComplaint] = useState<any>(null);
   const [submissionError, setSubmissionError] = useState('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -593,6 +594,16 @@ export default function Home() {
 
       if (res.ok && data.success) {
         setTrackingId(data.trackingId);
+        setSubmittedComplaint({
+          trackingId: data.trackingId,
+          submittedAt: new Date().toISOString(),
+          name, mobile, aadhaar, gender, age, address, areaStreet,
+          constituency, ward, voterId,
+          category, subcategory, description, urgency,
+          latitude, longitude,
+          photoUrls: data.photoUrls || [],
+          videoUrls: data.videoUrls || [],
+        });
         sessionStorage.removeItem('tvk_complaint_form_data');
       } else {
         setSubmissionError(data.error || 'புகாரைச் சமர்ப்பிப்பதில் பிழை ஏற்பட்டது.');
@@ -604,6 +615,86 @@ export default function Home() {
       setIsSubmitting(false);
     }
   };
+
+  // Open a print-friendly acknowledgement the citizen can save as a PDF (no external dependency).
+  const generateComplaintPdf = () => {
+    const c = submittedComplaint;
+    if (!c) return;
+    const win = window.open('', '_blank');
+    if (!win) {
+      alert('PDF பதிவிறக்க உலாவியின் pop-up தடையை நீக்கவும். (Please allow pop-ups to download the PDF.)');
+      return;
+    }
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+    const row = (label, value) => `<tr><td class="k">${esc(label)}</td><td class="v">${esc(value || '-')}</td></tr>`;
+    const mediaItems = (urls, word) => (urls && urls.length)
+      ? urls.map((u, i) => `<li><a href="${esc(u)}">${esc(word)} ${i + 1}</a><div class="u">${esc(u)}</div></li>`).join('')
+      : '<li>இல்லை (None)</li>';
+    const mapsLink = (c.latitude && c.longitude)
+      ? `<a href="https://www.google.com/maps?q=${esc(c.latitude)},${esc(c.longitude)}">${esc(c.latitude)}, ${esc(c.longitude)}</a>`
+      : '-';
+    const html = `<!doctype html><html lang="ta"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>மனு ${esc(c.trackingId)}</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:'Noto Sans Tamil',system-ui,Arial,sans-serif;color:#1a1a1a;margin:0;padding:28px}
+  .head{border-bottom:3px solid #A00000;padding-bottom:12px;margin-bottom:8px}
+  .head h1{margin:6px 0 0;font-size:17px;color:#A00000}
+  .head small{color:#555;font-weight:700;letter-spacing:.04em}
+  .id-box{border:2px dashed #A00000;border-radius:10px;padding:12px 16px;text-align:center;margin:16px 0}
+  .id-box .id{font-size:26px;font-weight:800;color:#A00000;letter-spacing:1px}
+  .id-box .note{font-size:12px;color:#7a0000;margin-top:6px;font-weight:700;line-height:1.5}
+  h2{font-size:14px;color:#4A080E;border-bottom:1px solid #ddd;padding-bottom:4px;margin:20px 0 8px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  td{padding:5px 8px;vertical-align:top;border-bottom:1px solid #eee}
+  td.k{color:#666;width:40%;font-weight:700}
+  td.v{color:#111}
+  ul{margin:6px 0;padding-left:18px;font-size:13px}
+  li{margin-bottom:6px}
+  .u{color:#555;font-size:10px;word-break:break-all}
+  a{color:#1155cc}
+  p.desc{font-size:13px;line-height:1.55;white-space:pre-wrap}
+  .foot{margin-top:24px;font-size:11px;color:#888;text-align:center}
+  @media print{body{padding:0}}
+</style></head><body>
+  <div class="head"><small>TVK · NAMAKKAL WEST</small><h1>பொதுமக்கள் குறைதீர் மனு — ஒப்புகை (Complaint Acknowledgement)</h1></div>
+  <div class="id-box">
+    <div class="id">${esc(c.trackingId)}</div>
+    <div class="note">இந்த மனு எண்ணை பத்திரமாக வைத்துக் கொள்ளுங்கள் — இதை வைத்தே மட்டுமே உங்கள் மனுவின் நிலையை அறிய முடியும்.<br>(Keep this number safe — it is required to track your complaint.)</div>
+  </div>
+  <h2>குடிமகன் விவரங்கள் (Citizen Details)</h2>
+  <table>
+    ${row('பெயர் / Name', c.name)}
+    ${row('அலைபேசி / Mobile', c.mobile)}
+    ${row('வாக்காளர் எண் / Voter ID', c.voterId)}
+    ${row('பாலினம் / Gender', c.gender)}
+    ${row('வயது / Age', c.age)}
+    ${row('முகவரி / Address', c.address)}
+    ${row('தெரு / Street', c.areaStreet)}
+    ${row('தொகுதி / Constituency', c.constituency)}
+    ${row('வார்டு / Ward', c.ward)}
+    <tr><td class="k">இருப்பிடம் / Location</td><td class="v">${mapsLink}</td></tr>
+  </table>
+  <h2>குறை விவரங்கள் (Complaint Details)</h2>
+  <table>
+    ${row('துறை / Category', c.category)}
+    ${row('உட்பிரிவு / Subcategory', c.subcategory)}
+    ${row('அவசரம் / Urgency', c.urgency)}
+  </table>
+  <h2>விளக்கம் (Description)</h2>
+  <p class="desc">${esc(c.description)}</p>
+  <h2>பதிவேற்றிய படங்கள் (Uploaded Photos)</h2>
+  <ul>${mediaItems(c.photoUrls, 'படம் / Photo')}</ul>
+  <h2>பதிவேற்றிய வீடியோ (Uploaded Video)</h2>
+  <ul>${mediaItems(c.videoUrls, 'வீடியோ / Video')}</ul>
+  <div class="foot">சமர்ப்பிக்கப்பட்ட நேரம் (Submitted): ${esc(new Date(c.submittedAt).toLocaleString('ta-IN'))}</div>
+  <script>window.onload=function(){setTimeout(function(){window.print();},350);};</script>
+</body></html>`;
+    win.document.write(html);
+    win.document.close();
+  };
+
   const [flagPart, setFlagPart] = useState('none');
   const [selectedUnion, setSelectedUnion] = useState(0);
 
@@ -1671,6 +1762,18 @@ export default function Home() {
               உங்கள் மனுவின் கண்காணிப்பு எண் கீழே தரப்பட்டுள்ளது. இதைப் பயன்படுத்தி உங்கள் மனுவின் நிலையை அறிந்து கொள்ளலாம்.
             </p>
             <div className="tracking-id-box">{trackingId}</div>
+
+            <div style={{ background: 'rgba(160,0,0,0.06)', border: '1px solid rgba(160,0,0,0.2)', borderRadius: '0.6rem', padding: '0.85rem 1rem', margin: '0 0 1.1rem', fontSize: '0.9rem', lineHeight: 1.55, color: '#7a0000', fontWeight: 600, textAlign: 'left' }}>
+              <b>முக்கியம்:</b> இந்த மனு எண்ணைக் கட்டாயம் பத்திரமாக வைத்துக் கொள்ளுங்கள் — உங்கள் மனுவின் நிலையை அறிய இந்த எண் மட்டுமே பயன்படும். கீழே உள்ள பட்டனை அழுத்தி, இந்த விவரங்களையும் நீங்கள் பதிவேற்றிய படம்/வீடியோ இணைப்புகளையும் <b>PDF ஆகப் பதிவிறக்கி வைத்துக் கொள்வது மிகவும் அவசியம்.</b>
+            </div>
+
+            <button
+              type="button"
+              className="verify-btn"
+              onClick={generateComplaintPdf}
+            >
+              விவரங்களை PDF ஆகப் பதிவிறக்கவும்
+            </button>
             <a
               className="verify-btn"
               href={`/track?trackingId=${encodeURIComponent(trackingId)}`}
@@ -1682,6 +1785,7 @@ export default function Home() {
               className="verify-btn verify-btn-secondary"
               onClick={() => {
                 setTrackingId(null);
+                setSubmittedComplaint(null);
                 setVoterVerified(false);
                 setVoterId('');
                 setName('');
