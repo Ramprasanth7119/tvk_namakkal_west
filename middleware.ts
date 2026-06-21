@@ -48,6 +48,16 @@ export function middleware(request: NextRequest) {
       }
       return NextResponse.redirect(new URL("/analytics", request.url));
     }
+
+    // Field officers must not access the representative's constituency view (/complaints page).
+    // Their scoped workspace is /my-tasks. The /api/complaints API stays accessible (filtered to
+    // their own assignments) so /my-tasks keeps working.
+    if (
+      (pathname === "/complaints" || pathname.startsWith("/complaints/")) &&
+      session.role === "FIELD_OFFICER"
+    ) {
+      return NextResponse.redirect(new URL("/my-tasks", request.url));
+    }
   }
 
   return NextResponse.next();

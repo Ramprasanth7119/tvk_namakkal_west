@@ -36,9 +36,14 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Redirect to the intended page (defaults to /analytics or /my-tasks for field officers)
+        // Field officers always land on their own task workspace and may never enter the
+        // representative's constituency view, even if a ?redirect= pointed there.
         const params = new URLSearchParams(window.location.search);
-        const redirectPath = params.get("redirect") || (data.user?.role === "FIELD_OFFICER" ? "/my-tasks" : "/analytics");
+        const requestedRedirect = params.get("redirect");
+        const redirectPath =
+          data.user?.role === "FIELD_OFFICER"
+            ? "/my-tasks"
+            : requestedRedirect || "/analytics";
         router.push(redirectPath);
         router.refresh();
       } else {
@@ -203,6 +208,17 @@ export default function LoginPage() {
             {loading ? "சரிபார்க்கப்படுகிறது..." : "உள்நுழைய (Login) "}
           </button>
         </form>
+
+        <div style={{ marginTop: "1.5rem", padding: "0.85rem 1rem", background: "rgba(254,203,2,0.06)", border: "1px solid rgba(254,203,2,0.18)", borderRadius: "0.6rem", textAlign: "center" }}>
+          <p style={{ margin: 0, fontSize: "0.8rem", color: "rgba(255,255,255,0.85)", fontWeight: "bold", lineHeight: 1.5 }}>
+            களப்பணியாளரா? (Field officer?)
+            <br />
+            உங்கள் பணிகளை இங்கே நிர்வகிக்கவும் —{" "}
+            <a href="/my-tasks" style={{ color: "#FECB02", fontWeight: 900, textDecoration: "underline" }}>
+              எனது பணிகள் (My Tasks)
+            </a>
+          </p>
+        </div>
 
         <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.05)", textAlign: "center" }}>
           <p style={{ margin: 0, fontSize: "0.65rem", color: "rgba(255,255,255,0.4)", fontWeight: "bold", letterSpacing: "0.05em" }}>

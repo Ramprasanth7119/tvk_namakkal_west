@@ -163,6 +163,12 @@ export default function ComplaintsManagementPage() {
 
   const activeOfficers = useMemo(() => officers.filter(o => o.active), [officers]);
 
+  // Keep the "Assign Field Officer" dropdown in sync with the complaint being viewed,
+  // so it shows the currently-assigned officer instead of the placeholder.
+  useEffect(() => {
+    setSelectedOfficerUsername(selectedComplaint?.assignedTo || "");
+  }, [selectedComplaint?.trackingId, selectedComplaint?.assignedTo]);
+
   // Fetch Complaints
   const fetchComplaints = async () => {
     setIsLoadingComplaints(true);
@@ -297,7 +303,7 @@ export default function ComplaintsManagementPage() {
         setSelectedComplaint((prev: any) =>
           prev ? { ...prev, status: "assigned", assignedTo: selectedOfficerUsername, assignedToName: nameToUse } : null
         );
-        setSelectedOfficerUsername("");
+        // dropdown stays in sync with the now-assigned officer via the selectedComplaint effect
         fetchComplaints();
       } else {
         setStatusUpdateMessage(` பிழை: ${data.error || "ஒதுக்க முடியவில்லை"}`);
@@ -1171,11 +1177,11 @@ export default function ComplaintsManagementPage() {
                     <button
                       type="button"
                       onClick={() => handleAssignOfficer(selectedComplaint.trackingId)}
-                      disabled={isAssigning || !selectedOfficerUsername}
+                      disabled={isAssigning || !selectedOfficerUsername || selectedOfficerUsername === (selectedComplaint.assignedTo || "")}
                       className="submit-btn"
                       style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', margin: 0 }}
                     >
-                      {isAssigning ? "ஒதுக்கப்படுகிறது..." : "ஒதுக்கு"}
+                      {isAssigning ? "ஒதுக்கப்படுகிறது..." : selectedComplaint.assignedTo ? "மீண்டும் ஒதுக்கு (Reassign)" : "ஒதுக்கு"}
                     </button>
                   </div>
                 </div>

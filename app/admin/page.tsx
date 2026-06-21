@@ -1292,6 +1292,17 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {selectedApproval.videos?.length > 0 && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#666", display: "block", marginBottom: "0.5rem" }}>வீடியோ ஆதாரம் (Video Evidence):</span>
+                    <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                      {selectedApproval.videos.map((vid: string, idx: number) => (
+                        <video key={idx} src={vid} controls playsInline style={{ maxWidth: "320px", width: "100%", height: "auto", borderRadius: "0.4rem" }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {selectedApproval.workNotes && (
                   <div style={{ background: "#F4FDF4", padding: "0.75rem", borderRadius: "0.5rem", borderLeft: "4px solid #5E8C3A", marginTop: "1rem" }}>
                     <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#333", display: "block" }}>களப்பணியாளர் பணி நிறைவு குறிப்பு:</span>

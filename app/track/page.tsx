@@ -190,6 +190,50 @@ function TrackPageContent() {
                 </div>
               )}
 
+              {/* COMPLETED WORK PHOTOS */}
+              {((result.afterImages?.length || 0) > 0 || (result.beforeImages?.length || 0) > 0) && (
+                <div style={{ marginTop: "2rem", background: "rgba(94, 140, 58, 0.06)", border: "1px solid rgba(94, 140, 58, 0.25)", padding: "1.25rem", borderRadius: "0.75rem" }}>
+                  <h3 style={{ fontSize: "1rem", fontWeight: 900, color: "var(--m-800)", marginBottom: "0.85rem" }}>
+                    முடிக்கப்பட்ட பணி – புகைப்படங்கள் (Completed Work Photos)
+                  </h3>
+                  <div style={{ display: "grid", gap: "1.25rem", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+                    <div>
+                      <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block", marginBottom: "0.5rem" }}>பணிக்கு முன் (Before)</small>
+                      {(result.beforeImages?.length || 0) > 0 ? (
+                        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                          {result.beforeImages.map((img: string, idx: number) => (
+                            <a href={img} target="_blank" rel="noopener noreferrer" key={idx} style={{ display: "block", width: "92px", height: "92px", borderRadius: "0.5rem", overflow: "hidden", border: "1px solid rgba(0,0,0,0.1)" }}>
+                              <img src={img} alt={`Before ${idx + 1}`} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: "0.8rem", color: "var(--ink-soft)", fontStyle: "italic" }}>புகைப்படம் இல்லை</span>
+                      )}
+                    </div>
+                    <div>
+                      <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block", marginBottom: "0.5rem" }}>பணிக்கு பின் (After)</small>
+                      {(result.afterImages?.length || 0) > 0 ? (
+                        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                          {result.afterImages.map((img: string, idx: number) => (
+                            <a href={img} target="_blank" rel="noopener noreferrer" key={idx} style={{ display: "block", width: "92px", height: "92px", borderRadius: "0.5rem", overflow: "hidden", border: "1px solid rgba(0,0,0,0.1)" }}>
+                              <img src={img} alt={`After ${idx + 1}`} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: "0.8rem", color: "var(--ink-soft)", fontStyle: "italic" }}>புகைப்படம் இல்லை</span>
+                      )}
+                    </div>
+                  </div>
+                  {result.workNotes && (
+                    <p style={{ margin: "0.85rem 0 0 0", fontSize: "0.85rem", color: "var(--ink)", lineHeight: 1.5 }}>
+                      <b style={{ color: "var(--m-800)" }}>பணி குறிப்பு:</b> {result.workNotes}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* TIMELINE */}
               <div style={{ marginTop: "2rem" }}>
                 <h3 style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--m-800)", marginBottom: "1rem" }}>

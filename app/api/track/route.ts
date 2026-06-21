@@ -43,6 +43,9 @@ export async function GET(request: Request) {
           verifiedBy: 1,
           approvedBy: 1,
           assignedToName: 1,
+          beforeImages: 1,
+          afterImages: 1,
+          workNotes: 1,
           "complaintDetails.category": 1,
           "complaintDetails.subcategory": 1,
         },
@@ -54,6 +57,14 @@ export async function GET(request: Request) {
     }
 
     const status = normalizeStatus(complaint.status);
+
+    // Only expose the field officer's work photos once the work has actually been done,
+    // so citizens see the "completed work" evidence (before/after) when tracking.
+    const workDone = ["solution_submitted", "pending_admin_approval", "resolved"].includes(status);
+    const beforeImages = workDone && Array.isArray(complaint.beforeImages) ? complaint.beforeImages : [];
+    const afterImages = workDone && Array.isArray(complaint.afterImages) ? complaint.afterImages : [];
+    const workNotes = workDone ? complaint.workNotes || "" : "";
+
     const timeline = Array.isArray(complaint.timeline) && complaint.timeline.length > 0
       ? complaint.timeline.map((entry: any) => ({
           status: normalizeStatus(entry.status),
@@ -75,6 +86,9 @@ export async function GET(request: Request) {
       solvedBy: complaint.solvedBy || complaint.assignedToName || null,
       verifiedBy: complaint.verifiedBy || null,
       approvedBy: complaint.approvedBy || null,
+      beforeImages,
+      afterImages,
+      workNotes,
       timeline,
     });
   } catch (error) {
