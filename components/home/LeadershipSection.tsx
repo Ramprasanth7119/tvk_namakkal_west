@@ -31,7 +31,7 @@ export default function LeadershipSection() {
           </div>
           <div className="ocard spot rv rv-d2">
             <div className="ophoto"><span className="obadge">மாவட்டம்</span>
-              <img src="/sathish.jpeg" alt="மாவட்டச் செயலாளர்" data-fb="ந" />
+              <img src="/mavattam.jpeg" alt="நாமக்கல் மேற்கு மாவட்டத் தலைமை" data-fb="ந" />
             </div>
             <div className="obody">
               <h3>என். சதீஷ்</h3><span>மாவட்டச் செயலாளர், நாமக்கல் மேற்கு</span>
