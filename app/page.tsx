@@ -2,20 +2,20 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import Image from 'next/image';
 import './home.css';
 import './analytics/analytics.css';
 import { CONSTITUENCIES, ALL_AREAS } from '@/lib/constituencies';
 import { TVK_LOGO } from '@/lib/brand';
-import { WHISTLE_CURSOR_GOLD } from '@/lib/whistleCursorAssets';
 import { calculateAgeFromDob } from '@/lib/voterRegistry';
 import TvkHomeNav from '@/components/TvkHomeNav';
 import LaunchReveal from '@/components/LaunchReveal';
-import SmoothScroll from '@/components/SmoothScroll';
 import StatsSection from '@/components/home/StatsSection';
 import IdeologicalLeadersSection from '@/components/home/IdeologicalLeadersSection';
 import LeadershipSection from '@/components/home/LeadershipSection';
 import PrinciplesSection from '@/components/home/PrinciplesSection';
+import UnionExplorerSection from '@/components/home/UnionExplorerSection';
+import JoinSection from '@/components/home/JoinSection';
+import FooterSection from '@/components/home/FooterSection';
 
 const CATEGORIES = {
   "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
@@ -1219,9 +1219,6 @@ export default function Home() {
 
   return (
     <>
-      {/* Desktop momentum wheel scrolling (touch keeps native momentum) */}
-      <SmoothScroll />
-
       {/* LAUNCH REVEAL — birthday/launch ribbon-cut overlay (campaign-gated, self-removing) */}
       <LaunchReveal />
 
@@ -1484,32 +1481,14 @@ export default function Home() {
       <PrinciplesSection />
 
       {/* UNION EXPLORER */}
-      <section className="dark sec-pad" data-cursor="gold" data-rail="என் தெரு" id="plan">
-        <div className="wrap">
-          <div className="sec-head center">
-            <span className="sec-eyebrow">என் தெரு, என் திட்டம் </span>
-            <h2>உங்கள் ஒன்றியத்தைத் தேர்வு செய்யுங்கள்</h2>
-            <p>ஒன்றிய வாரியாக கள அமைப்பு, பூத் குழுக்கள் மற்றும் ஒருங்கிணைப்பாளர் விவரங்கள்.</p>
-          </div>
-          <div className="uchips" id="uchips">
-            {unions.map((u, i) => (
-              <button
-                key={i}
-                className={`uchip ${selectedUnion === i ? 'active' : ''}`}
-                onClick={() => handleUnionPick(i)}
-              >
-                {u[0]}
-              </button>
-            ))}
-          </div>
-          <div className="upanel rv" id="upanel">
-            <div className="ubox"><b id="uWards">{unionWards}</b><span>வார்டுகள் / ஊராட்சிகள்</span></div>
-            <div className="ubox"><b id="uBooths">{unionBooths}</b><span>பூத் குழுக்கள்</span></div>
-            <div className="ubox"><b id="uVols">{unionVols}</b><span>தொண்டர்கள்</span></div>
-          </div>
-          <p className="unote">* மாதிரித் தரவுகள் (Demo) — மாவட்ட நிர்வாகம் தரும் உண்மையான எண்ணிக்கைகள் இங்கே இணைக்கப்படும்.</p>
-        </div>
-      </section>
+      <UnionExplorerSection
+        unions={unions}
+        selectedUnion={selectedUnion}
+        unionWards={unionWards}
+        unionBooths={unionBooths}
+        unionVols={unionVols}
+        onPick={handleUnionPick}
+      />
 
       {/* EVENTS */}
       <section className="sec-pad" data-cursor="maroon" data-rail="நிகழ்வு" id="events">
@@ -1552,60 +1531,10 @@ export default function Home() {
       </section>
 
       {/* JOIN */}
-      <section className="dark sec-pad" data-cursor="gold" data-rail="இணைய" id="join">
-        <div className="wrap join-grid">
-          <div className="rv">
-            <span className="sec-eyebrow">இணையுங்கள் </span>
-            <h2>மாற்றத்தின் <em>விசில்</em>,<br />உங்கள் கையில்.</h2>
-            <p>நாமக்கல் மேற்கு மாவட்டக் கிளையில் உறுப்பினராகுங்கள். உங்கள் வார்டில், உங்கள் தெருவில் — மக்களாட்சியை நீங்களே
-              கட்டமைக்கலாம். விவரங்களைப் பதிவு செய்தால் ஒன்றிய ஒருங்கிணைப்பாளர் உங்களைத் தொடர்பு கொள்வார்.</p>
-          </div>
-          <div className="join-card rv rv-d1" id="joinCard">
-            <div className="join-ok" id="joinOk" style={{ display: 'block' }}>
-              <img src={WHISTLE_CURSOR_GOLD} alt="" aria-hidden="true" />
-              <a
-                href="https://tvk.family/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-gold magnetic"
-              >
-                உறுப்பினர் ஆக
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
+      <JoinSection />
 
       {/* FOOTER */}
-      <footer id="contact">
-        <div className="fstripe"></div>
-        <div className="f-word">தமிழக வெற்றிக் கழகம்</div>
-        <div className="f-inner">
-          <div className="f-brand">
-            <a className="brand" href="#top">
-              <Image src={TVK_LOGO} alt="TVK" width={36} height={36} style={{ objectFit: 'contain' }} />
-              <span><small>TVK · Namakkal West</small><b style={{ color: 'var(--gold-3)' }}>தமிழக வெற்றிக் கழகம்</b></span>
-            </a>
-            <p>நாமக்கல் மேற்கு மாவட்டம் — கட்சி அலுவலக முகவரி, அலைபேசி எண் மற்றும் மின்னஞ்சல் இங்கே இணைக்கப்படும்.</p>
-          </div>
-          <div>
-            <h4>விரைவு இணைப்புகள்</h4>
-            <a href="#top">முகப்பு</a>
-            <a href="#events">நிகழ்வுகள்</a>
-            <a href="#complaint" onClick={(e) => { e.preventDefault(); setIsComplaintOpen(true); }}>குறைதீர் மனு</a>
-            <a href="#plan">என் தெரு, என் திட்டம்</a>
-            <a href="#join">இணையுங்கள்</a>
-          </div>
-          <div>
-            <h4>தொடர்பு / புகார்</h4>
-            {CONSTITUENCIES.map((c, idx) => (
-              <a key={idx} href="#contact"> {c}</a>
-            ))}
-          </div>
-        </div>
-        <div className="f-bottom">© 2026 நாமக்கல் மேற்கு — தமிழக வெற்றிக் கழகம் · <b>பிறப்பொக்கும் எல்லா உயிர்க்கும்</b> ·
-          Premium demo build</div>
-      </footer>
+      <FooterSection onComplaintClick={() => setIsComplaintOpen(true)} />
 
       {/* COMPLAINT POPUP MODAL */}
       {isComplaintOpen && (
