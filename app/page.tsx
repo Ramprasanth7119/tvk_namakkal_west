@@ -12,6 +12,10 @@ import { calculateAgeFromDob } from '@/lib/voterRegistry';
 import TvkHomeNav from '@/components/TvkHomeNav';
 import LaunchReveal from '@/components/LaunchReveal';
 import SmoothScroll from '@/components/SmoothScroll';
+import StatsSection from '@/components/home/StatsSection';
+import IdeologicalLeadersSection from '@/components/home/IdeologicalLeadersSection';
+import LeadershipSection from '@/components/home/LeadershipSection';
+import PrinciplesSection from '@/components/home/PrinciplesSection';
 
 const CATEGORIES = {
   "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
@@ -1322,21 +1326,7 @@ export default function Home() {
       </div>
 
       {/* STATS */}
-      <section className="stats sec-pad" data-cursor="maroon" data-rail="புள்ளிவிவரம்" id="stats" style={{ paddingBottom: 0 }}>
-        <div className="wrap">
-          <div className="sec-head">
-            <span className="sec-eyebrow">இயக்கம் — ஒரு பார்வையில்</span>
-            <h2>இரண்டே ஆண்டுகளில்,<br />ஒரு வரலாறு.</h2>
-          </div>
-        </div>
-        <div className="wrap grid">
-          <div className="stat rv"><b data-count="2024">0</b><span>கட்சி தொடக்கம் · பிப்ரவரி 2</span></div>
-          <div className="stat rv rv-d1"><b><span className="num" data-count="1.5" data-dec="1">0</span><span
-            className="unit">கோடி+</span></b><span>உறுப்பினர்கள் (2025)</span></div>
-          <div className="stat rv rv-d2"><b data-count="234">0</b><span>தொகுதிகளில் களம்</span></div>
-          <div className="stat rv rv-d3"><b data-count="2026">0</b><span>மக்கள் அளித்த ஆட்சி</span></div>
-        </div>
-      </section>
+      <StatsSection />
 
       {/* TRACK COMPLAINT STATUS */}
       <section className="sec-pad resolved-showcase-sec" data-cursor="gold" data-rail="தீர்வுகள்" id="resolved-showcase">
@@ -1485,132 +1475,13 @@ export default function Home() {
       </div>
 
       {/* IDEOLOGICAL LEADERS */}
-      <section className="dark sec-pad" data-cursor="gold" data-rail="முன்னோர்" id="leaders">
-        <div className="wrap">
-          <div className="sec-head center">
-            <span className="sec-eyebrow">வழிகாட்டும் விளக்குகள்</span>
-            <h2>கொள்கை தலைவர்கள்</h2>
-            <p>சமூக நீதி, சமத்துவம், விடுதலை — இவ்வியக்கத்தின் வேர்கள் இவர்களின் வாழ்வில் ஊன்றியவை.</p>
-          </div>
-          <div className="lgrid">
-            <div className="lcard spot rv">
-              <div className="lphoto"><img src="https://www.tvknamakkaleast.com/assets/images/periar.jpg" alt="பெரியார்"
-                data-fb="பெ" /></div>
-              <h3>பெரியார்</h3>
-              <p>மூடநம்பிக்கைகளை எதிர்த்து சமூக நீதியை நிலைநாட்டிய பகுத்தறிவு தந்தை.</p>
-            </div>
-            <div className="lcard spot rv rv-d1">
-              <div className="lphoto"><img src="https://www.tvknamakkaleast.com/assets/images/ambedkar.jpeg" alt="அம்பேத்கர்"
-                data-fb="அ" /></div>
-              <h3>அம்பேத்கர்</h3>
-              <p>இந்திய அரசியலமைப்பின் சிற்பி மற்றும் ஒடுக்கப்பட்ட மக்களின் விடிவெள்ளி.</p>
-            </div>
-            <div className="lcard spot rv rv-d2">
-              <div className="lphoto"><img src="https://www.tvknamakkaleast.com/assets/images/kamarajar.jpeg" alt="காமராஜர்"
-                data-fb="கா" /></div>
-              <h3>காமராஜர்</h3>
-              <p>இலவசக் கல்வி தந்து ஏழை எளியோரின் வாழ்வை உயர்த்திய கர்மவீரர்.</p>
-            </div>
-            <div className="lcard spot rv rv-d3">
-              <div className="lphoto"><img src="https://www.tvknamakkaleast.com/assets/images/velu.jpg" alt="வேலு நாச்சியார்"
-                data-fb="வே" /></div>
-              <h3>வேலு நாச்சியார்</h3>
-              <p>ஆங்கிலேய ஆதிக்கத்தை எதிர்த்துப் போரிட்ட முதல் தமிழ்ப்பெண் அரசி.</p>
-            </div>
-            <div className="lcard spot rv rv-d4">
-              <div className="lphoto"><img src="https://www.tvknamakkaleast.com/assets/images/anjalai.jpeg" alt="அஞ்சலை அம்மாள்"
-                data-fb="அ" /></div>
-              <h3>அஞ்சலை அம்மாள்</h3>
-              <p>தேச விடுதலைக்காகத் தன் வாழ்வை அர்ப்பணித்த தென்னாட்டு ஜான்சி ராணி.</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <IdeologicalLeadersSection />
 
       {/* ORG */}
-      <section className="sec-pad" data-cursor="maroon" data-rail="தலைமை" id="org">
-        <div className="wrap">
-          <div className="sec-head center">
-            <span className="sec-eyebrow">Leadership</span>
-            <h2>இயக்கத்தின் ஆளுமைகள்</h2>
-            <p>மாநிலத் தலைமை முதல் மாவட்ட நிர்வாகம் வரை — ஒரே அணி, ஒரே இலக்கு.</p>
-          </div>
-          <div className="org-grid">
-            <div className="ocard spot rv">
-              <div className="ophoto"><span className="obadge">தலைமை</span>
-                <img src="/vijaycm.jpg" alt="ஜோசப் விஜய் சந்திரசேகர்" data-fb="வி" width="100%" />
-              </div>
-              <div className="obody">
-                <h3>சி. ஜோசப் விஜய்</h3><span>தலைவர், தமிழக வெற்றிக் கழகம் · தமிழ்நாடு முதலமைச்சர்</span>
-              </div>
-            </div>
-            <div className="ocard spot rv rv-d1">
-              <div className="ophoto"><span className="obadge">மாநிலம்</span>
-                <img src="https://www.tvknamakkaleast.com/assets/images/anand.png" alt="புஸ்ஸி என். ஆனந்த்" data-fb="ஆ" />
-              </div>
-              <div className="obody">
-                <h3>புஸ்ஸி என். ஆனந்த்</h3><span>பொதுச் செயலாளர், தமிழக வெற்றிக் கழகம்</span>
-              </div>
-            </div>
-            <div className="ocard spot rv rv-d2">
-              <div className="ophoto"><span className="obadge">மாவட்டம்</span>
-                <img src="/sathish.jpeg" alt="மாவட்டச் செயலாளர்" data-fb="ந" />
-              </div>
-              <div className="obody">
-                <h3>என். சதீஷ்</h3><span>மாவட்டச் செயலாளர், நாமக்கல் மேற்கு</span>
-              </div>
-            </div>
-            {/* <div className="ocard spot rv rv-d3">
-          <div className="ophoto"><span className="obadge">மாவட்டம்</span>
-            <img src={undefined} alt="மாவட்ட துணைச் செயலாளர்" data-fb="ந" />
-          </div>
-          <div className="obody">
-            <h3>[பெயர் சேர்க்கவும்]</h3><span>மாவட்ட துணைச் செயலாளர், நாமக்கல் மேற்கு</span>
-          </div>
-        </div> */}
-          </div>
-        </div>
-      </section>
+      <LeadershipSection />
 
       {/* PRINCIPLES */}
-      <section className="pr-sec sec-pad" data-cursor="maroon" data-rail="கொள்கை" id="principles">
-        <div className="wrap">
-          <div className="sec-head">
-            <span className="sec-eyebrow">Our Principles</span>
-            <h2>நமது கொள்கை<br />விளக்கங்கள்</h2>
-          </div>
-          <div className="pgrid">
-            <div className="pcard rv">
-              <div className="pemblem">⚖️</div>
-              <div>
-                <h3>சமூக நீதி</h3>
-                <p>சாதி, மத பேதமின்றி அனைத்து மக்களுக்கும் சமமான வாய்ப்புகள் மற்றும் உரிமைகளை உறுதி செய்தல்.</p>
-              </div>
-            </div>
-            <div className="pcard rv rv-d1">
-              <div className="pemblem">🤝</div>
-              <div>
-                <h3>சமத்துவம்</h3>
-                <p>"பிறப்பொக்கும் எல்லா உயிர்க்கும்" — பிறப்பின் அடிப்படையில் உயர்வு தாழ்வு இல்லாத சமுதாயம் அமைத்தல்.</p>
-              </div>
-            </div>
-            <div className="pcard rv rv-d2">
-              <div className="pemblem">💎</div>
-              <div>
-                <h3>ஊழலற்ற நிர்வாகம்</h3>
-                <p>மக்களின் வரிப்பணம் மக்களுக்கே சென்றடைவதை உறுதி செய்யும் நேர்மையான அரசியல் பாதை.</p>
-              </div>
-            </div>
-            <div className="pcard rv rv-d3">
-              <div className="pemblem">🌱</div>
-              <div>
-                <h3>மனிதநேயம்</h3>
-                <p>அதிகார அரசியலுக்கு மாற்றாக, எளிய மக்களின் துயர் துடைக்கும் மனிதநேய அரசியலை முன்னெடுத்தல்.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PrinciplesSection />
 
       {/* UNION EXPLORER */}
       <section className="dark sec-pad" data-cursor="gold" data-rail="என் தெரு" id="plan">
