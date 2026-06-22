@@ -777,16 +777,13 @@
     }
 
     .h-district-portrait {
-      position: absolute;
-      left: 50%;
-      bottom: clamp(145px, 20vh, 185px);
+      position: relative;
       z-index: 10;
-      width: clamp(140px, 20vw, 210px);
-      height: clamp(140px, 20vw, 210px);
+      width: clamp(140px, 15vw, 190px);
+      height: clamp(140px, 15vw, 190px);
       border-radius: 50%;
       overflow: hidden;
-      margin: 0;
-      transform: translateX(-50%);
+      margin: -3.5rem auto 1rem;
       transform-origin: center center;
       box-shadow:
         0 12px 42px rgba(0, 0, 0, .52),
@@ -794,6 +791,7 @@
         0 0 0 8px rgba(160, 0, 0, .35);
       will-change: transform, opacity;
       background-color: var(--night);
+      flex-shrink: 0;
     }
 
     .h-district-portrait img {
@@ -2277,9 +2275,9 @@
 
     @media (min-width:721px) and (max-width:1024px) {
       .h-district-portrait {
-        width: clamp(120px, 16vw, 150px);
-        height: clamp(120px, 16vw, 150px);
-        bottom: clamp(125px, 18vh, 155px)
+        width: clamp(110px, 14vw, 140px);
+        height: clamp(110px, 14vw, 140px);
+        margin: -2.5rem auto 0.75rem;
       }
     }
 
@@ -2317,9 +2315,9 @@
       }
 
       .h-district-portrait {
-        width: clamp(110px, 25vw, 140px);
-        height: clamp(110px, 25vw, 140px);
-        bottom: clamp(120px, 17vh, 150px)
+        width: clamp(100px, 22vw, 125px);
+        height: clamp(100px, 22vw, 125px);
+        margin: -2rem auto 0.5rem;
       }
 
       .h-title {
@@ -2473,9 +2471,9 @@
       }
 
       .h-district-portrait {
-        width: clamp(120px, 16vw, 160px);
-        height: clamp(120px, 16vw, 160px);
-        bottom: clamp(130px, 18vh, 160px)
+        width: clamp(110px, 14vw, 135px);
+        height: clamp(110px, 14vw, 135px);
+        margin: -2.25rem auto 0.65rem;
       }
 
       .band {

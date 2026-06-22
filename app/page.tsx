@@ -992,7 +992,7 @@ export default function Home() {
       }
       if (hDistrictPortrait) {
         const portraitOpacity = clampVal(1 - heroP / 0.08, 0, 1);
-        hDistrictPortrait.style.transform = `translateX(-50%) translateY(${heroP * -20}px)`;
+        hDistrictPortrait.style.transform = `translateY(${heroP * -20}px)`;
         hDistrictPortrait.style.opacity = portraitOpacity.toString();
         if (heroP > 0.08) {
           hDistrictPortrait.style.visibility = 'hidden';
@@ -1313,6 +1313,10 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="h-district-portrait" id="hDistrictPortrait">
+            <img src="/mavattam.jpeg" alt="நாமக்கல் மேற்கு மாவட்டத் தலைமை" width={112} height={112} />
+          </div>
+
           <div className="h-kural">
             <b>"பிறப்பொக்கும் எல்லா உயிர்க்கும்"</b>
             <span>திருக்குறள் · 972</span>
@@ -1320,9 +1324,6 @@ export default function Home() {
           <div className="h-ctas">
             <a className="btn btn-gold magnetic" href="#complaint" onClick={(e) => { e.preventDefault(); setIsComplaintOpen(true); }}>குறைதீர் மனு சமர்ப்பிக்க </a>
             <a className="btn btn-ghost magnetic" href="#join">இப்போதே இணையுங்கள் </a>
-          </div>
-          <div className="h-district-portrait" id="hDistrictPortrait">
-            <img src="/mavattam.jpeg" alt="நாமக்கல் மேற்கு மாவட்டத் தலைமை" width={112} height={112} />
           </div>
           <div className="h-cue" id="hCue">Scroll</div>
         </div>
