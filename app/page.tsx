@@ -79,6 +79,8 @@ export default function Home() {
   const [successLocationCount, setSuccessLocationCount] = useState(0);
   const [gpsMessage, setGpsMessage] = useState('');
   const [locationTimestamp, setLocationTimestamp] = useState<string>('');
+  // true once geolocation can no longer help (denied or 2 attempts used) — unlocks manual address
+  const [locationFailed, setLocationFailed] = useState(false);
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -376,7 +378,8 @@ export default function Home() {
 
     // Rule 2: Limit GPS requests to 2 attempts per complaint session.
     if (locationAttempts >= 2) {
-      setGpsMessage("அதிகப்படியான இருப்பிட முயற்சிகள் (அதிகபட்சம் 2 முறை).");
+      setLocationFailed(true);
+      setGpsMessage("உங்கள் இருப்பிடத்தை அணுக இயலவில்லை. தயவுசெய்து முகவரியை கைமுறையாக நிரப்பவும். (Your location is not accessible. Kindly fill in the address manually.)");
       return;
     }
 
@@ -438,13 +441,16 @@ export default function Home() {
       (error) => {
         console.error(error);
         setIsLocating(false);
-        // Rule 5 & 6
-        if (error.code === error.PERMISSION_DENIED) {
-          setGpsMessage("இருப்பிட அனுமதி மறுக்கப்பட்டுள்ளது. தயவுசெய்து உலாவி அமைப்புகளில் அனுமதியை வழங்கவும்.");
-        } else if (error.code === error.TIMEOUT) {
-          setGpsMessage("இருப்பிடத்தை கண்டறிய முடியவில்லை. மீண்டும் முயற்சிக்கவும்.");
+        // `locationAttempts` here is the count BEFORE this attempt, so this call is
+        // attempt (locationAttempts + 1). If permission is denied, or both attempts
+        // are now used up, fall back to manual address entry instead of retrying.
+        const exhausted = error.code === error.PERMISSION_DENIED || locationAttempts + 1 >= 2;
+        if (exhausted) {
+          setLocationFailed(true);
+          setGpsMessage("உங்கள் இருப்பிடத்தை அணுக இயலவில்லை. தயவுசெய்து முகவரியை கைமுறையாக நிரப்பவும். (Your location is not accessible. Kindly fill in the address manually.)");
         } else {
-          setGpsMessage("இருப்பிடத்தை கண்டறிய முடியவில்லை. மீண்டும் முயற்சிக்கவும்.");
+          // First attempt failed (timeout / position unavailable) — they can try once more.
+          setGpsMessage("இருப்பிடத்தை கண்டறிய முடியவில்லை. மீண்டும் ஒருமுறை முயற்சிக்கவும்.");
         }
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -2051,8 +2057,8 @@ export default function Home() {
                           rows={3}
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
-                          readOnly={voterVerified}
-                          placeholder={isIpLocating ? "இருப்பிட முகவரியைக் கண்டறிகிறது..." : "உங்கள் முகவரி"}
+                          readOnly={voterVerified && !locationFailed}
+                          placeholder={isIpLocating ? "இருப்பிட முகவரியைக் கண்டறிகிறது..." : "உங்கள் முகவரியை இங்கே உள்ளிடவும்"}
                           required
                         />
                       </div>

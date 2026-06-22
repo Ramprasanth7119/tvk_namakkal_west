@@ -124,7 +124,7 @@
       justify-content: space-between;
       gap: 1rem;
       padding: .7rem 1.3rem;
-      height: 64px
+      min-height: 64px
     }
 
     .tb-brand {
@@ -2271,6 +2271,17 @@ body.chover .wcur {
 }
 
 @media (max-width: 992px) {
+  /* The mobile nav drawer (.tb-actions) is position:fixed. An ancestor with
+     backdrop-filter becomes the containing block for fixed descendants, which
+     collapsed the drawer to the height of the 64px header (it opened but stayed
+     invisible). Drop the blur on mobile so the drawer is sized against the
+     viewport and actually appears; keep the bar opaque to compensate. */
+  .topbar {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(34, 3, 5, .96);
+  }
+
   .topbar-menu-toggle {
     display: inline-flex;
   }

@@ -494,7 +494,7 @@ export default function MyTasksPage() {
                     <div style={{ background: "#000", borderRadius: "0.75rem", padding: "1rem", position: "relative", marginBottom: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
                       <video ref={videoRef} autoPlay playsInline style={{ width: "100%", maxHeight: "280px", background: "#000", borderRadius: "0.5rem" }} />
                       <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                        <button type="button" onClick={capturePhoto} style={{ background: "var(--ok)", color: "white", border: "none", padding: "0.5rem 1.5rem", borderRadius: "2rem", fontWeight: "bold", cursor: "pointer" }}>📸 படம் எடு (Capture)</button>
+                        <button type="button" onClick={capturePhoto} style={{ background: "var(--ok)", color: "white", border: "none", padding: "0.5rem 1.5rem", borderRadius: "2rem", fontWeight: "bold", cursor: "pointer" }}>படம் எடு (Capture)</button>
                         <button type="button" onClick={stopCamera} style={{ background: "#A00000", color: "white", border: "none", padding: "0.5rem 1.5rem", borderRadius: "2rem", fontWeight: "bold", cursor: "pointer" }}>ரத்து செய்</button>
                       </div>
                     </div>
@@ -513,7 +513,7 @@ export default function MyTasksPage() {
                         ))}
                       </div>
                       <div style={{ display: "flex", gap: "0.35rem" }}>
-                        <button type="button" onClick={() => startCamera("before")} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>📸 கேமரா</button>
+                        <button type="button" onClick={() => startCamera("before")} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>கேமரா</button>
                         <button type="button" onClick={() => beforeInputRef.current?.click()} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>கோப்பு</button>
                       </div>
                       <input type="file" accept="image/*" multiple ref={beforeInputRef} onChange={(e) => handleFileChange(e, "before")} style={{ display: "none" }} title="பணிக்கு முன் புகைப்படங்கள்" />
@@ -531,7 +531,7 @@ export default function MyTasksPage() {
                         ))}
                       </div>
                       <div style={{ display: "flex", gap: "0.35rem" }}>
-                        <button type="button" onClick={() => startCamera("after")} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>📸 கேமரா</button>
+                        <button type="button" onClick={() => startCamera("after")} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>கேமரா</button>
                         <button type="button" onClick={() => afterInputRef.current?.click()} style={{ flex: 1, padding: "0.45rem", fontSize: "0.75rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>கோப்பு</button>
                       </div>
                       <input type="file" accept="image/*" multiple ref={afterInputRef} onChange={(e) => handleFileChange(e, "after")} style={{ display: "none" }} title="பணிக்கு பின் புகைப்படங்கள்" />
@@ -551,7 +551,7 @@ export default function MyTasksPage() {
                         ))}
                       </div>
                     )}
-                    <button type="button" onClick={() => videoInputRef.current?.click()} style={{ padding: "0.5rem 1rem", fontSize: "0.8rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>🎥 வீடியோ கோப்பைத் தேர்ந்தெடு</button>
+                    <button type="button" onClick={() => videoInputRef.current?.click()} style={{ padding: "0.5rem 1rem", fontSize: "0.8rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>வீடியோ கோப்பைத் தேர்ந்தெடு</button>
                     <input type="file" accept="video/*" ref={videoInputRef} onChange={(e) => handleFileChange(e, "video")} style={{ display: "none" }} title="பணி வீடியோ சான்று" />
                   </div>
 
@@ -576,7 +576,7 @@ export default function MyTasksPage() {
                       className="submit-btn"
                       style={{ margin: 0, padding: "0.75rem 2rem", fontSize: "0.95rem" }}
                     >
-                      {isSubmittingWork ? "சமர்ப்பிக்கப்படுகிறது..." : "பணி நிறைவடைந்தது (Submit Solutions) 🏁"}
+                      {isSubmittingWork ? "சமர்ப்பிக்கப்படுகிறது..." : "பணி நிறைவடைந்தது (Submit Solutions)"}
                     </button>
                   </div>
                 </form>

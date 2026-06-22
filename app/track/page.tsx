@@ -123,10 +123,10 @@ function TrackPageContent() {
 
           {result && (
             <div style={{ marginTop: "2rem", borderTop: "1px solid var(--line)", paddingTop: "1.5rem" }}>
-              <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+              <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", textAlign: "center" }}>
                 <div>
                   <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>கண்காணிப்பு எண்</small>
-                  <p style={{ margin: "0.25rem 0 0", fontWeight: 900, color: "var(--m-800)" }}>{result.trackingId}</p>
+                  <p style={{ margin: "0.25rem 0 0", fontWeight: 900, color: "var(--m-800)", letterSpacing: "0.02em" }}>{result.trackingId}</p>
                 </div>
                 <div>
                   <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>வகை</small>
