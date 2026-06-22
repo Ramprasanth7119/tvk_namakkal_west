@@ -35,14 +35,13 @@ export default function TvkTopBar({
   const { close, toggle } = useMobileNav(menuOpen, setMenuOpen, "topbar-menu-open", 992);
 
   return (
-    <>
+    <header className={`topbar ${className}`.trim()}>
       <div
         className={`topbar-backdrop ${menuOpen ? "open" : ""}`}
         aria-hidden={menuOpen ? "true" : "false"}
         onClick={close}
       />
-      <header className={`topbar ${className}`.trim()}>
-        <div className="topbar-in">
+      <div className="topbar-in">
           <Link className="tb-brand" href={brandHref} onClick={close}>
             <img src={TVK_LOGO} alt="TVK" className={logoClassName} />
             <span>
@@ -118,8 +117,7 @@ export default function TvkTopBar({
               );
             })}
           </nav>
-        </div>
-      </header>
-    </>
+      </div>
+    </header>
   );
 }

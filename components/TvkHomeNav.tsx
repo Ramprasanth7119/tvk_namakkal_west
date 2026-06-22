@@ -15,14 +15,13 @@ export default function TvkHomeNav({ onOpenComplaint }: TvkHomeNavProps) {
   const { close, toggle } = useMobileNav(navOpen, setNavOpen, "nav-menu-open", 1480);
 
   return (
-    <>
+    <nav className="nav" id="nav">
       <div
         className={`nav-backdrop ${navOpen ? "open" : ""}`}
         aria-hidden={navOpen ? "true" : "false"}
         onClick={close}
       />
-      <nav className="nav" id="nav">
-        <div className="nav-inner">
+      <div className="nav-inner">
           <Link className="brand" href="#top" onClick={close}>
             <Image src={TVK_LOGO} alt="TVK" width={36} height={36} style={{ objectFit: "contain" }} />
             <span className="brand-text">
@@ -76,8 +75,7 @@ export default function TvkHomeNav({ onOpenComplaint }: TvkHomeNavProps) {
               இணையுங்கள்
             </a>
           </div>
-        </div>
-      </nav>
-    </>
+      </div>
+    </nav>
   );
 }

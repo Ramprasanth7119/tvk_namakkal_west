@@ -458,6 +458,8 @@
     }
 
     .nav-inner {
+      position: relative;
+      z-index: 1;
       max-width: var(--maxw);
       margin: .8rem auto 0;
       display: flex;
@@ -468,7 +470,6 @@
       border-radius: 999px;
       height: 62px;
       min-width: 0;
-      position: relative;
       overflow: visible;
       transition: .4s var(--ease)
     }
@@ -623,7 +624,8 @@
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, .45);
-      z-index: calc(var(--z-nav, 2000) - 1);
+      /* Inside .nav — must stay below .nav-inner so drawer links receive taps */
+      z-index: 0;
       opacity: 0;
       transition: opacity .25s ease;
     }
@@ -2148,10 +2150,11 @@
     @media (max-width:1480px) {
       .nav-links {
         display: none;
-        position: absolute;
-        top: calc(100% + .6rem);
-        left: 0;
-        right: 0;
+        position: fixed;
+        top: calc(58px + .7rem + env(safe-area-inset-top, 0px));
+        left: .8rem;
+        right: .8rem;
+        bottom: max(.8rem, env(safe-area-inset-bottom));
         background: rgba(34, 3, 5, .97);
         flex-direction: column;
         align-items: stretch;
@@ -2159,9 +2162,9 @@
         padding: 1rem;
         border: 1px solid var(--gline);
         height: auto;
-        z-index: calc(var(--z-nav, 2000) + 1);
+        z-index: 2;
         box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
-        max-height: min(70vh, calc(100dvh - 120px));
+        max-height: none;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
       }
@@ -2174,7 +2177,9 @@
         height: 48px;
         padding: 0 1.1rem;
         justify-content: flex-start;
-        font-size: .9rem
+        font-size: .9rem;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(254, 203, 2, .2);
       }
 
       .nav-links a.cta {
