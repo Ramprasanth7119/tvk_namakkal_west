@@ -2201,6 +2201,16 @@
         padding-right: .65rem;
       }
 
+      /* While the mobile drawer is open, drop the bar's backdrop-filter. It makes
+         .nav-inner a clipping + stacking context for the absolutely-positioned
+         .nav-links dropdown, and on some mobile browsers (notably iOS Safari) that
+         clips the drawer to the 58px bar or swallows its taps — the menu shows but
+         won't navigate. The open drawer covers the bar, so the blur is moot here. */
+      body.nav-menu-open .nav .nav-inner {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+      }
+
       .brand b {
         font-size: .88rem
       }
