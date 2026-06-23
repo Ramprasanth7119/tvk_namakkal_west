@@ -2291,6 +2291,7 @@
         top: clamp(68px, 9.5vh, 88px);
         height: 82vh;
         width: 100%;
+        object-position: 30% 0%;
       }
     }
 
@@ -2327,6 +2328,7 @@
         top: clamp(62px, 8.5vh, 78px);
         height: 80vh;
         width: 100%;
+        object-position: 30% 0%;
       }
 
       .h-eyebrow {
