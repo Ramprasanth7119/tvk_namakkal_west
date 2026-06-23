@@ -659,8 +659,8 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: clamp(82px, 11vh, 104px) 1rem clamp(56px, 9vh, 88px);
+      justify-content: flex-start;
+      padding: clamp(80px, 10vh, 100px) 1rem clamp(16px, 3vh, 32px);
       background:
         radial-gradient(1100px 520px at 50% -8%, rgba(160, 0, 0, .55), transparent 62%),
         radial-gradient(900px 600px at 50% 115%, rgba(160, 0, 0, .4), transparent 60%),
@@ -678,28 +678,32 @@
 
     /* ---- LEADER PORTRAIT (interactive cinematic backdrop) ---- */
     .hero-portrait {
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      overflow: hidden;
+      position: relative;
+      width: 100%;
+      flex: 1 1 auto;
+      max-height: 420px;
+      min-height: 160px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 1;
+      overflow: visible;
       pointer-events: none;
       will-change: transform, opacity
     }
 
     .hp-img {
-      position: absolute;
-      top: clamp(75px, 10vh, 100px);
-      left: 50%;
-      transform: translate(-50%, 0);
-      height: 85vh;
+      position: relative;
+      top: 0;
+      left: auto;
+      transform: none;
+      height: 100%;
       width: auto;
-      max-width: none;
-      object-fit: cover;
-      object-position: 50% 0%;
-      transform-origin: top center;
-      /* feather the figure's edges so it melts into the dark hero */
-      -webkit-mask: radial-gradient(116% 96% at 50% 35%, #000 50%, rgba(0, 0, 0, .45) 72%, transparent 90%);
-      mask: radial-gradient(116% 96% at 50% 35%, #000 50%, rgba(0, 0, 0, .45) 72%, transparent 90%);
+      max-width: 100%;
+      object-fit: contain;
+      transform-origin: bottom center;
+      -webkit-mask: none;
+      mask: none;
       animation: kenburns 30s ease-in-out infinite alternate
     }
 
@@ -742,11 +746,11 @@
 
     @keyframes kenburns {
       from {
-        transform: translate(-50%, 0) scale(1.0)
+        transform: scale(1.0)
       }
 
       to {
-        transform: translate(-50%, 0) scale(1.06)
+        transform: scale(1.06)
       }
     }
 
@@ -762,7 +766,8 @@
       letter-spacing: .4em;
       text-transform: uppercase;
       color: var(--gold);
-      margin-bottom: 0.5rem;
+      margin-top: clamp(10px, 1.5vh, 20px);
+      margin-bottom: clamp(6px, 1vh, 12px);
       flex-shrink: 0
     }
 
@@ -808,15 +813,12 @@
       z-index: 8;
       text-align: center;
       color: #fff;
-      font-size: clamp(2.4rem, 7vw, 5.2rem);
+      font-size: clamp(2.2rem, 6vw, 4.6rem);
       font-weight: 800;
       letter-spacing: -.012em;
       line-height: 1.15;
-      
-      /* UPDATED: Increase margin-top to push text down further below chin */
-      margin-top: clamp(7rem, 26vh, 14rem);  /* Was: clamp(5rem, 20vh, 11rem) */
-      
-      margin-bottom: clamp(0.25rem, 0.8vh, 0.55rem);
+      margin-top: 0;
+      margin-bottom: clamp(10px, 1.5vh, 20px);
       will-change: transform;
       flex-shrink: 0
     }
@@ -839,7 +841,7 @@
     .band {
       position: relative;
       width: 100%;
-      height: min(38vh, 360px);
+      height: clamp(100px, 16vh, 160px);
       background: var(--gold);
       overflow: visible;
       will-change: transform;
@@ -935,8 +937,8 @@
       position: relative;
       z-index: 10;
       text-align: center;
-      margin-top: 1.5rem;
-      margin-bottom: 0.35rem;
+      margin-top: clamp(10px, 1.8vh, 24px);
+      margin-bottom: clamp(6px, 1.2vh, 16px);
       color: var(--gold-3);
       flex-shrink: 0
     }
@@ -963,8 +965,8 @@
       z-index: 10;
       display: flex;
       gap: .9rem;
-      margin-top: 1.75rem;
-      margin-bottom: 3.75rem;
+      margin-top: clamp(10px, 1.5vh, 20px);
+      margin-bottom: clamp(10px, 2vh, 30px);
       flex-wrap: wrap;
       justify-content: center;
       flex-shrink: 0
@@ -2287,16 +2289,9 @@
         height: clamp(110px, 14vw, 135px);
         margin: -2.5rem auto 0.75rem;
       }
-      .hp-img {
-        top: clamp(68px, 9.5vh, 88px);
-        height: 82vh;
-        width: 100%;
-        object-position: 30% 0%;
-      }
     }
 
     @media (max-width:720px) {
-
 
       /* hero: breathing room + sane title size so it never crowds the nav */
       .hero {
@@ -2320,16 +2315,35 @@
       }
 
       .hero-pin {
-        padding-top: 3.5rem;
-        padding-bottom: 1.5rem;
+        padding-top: clamp(80px, 10vh, 90px);
+        padding-bottom: 1.25rem;
         justify-content: flex-start
       }
 
-      .hp-img {
-        top: clamp(54px, 7.5vh, 70px);
-        height: 70vh;
+      .hero-portrait {
+        position: relative;
         width: 100%;
-        object-position: 30% 0%;
+        height: clamp(180px, 32vh, 240px);
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        margin-bottom: clamp(6px, 1.2vh, 16px);
+        z-index: 1;
+        overflow: visible;
+      }
+
+      .hp-img {
+        position: relative;
+        top: 0;
+        left: auto;
+        transform: none;
+        height: 100%;
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        animation: none;
+        -webkit-mask: none;
+        mask: none;
       }
 
       .h-eyebrow {
@@ -2345,13 +2359,13 @@
 
       .h-title {
         font-size: clamp(1.6rem, 7.5vw, 2.2rem);
-        margin-top: clamp(7.5rem, 28vh, 10.5rem);
-        margin-bottom: 0.25rem;
+        margin-top: 0;
+        margin-bottom: clamp(6px, 1vh, 12px);
         padding: 0 .4rem
       }
 
       .band {
-        height: clamp(110px, 20vh, 145px);
+        height: clamp(90px, 15vh, 130px);
       }
 
       .ele {
@@ -2371,7 +2385,7 @@
       }
 
       .h-kural {
-        margin-top: 0.5rem;
+        margin-top: clamp(6px, 1.2vh, 14px);
       }
 
       .h-kural b {
@@ -2384,8 +2398,8 @@
       }
 
       .h-ctas {
-        margin-top: 0.75rem;
-        margin-bottom: 1rem;
+        margin-top: clamp(8px, 1.5vh, 16px);
+        margin-bottom: clamp(8px, 1.5vh, 16px);
         gap: .5rem;
       }
 
@@ -2477,98 +2491,51 @@
     /* the title block + reserved flag space is tall; on limited height it would       */
     /* collide with the fixed nav, so scale the hero down to fit cleanly below it.      */
     @media (min-width:721px) and (max-height:900px) {
-      .hero-pin {
-        padding-top: clamp(125px, 16vh, 145px);
-        padding-bottom: 1.75rem;
-        justify-content: flex-start;
-      }
-
-      .hp-img {
-        top: clamp(68px, 9.5vh, 88px);
-        height: 82vh;
+      .hero-portrait {
+        max-height: 320px;
       }
 
       .h-title {
         font-size: clamp(2rem, 4.5vw, 3.8rem);
-        line-height: 1.15;
-        margin-top: clamp(11rem, 36vh, 15.5rem);
-        margin-bottom: 1rem
-      }
-
-      .h-eyebrow {
-        margin-bottom: 0.5rem;
-        font-size: .66rem
-      }
-
-      .h-district-portrait {
-        width: clamp(110px, 14vw, 135px);
-        height: clamp(110px, 14vw, 135px);
-        margin: -2.25rem auto 0.65rem;
-      }
-
-      .band {
-        height: min(40vh, 330px)
+        margin-bottom: clamp(8px, 1vh, 16px);
       }
 
       .h-kural {
-        margin-top: 1.1rem
-      }
-
-      .h-kural b {
-        font-size: clamp(1rem, 2vw, 1.3rem)
+        margin-top: clamp(8px, 1vh, 16px);
       }
 
       .h-ctas {
-        margin-top: 1rem;
-        margin-bottom: 1.5rem;
+        margin-top: clamp(8px, 1vh, 16px);
+        margin-bottom: clamp(8px, 1.2vh, 20px);
       }
     }
 
     @media (min-width:721px) and (max-height:760px) {
-      .hero-pin {
-        padding-top: clamp(135px, 18vh, 155px);
-        padding-bottom: 1.25rem;
-        justify-content: flex-start;
-      }
-
-      .hp-img {
-        top: clamp(65px, 8.5vh, 80px);
-        height: 80vh;
+      .hero-portrait {
+        max-height: 250px;
       }
 
       .h-title {
         font-size: clamp(1.8rem, 3.8vw, 3rem);
-        line-height: 1.15;
-        margin-top: clamp(10rem, 34vh, 13.5rem);
-        margin-bottom: .7rem
+        margin-bottom: clamp(6px, 0.8vh, 12px);
       }
 
       .band {
-        height: min(33vh, 260px)
-      }
-
-      .h-eyebrow {
-        margin-bottom: 0.4rem
-      }
-
-      .h-district-portrait {
-        width: clamp(100px, 12vh, 120px);
-        height: clamp(100px, 12vh, 120px);
-        margin: -1.75rem auto 0.5rem;
+        height: clamp(90px, 14vh, 130px);
       }
 
       .h-kural {
-        margin-top: .8rem
+        margin-top: clamp(6px, 0.8vh, 12px);
       }
 
       .h-ctas {
-        margin-top: 0.75rem;
-        margin-bottom: 1.25rem;
+        margin-top: clamp(6px, 0.8vh, 12px);
+        margin-bottom: clamp(6px, 1vh, 16px);
       }
 
       .btn {
         padding: .82rem 1.7rem;
-        font-size: .88rem
+        font-size: .88rem;
       }
     }
 
