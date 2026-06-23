@@ -813,8 +813,8 @@
       letter-spacing: -.012em;
       line-height: 1.15;
       
-      /* UPDATED: Increase margin-top to push text down further */
-      margin-top: clamp(5rem, 20vh, 11rem);  /* Was: clamp(3rem, 12vh, 5.5rem) */
+      /* UPDATED: Increase margin-top to push text down further below chin */
+      margin-top: clamp(7rem, 26vh, 14rem);  /* Was: clamp(5rem, 20vh, 11rem) */
       
       margin-bottom: clamp(0.25rem, 0.8vh, 0.55rem);
       will-change: transform;
@@ -2342,7 +2342,7 @@
 
       .h-title {
         font-size: clamp(1.8rem, 9vw, 2.8rem);
-        margin-top: clamp(4.5rem, 16vh, 7rem);
+        margin-top: clamp(10.5rem, 38vh, 14.5rem);
         margin-bottom: 0.35rem;
         padding: 0 .4rem
       }
@@ -2488,7 +2488,7 @@
       .h-title {
         font-size: clamp(2rem, 4.5vw, 3.8rem);
         line-height: 1.15;
-        margin-top: clamp(5rem, 18vh, 9rem);
+        margin-top: clamp(12.5rem, 42vh, 18.5rem);
         margin-bottom: 1rem
       }
 
@@ -2535,7 +2535,7 @@
       .h-title {
         font-size: clamp(1.8rem, 3.8vw, 3rem);
         line-height: 1.15;
-        margin-top: clamp(4.5rem, 14vh, 8rem);
+        margin-top: clamp(11.5rem, 40vh, 16.5rem);
         margin-bottom: .7rem
       }
 
