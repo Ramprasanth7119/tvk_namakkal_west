@@ -688,16 +688,18 @@
 
     .hp-img {
       position: absolute;
-      top: 50%;
+      top: clamp(75px, 10vh, 100px);
       left: 50%;
-      height: 120%;
+      transform: translate(-50%, 0);
+      height: 85vh;
       width: auto;
       max-width: none;
       object-fit: cover;
-      object-position: 50% 30%;
+      object-position: 50% 0%;
+      transform-origin: top center;
       /* feather the figure's edges so it melts into the dark hero */
-      -webkit-mask: radial-gradient(116% 96% at 50% 40%, #000 50%, rgba(0, 0, 0, .45) 72%, transparent 90%);
-      mask: radial-gradient(116% 96% at 50% 40%, #000 50%, rgba(0, 0, 0, .45) 72%, transparent 90%);
+      -webkit-mask: radial-gradient(116% 96% at 50% 35%, #000 50%, rgba(0, 0, 0, .45) 72%, transparent 90%);
+      mask: radial-gradient(116% 96% at 50% 35%, #000 50%, rgba(0, 0, 0, .45) 72%, transparent 90%);
       animation: kenburns 30s ease-in-out infinite alternate
     }
 
@@ -740,11 +742,11 @@
 
     @keyframes kenburns {
       from {
-        transform: translate(-50%, -50%) scale(1.0)
+        transform: translate(-50%, 0) scale(1.0)
       }
 
       to {
-        transform: translate(-50%, -50%) scale(1.07)
+        transform: translate(-50%, 0) scale(1.06)
       }
     }
 
@@ -760,7 +762,7 @@
       letter-spacing: .4em;
       text-transform: uppercase;
       color: var(--gold);
-      margin-bottom: 1.5rem;
+      margin-bottom: 0.5rem;
       flex-shrink: 0
     }
 
@@ -779,8 +781,8 @@
     .h-district-portrait {
       position: relative;
       z-index: 10;
-      width: clamp(140px, 15vw, 190px);
-      height: clamp(140px, 15vw, 190px);
+      width: clamp(140px, 15vw, 185px);
+      height: clamp(140px, 15vw, 185px);
       border-radius: 50%;
       overflow: hidden;
       margin: -3.5rem auto 1rem;
@@ -810,22 +812,26 @@
       font-weight: 800;
       letter-spacing: -.012em;
       line-height: 1.15;
+      
+      /* UPDATED: Increase margin-top to push text down further */
+      margin-top: clamp(5rem, 20vh, 11rem);  /* Was: clamp(3rem, 12vh, 5.5rem) */
+      
       margin-bottom: clamp(0.25rem, 0.8vh, 0.55rem);
       will-change: transform;
       flex-shrink: 0
     }
-
+    
     .h-title .row {
       display: block;
       overflow: hidden
     }
-
+    
     .h-title .ch {
       display: inline-block;
       transform: translateY(115%);
       will-change: transform
     }
-
+    
     .h-title .gold {
       color: var(--gold)
     }
@@ -2273,11 +2279,18 @@
       }
     }
 
+  
+
     @media (min-width:721px) and (max-width:1024px) {
       .h-district-portrait {
-        width: clamp(110px, 14vw, 140px);
-        height: clamp(110px, 14vw, 140px);
+        width: clamp(110px, 14vw, 135px);
+        height: clamp(110px, 14vw, 135px);
         margin: -2.5rem auto 0.75rem;
+      }
+      .hp-img {
+        top: clamp(68px, 9.5vh, 88px);
+        height: 82vh;
+        width: 100%;
       }
     }
 
@@ -2310,18 +2323,26 @@
         justify-content: flex-start
       }
 
+      .hp-img {
+        top: clamp(62px, 8.5vh, 78px);
+        height: 80vh;
+        width: 100%;
+      }
+
       .h-eyebrow {
-        margin-top: .3rem
+        margin-top: .3rem;
+        margin-bottom: 0.4rem;
       }
 
       .h-district-portrait {
-        width: clamp(100px, 22vw, 125px);
-        height: clamp(100px, 22vw, 125px);
+        width: clamp(100px, 22vw, 120px);
+        height: clamp(100px, 22vw, 120px);
         margin: -2rem auto 0.5rem;
       }
 
       .h-title {
         font-size: clamp(1.8rem, 9vw, 2.8rem);
+        margin-top: clamp(4.5rem, 16vh, 7rem);
         margin-bottom: 0.35rem;
         padding: 0 .4rem
       }
@@ -2459,14 +2480,20 @@
         justify-content: flex-start;
       }
 
+      .hp-img {
+        top: clamp(68px, 9.5vh, 88px);
+        height: 82vh;
+      }
+
       .h-title {
         font-size: clamp(2rem, 4.5vw, 3.8rem);
         line-height: 1.15;
+        margin-top: clamp(5rem, 18vh, 9rem);
         margin-bottom: 1rem
       }
 
       .h-eyebrow {
-        margin-bottom: 1.6rem;
+        margin-bottom: 0.5rem;
         font-size: .66rem
       }
 
@@ -2500,9 +2527,15 @@
         justify-content: flex-start;
       }
 
+      .hp-img {
+        top: clamp(65px, 8.5vh, 80px);
+        height: 80vh;
+      }
+
       .h-title {
         font-size: clamp(1.8rem, 3.8vw, 3rem);
         line-height: 1.15;
+        margin-top: clamp(4.5rem, 14vh, 8rem);
         margin-bottom: .7rem
       }
 
@@ -2511,7 +2544,13 @@
       }
 
       .h-eyebrow {
-        margin-bottom: 1.4rem
+        margin-bottom: 0.4rem
+      }
+
+      .h-district-portrait {
+        width: clamp(100px, 12vh, 120px);
+        height: clamp(100px, 12vh, 120px);
+        margin: -1.75rem auto 0.5rem;
       }
 
       .h-kural {
