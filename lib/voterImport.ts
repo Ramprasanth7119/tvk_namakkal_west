@@ -156,7 +156,11 @@ export function parseDob(raw: unknown): Date | null {
     const day = Number(dmy[1]);
     const month = Number(dmy[2]) - 1;
     let year = Number(dmy[3]);
-    if (year < 100) year += year > 30 ? 1900 : 2000;
+    if (year < 100) {
+      // Dynamic cutoff: years > (currentYear - 18) % 100 are in 1900s (old voters)
+      const cutoff = (new Date().getFullYear() - 18) % 100;
+      year += year > cutoff ? 1900 : 2000;
+    }
     const parsed = new Date(year, month, day);
     if (!Number.isNaN(parsed.getTime())) return parsed;
   }
@@ -198,6 +202,11 @@ export function normalizeVoterRow(
       wardNo: parseWardNo(cellValue(row, mapping.wardNo)),
       wardName: cellValue(row, mapping.wardName),
       doorNo: mapping.doorNo ? cellValue(row, mapping.doorNo) : undefined,
+      panchayat: mapping.panchayat ? cellValue(row, mapping.panchayat) : undefined,
+      taluk: mapping.taluk ? cellValue(row, mapping.taluk) : undefined,
+      district: mapping.district ? cellValue(row, mapping.district) : undefined,
+      gender: mapping.gender ? cellValue(row, mapping.gender) : undefined,
+      age: mapping.age ? parseWardNo(cellValue(row, mapping.age)) : undefined,
     },
   };
 }

@@ -137,6 +137,9 @@ export async function POST(request: Request) {
       geolocation,
       email_honeypot,
       website_honeypot,
+      panchayat,
+      taluk,
+      district,
     } = body;
 
     // 4. Honeypot Validation for bot protection
@@ -286,6 +289,9 @@ export async function POST(request: Request) {
       locationTimestamp: locationTimestamp ? new Date(locationTimestamp) : null,
       ward: sanitizeInput(ward),
       constituency: sanitizeInput(constituency),
+      panchayat: sanitizeInput(panchayat),
+      taluk: sanitizeInput(taluk),
+      district: sanitizeInput(district),
       citizenDetails: sanitizeInput(citizenDetails),
       complaintDetails: sanitizeInput(complaintDetails),
       photoUrls,

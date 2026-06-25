@@ -35,6 +35,7 @@ export async function GET(request: Request) {
         { name: regex },
         { mobile: regex },
         { constituency: regex },
+        { doorNo: regex },
       ];
     }
 
@@ -57,10 +58,15 @@ export async function GET(request: Request) {
       dob: formatVoterDob(doc.dob),
       doorNo: doc.doorNo || "",
       mobile: doc.mobile || "",
+      gender: doc.gender || "",
+      age: doc.age != null ? String(doc.age) : "",
       address: doc.address || "",
       constituency: doc.constituency || "",
       wardNo: readWardNo(doc as Record<string, unknown>),
       wardName: doc.wardName || "",
+      panchayat: doc.panchayat || "",
+      taluk: doc.taluk || "",
+      district: doc.district || "",
       sourceFile: doc.sourceFile || "",
       importedAt: doc.importedAt || doc.createdAt || null,
       updatedAt: doc.updatedAt || null,

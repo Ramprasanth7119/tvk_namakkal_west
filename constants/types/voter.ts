@@ -9,4 +9,9 @@ export interface Voter {
   Mobile: string;
   Address: string;
   DoorNo?: string;
+  Panchayat?: string;
+  Taluk?: string;
+  District?: string;
+  Gender?: string;
+  Age?: number | string;
 }

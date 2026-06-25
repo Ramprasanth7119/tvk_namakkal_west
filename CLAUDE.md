@@ -164,7 +164,7 @@ npm run lint       # eslint
 
 **Code-quality / dead code (cleanup debt — none blocks the app):**
 - `app/page.tsx` is a **2,214-line `// @ts-nocheck` mega client component** (~653 KB). Make targeted edits; don't bulk-reformat. Refactors → propose extracting into `components/` and confirm scope first. **(Phase 3 target.)**
-- ⏳ `app/analytics/page.tsx` still carries ~270 lines of **orphaned complaint-modal code** (marked `{/* COMPLAINT POPUP MODAL MOVED TO HOME PAGE */}`) — not yet removed (delicate in-file surgery; no git undo available).
+-  `app/analytics/page.tsx` still carries ~270 lines of **orphaned complaint-modal code** (marked `{/* COMPLAINT POPUP MODAL MOVED TO HOME PAGE */}`) — not yet removed (delicate in-file surgery; no git undo available).
 - `types/representative.ts` & `types/fieldOfficer.ts` are pass-through `= User` aliases. Loose `any` on Mongo filters in places.
 
 **Correctness/security to be aware of (don't regress; fix only when in scope):**
@@ -196,7 +196,7 @@ A **finished frontend** (migrated from a static HTML prototype) on a **fully-imp
 - ✅ Red/green completion bug — the success/error box in `complaints` + `my-tasks` detected success by `"✅"` (which no success message contained), so completions rendered in red error styling. Now detects *errors* by `"பிழை"`; successes render green.
 - ✅ Site-wide smooth scroll — `scroll-behavior: smooth` + `scroll-padding-top` + `prefers-reduced-motion` guard in `app/globals.css`.
 - ✅ Dead code deleted — `services/`, `hooks/`, `validators/`, `scratch/`, stray HTML.
-- ⏳ Remaining: validation + correctness review/fixes; remove the ~270 orphaned lines in `app/analytics/page.tsx`.
+-  Remaining: validation + correctness review/fixes; remove the ~270 orphaned lines in `app/analytics/page.tsx`.
 
 **Phase 2 — mobile responsiveness** (not started).
 **Phase 3 — split the 2,214-line `app/page.tsx`** into components (not started; highest risk, build-verify each extraction).

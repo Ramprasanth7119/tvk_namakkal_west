@@ -11,6 +11,11 @@ export interface Voter {
   Mobile: string;
   Address: string;
   DoorNo?: string;
+  Panchayat?: string;
+  Taluk?: string;
+  District?: string;
+  Gender?: string;
+  Age?: number | string;
 }
 
 /**
@@ -38,6 +43,11 @@ export async function lookupVoter(voterId: string): Promise<Voter | null> {
       Mobile: doc.mobile || "",
       Address: doc.address || "",
       DoorNo: doc.doorNo || "",
+      Panchayat: doc.panchayat || "",
+      Taluk: doc.taluk || "",
+      District: doc.district || "",
+      Gender: doc.gender || "",
+      Age: doc.age || "",
     };
   } catch (error) {
     console.error("Error looking up voter in database:", error);

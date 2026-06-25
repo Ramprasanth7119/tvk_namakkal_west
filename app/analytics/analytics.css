@@ -1458,6 +1458,7 @@ label {
 .form-card input[type="text"],
 .form-card input[type="tel"],
 .form-card input[type="number"],
+.form-card input[type="date"],
 .form-card select,
 .form-card textarea {
   width: 100%;
@@ -1474,6 +1475,7 @@ label {
 .form-card input[type="text"]:focus,
 .form-card input[type="tel"]:focus,
 .form-card input[type="number"]:focus,
+.form-card input[type="date"]:focus,
 .form-card select:focus,
 .form-card textarea:focus {
   outline: none;

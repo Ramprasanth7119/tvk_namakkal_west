@@ -54,6 +54,7 @@ export default function Home() {
   const [verificationMethod, setVerificationMethod] = useState<'VOTER_ID' | 'DETAIL_MATCH' | ''>('');
 
   const [name, setName] = useState('');
+  const [doorNo, setDoorNo] = useState('');
   const [mobile, setMobile] = useState('');
   const [aadhaar, setAadhaar] = useState('');
   const [gender, setGender] = useState('ஆண்');
@@ -68,6 +69,9 @@ export default function Home() {
   const [description, setDescription] = useState('');
   const [emailHoneypot, setEmailHoneypot] = useState('');
   const [urgency, setUrgency] = useState('சாதாரண');
+  const [panchayat, setPanchayat] = useState('');
+  const [taluk, setTaluk] = useState('');
+  const [district, setDistrict] = useState('');
 
   // Media state - Support multiple photos!
   const [photos, setPhotos] = useState<string[]>([]);
@@ -82,6 +86,7 @@ export default function Home() {
   const [locationAttempts, setLocationAttempts] = useState(0);
   const [successLocationCount, setSuccessLocationCount] = useState(0);
   const [gpsMessage, setGpsMessage] = useState('');
+  const [gpsAddress, setGpsAddress] = useState('');
   const [locationTimestamp, setLocationTimestamp] = useState<string>('');
   // true once geolocation can no longer help (denied or 2 attempts used) — unlocks manual address
   const [locationFailed, setLocationFailed] = useState(false);
@@ -118,6 +123,7 @@ export default function Home() {
         if (data.fbDob !== undefined) setFbDob(data.fbDob);
         if (data.fbWard !== undefined) setFbWard(data.fbWard);
         if (data.name !== undefined) setName(data.name);
+        if (data.doorNo !== undefined) setDoorNo(data.doorNo);
         if (data.mobile !== undefined) setMobile(data.mobile);
         if (data.aadhaar !== undefined) setAadhaar(data.aadhaar);
         if (data.gender !== undefined) setGender(data.gender);
@@ -131,6 +137,9 @@ export default function Home() {
         if (data.subcategory !== undefined) setSubcategory(data.subcategory);
         if (data.description !== undefined) setDescription(data.description);
         if (data.urgency !== undefined) setUrgency(data.urgency);
+        if (data.panchayat !== undefined) setPanchayat(data.panchayat);
+        if (data.taluk !== undefined) setTaluk(data.taluk);
+        if (data.district !== undefined) setDistrict(data.district);
         if (data.photos !== undefined) setPhotos(data.photos);
         if (data.video !== undefined) setVideo(data.video);
         if (data.latitude !== undefined) setLatitude(data.latitude);
@@ -160,6 +169,7 @@ export default function Home() {
         fbDob,
         fbWard,
         name,
+        doorNo,
         mobile,
         aadhaar,
         gender,
@@ -173,6 +183,9 @@ export default function Home() {
         subcategory,
         description,
         urgency,
+        panchayat,
+        taluk,
+        district,
         photos,
         video,
         latitude,
@@ -180,6 +193,7 @@ export default function Home() {
         locationAttempts,
         successLocationCount,
         gpsMessage,
+        gpsAddress,
         locationTimestamp,
       };
       sessionStorage.setItem('tvk_complaint_form_data', JSON.stringify(data));
@@ -189,9 +203,9 @@ export default function Home() {
   }, [
     isFormLoaded,
     voterId, voterVerified, verificationMethod, fbName, fbDoorNo, fbDob, fbWard,
-    name, mobile, aadhaar, gender, age, dob, address, constituency, ward, areaStreet,
-    category, subcategory, description, urgency, photos, video,
-    latitude, longitude, locationAttempts, successLocationCount, gpsMessage, locationTimestamp
+    name, doorNo, mobile, aadhaar, gender, age, dob, address, constituency, ward, areaStreet,
+    category, subcategory, description, urgency, panchayat, taluk, district, photos, video,
+    latitude, longitude, locationAttempts, successLocationCount, gpsMessage, gpsAddress, locationTimestamp
   ]);
 
   // Lock scroll and restore native cursor while complaint modal is open
@@ -203,58 +217,7 @@ export default function Home() {
     return () => document.body.classList.remove('modal-open', 'chover');
   }, [isComplaintOpen]);
 
-  // Fetch IP Geolocation to auto-fill address automatically when modal opens
-  useEffect(() => {
-    if (isComplaintOpen && !voterVerified) {
-      const fetchIpLocation = async () => {
-        setIsIpLocating(true);
-        try {
-          const res = await fetch('https://ipapi.co/json/');
-          if (res.ok) {
-            const data = await res.json();
-            if (data.latitude && data.longitude) {
-              const lat = data.latitude;
-              const lon = data.longitude;
-              setLatitude(lat);
-              setLongitude(lon);
-
-              // Use Nominatim to reverse-geocode the IP coordinates to get a real address name!
-              const geocodeUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ta,en`;
-              const geoRes = await fetch(geocodeUrl, {
-                headers: {
-                  'User-Agent': 'TVK-Namakkal-West-Grievance-Platform'
-                }
-              });
-              if (geoRes.ok) {
-                const geoData = await geoRes.json();
-                if (geoData.display_name) {
-                  setAddress(geoData.display_name);
-
-                  // Auto-detect constituency from address
-                  const addressLower = geoData.display_name.toLowerCase();
-                  for (const constName of CONSTITUENCIES) {
-                    if (addressLower.includes(constName.toLowerCase())) {
-                      setConstituency(constName);
-                      break;
-                    }
-                  }
-                }
-              } else {
-                setAddress(`${data.city}, ${data.region}, India`);
-              }
-            } else if (data.city && data.region) {
-              setAddress(`${data.city}, ${data.region}, India`);
-            }
-          }
-        } catch (err) {
-          console.error("Error fetching IP Geolocation:", err);
-        } finally {
-          setIsIpLocating(false);
-        }
-      };
-      fetchIpLocation();
-    }
-  }, [isComplaintOpen, voterVerified]);
+  // Geolocation will be fetched manually via GPS click
 
   // Handle voter verification lookup
   const handleVerifyVoter = async () => {
@@ -280,17 +243,34 @@ export default function Home() {
         setVoterVerified(true);
         setVerificationMethod('VOTER_ID');
         setName(data.voter.VoterName);
-        setWard(String(data.voter.WardNo));
-        setAddress(data.voter.Address);
+        setDoorNo(data.voter.DoorNo || '');
+        setWard(String(data.voter.WardNo || ''));
+        setAddress(data.voter.Address || '');
         const voterDob = data.voter.DOB || '';
         setDob(voterDob);
-        setAge(calculateAgeFromDob(voterDob));
+        
+        // Auto-fill Gender & Age
+        if (data.voter.Gender) setGender(data.voter.Gender);
+        const calculatedAge = calculateAgeFromDob(voterDob);
+        if (calculatedAge) {
+          setAge(calculatedAge);
+        } else if (data.voter.Age) {
+          setAge(String(data.voter.Age));
+        } else {
+          setAge('');
+        }
+
+        setPanchayat(data.voter.Panchayat || '');
+        setTaluk(data.voter.Taluk || '');
+        setDistrict(data.voter.District || '');
 
         const matchedConstituency = CONSTITUENCIES.find(
           (c) => c.toLowerCase() === data.voter.Constituency.toLowerCase()
         );
         if (matchedConstituency) {
           setConstituency(matchedConstituency);
+        } else {
+          setConstituency('');
         }
       } else {
         setVerificationError(data.message || 'வாக்காளர் அடையாளம் கண்டறியப்படவில்லை');
@@ -305,8 +285,11 @@ export default function Home() {
 
   // Handle fallback detail-match voter verification lookup
   const handleFallbackVerify = async () => {
-    if (!fbName.trim() || !fbDoorNo.trim() || !fbDob || !fbWard.trim()) {
-      setVerificationError('பெயர், கதவு எண், பிறந்த தேதி மற்றும் வார்டு எண் அனைத்தும் தேவை.');
+    const trimmedName = fbName.trim();
+    const trimmedDoorNo = fbDoorNo.trim();
+
+    if (!trimmedName || !trimmedDoorNo) {
+      setVerificationError('பெயர் மற்றும் கதவு எண் இரண்டும் தேவை.');
       return;
     }
 
@@ -315,16 +298,19 @@ export default function Home() {
     setVoterVerified(false);
 
     try {
+      const payload: any = {
+        isFallback: true,
+        name: trimmedName,
+        doorNo: trimmedDoorNo,
+      };
+      
+      if (fbDob) payload.dob = fbDob;
+      if (fbWard.trim()) payload.wardNo = fbWard.trim();
+
       const res = await fetch('/api/voter/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          isFallback: true,
-          name: fbName.trim(),
-          doorNo: fbDoorNo.trim(),
-          dob: fbDob,
-          wardNo: fbWard.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -333,20 +319,37 @@ export default function Home() {
         setVoterVerified(true);
         setVerificationMethod('DETAIL_MATCH');
 
-        // Auto-fill and lock
+        // Auto-fill
         setVoterId(data.voter.VoterID);
         setName(data.voter.VoterName);
-        setWard(String(data.voter.WardNo));
-        setAddress(data.voter.Address);
+        setDoorNo(data.voter.DoorNo || '');
+        setWard(String(data.voter.WardNo || ''));
+        setAddress(data.voter.Address || '');
         const voterDob = data.voter.DOB || '';
         setDob(voterDob);
-        setAge(calculateAgeFromDob(voterDob));
+        
+        // Auto-fill Gender & Age
+        if (data.voter.Gender) setGender(data.voter.Gender);
+        const calculatedAge = calculateAgeFromDob(voterDob);
+        if (calculatedAge) {
+          setAge(calculatedAge);
+        } else if (data.voter.Age) {
+          setAge(String(data.voter.Age));
+        } else {
+          setAge('');
+        }
+
+        setPanchayat(data.voter.Panchayat || '');
+        setTaluk(data.voter.Taluk || '');
+        setDistrict(data.voter.District || '');
 
         const matchedConstituency = CONSTITUENCIES.find(
           (c) => c.toLowerCase() === data.voter.Constituency.toLowerCase()
         );
         if (matchedConstituency) {
           setConstituency(matchedConstituency);
+        } else {
+          setConstituency('');
         }
       } else {
         setVerificationError(data.message || 'வாக்காளர் அடையாளம் கண்டறியப்படவில்லை');
@@ -375,7 +378,8 @@ export default function Home() {
       if (cachedLat && cachedLon) {
         setLatitude(Number(cachedLat));
         setLongitude(Number(cachedLon));
-        if (cachedAddr) setAddress(cachedAddr);
+        // Show cached GPS address in GPS box only, don't overwrite voter's residential address
+        if (cachedAddr) setGpsAddress(cachedAddr);
       }
       return;
     }
@@ -423,8 +427,13 @@ export default function Home() {
           if (geoRes.ok) {
             const geoData = await geoRes.json();
             if (geoData.display_name) {
-              setAddress(geoData.display_name);
+              // Show geocoded location in GPS box — do NOT overwrite voter's residential address
+              setGpsAddress(geoData.display_name);
               localStorage.setItem('tvk_gps_address', geoData.display_name);
+              // Only fill residential address if it is still empty
+              if (!address.trim()) {
+                setAddress(geoData.display_name);
+              }
 
               // Try to auto-detect and set constituency from the Tamil address!
               const addressLower = geoData.display_name.toLowerCase();
@@ -550,6 +559,20 @@ export default function Home() {
       alert('சரியான 10 இலக்க அலைபேசி எண் தேவை. (A valid 10-digit mobile number is required.)');
       return;
     }
+    // DOB validation — if provided, must be a valid date and voter must be ≥ 18
+    if (dob) {
+      const dobDate = new Date(dob);
+      if (isNaN(dobDate.getTime())) {
+        alert('சரியான பிறந்த தேதியை உள்ளிடவும். (Please enter a valid date of birth.)');
+        return;
+      }
+      const minBirthYear = new Date();
+      minBirthYear.setFullYear(minBirthYear.getFullYear() - 18);
+      if (dobDate > minBirthYear) {
+        alert('வாக்காளர் வயது குறைந்தது 18 ஆண்டுகள் இருக்க வேண்டும். (Voter must be at least 18 years old.)');
+        return;
+      }
+    }
     if (!address.trim()) {
       alert('முகவரி தேவை. (Address is required.)');
       return;
@@ -572,9 +595,13 @@ export default function Home() {
       locationTimestamp: locationTimestamp || undefined,
       ward,
       constituency,
+      panchayat,
+      taluk,
+      district,
       citizenDetails: {
         name,
         mobile,
+        doorNo,
         aadhaar: aadhaar.trim() || undefined,
         gender,
         age: age ? parseInt(age, 10) : undefined,
@@ -1600,9 +1627,11 @@ export default function Home() {
                       setVoterVerified(false);
                       setVoterId('');
                       setName('');
+                      setDoorNo('');
                       setMobile('');
                       setAadhaar('');
                       setAge('');
+                      setGender('ஆண்');
                       setAddress('');
                       setAreaStreet('');
                       setDescription('');
@@ -1614,7 +1643,18 @@ export default function Home() {
                       setFbDoorNo('');
                       setFbDob('');
                       setFbWard('');
+                      setPanchayat('');
+                      setTaluk('');
+                      setDistrict('');
                       setVerificationMethod('');
+                      setSuccessLocationCount(0);
+                      setLocationAttempts(0);
+                      setLocationFailed(false);
+                      setGpsMessage('');
+                      setGpsAddress('');
+                      localStorage.removeItem('tvk_gps_lat');
+                      localStorage.removeItem('tvk_gps_lon');
+                      localStorage.removeItem('tvk_gps_address');
                       sessionStorage.removeItem('tvk_complaint_form_data');
                     }}
                   >
@@ -1674,11 +1714,26 @@ export default function Home() {
                               onClick={() => {
                                 setVoterVerified(false);
                                 setName('');
+                                setDoorNo('');
                                 setMobile('');
                                 setWard('');
                                 setAddress('');
                                 setDob('');
                                 setAge('');
+                                setGender('ஆண்');
+                                setPanchayat('');
+                                setTaluk('');
+                                setDistrict('');
+                                setSuccessLocationCount(0);
+                                setLocationAttempts(0);
+                                setLocationFailed(false);
+                                setGpsMessage('');
+                                setGpsAddress('');
+                                localStorage.removeItem('tvk_gps_lat');
+                                localStorage.removeItem('tvk_gps_lon');
+                                localStorage.removeItem('tvk_gps_address');
+                                setLatitude(null);
+                                setLongitude(null);
                               }}
                             >
                               மாற்று
@@ -1720,7 +1775,7 @@ export default function Home() {
 
                             <div className="input-row" style={{ marginBottom: '1.25rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                               <div className="input-group" style={{ marginBottom: 0 }}>
-                                <label htmlFor="fbDob" style={{ fontSize: '0.85rem', fontWeight: 600 }}>பிறந்த தேதி *</label>
+                                <label htmlFor="fbDob" style={{ fontSize: '0.85rem', fontWeight: 600 }}>பிறந்த தேதி (விருப்பத்தேர்வு)</label>
                                 <input
                                   id="fbDob"
                                   type="date"
@@ -1730,7 +1785,7 @@ export default function Home() {
                                 />
                               </div>
                               <div className="input-group" style={{ marginBottom: 0 }}>
-                                <label htmlFor="fbWard" style={{ fontSize: '0.85rem', fontWeight: 600 }}>வார்டு எண் *</label>
+                                <label htmlFor="fbWard" style={{ fontSize: '0.85rem', fontWeight: 600 }}>வார்டு எண் (விருப்பத்தேர்வு)</label>
                                 <input
                                   id="fbWard"
                                   type="text"
@@ -1755,8 +1810,10 @@ export default function Home() {
                         )}
 
                         {voterVerified && (
-                          <div className="status-badge success" style={{ marginTop: '1rem' }}>
-                            <span>வாக்காளர் விவரங்கள் சரிபார்க்கப்பட்டன</span>
+                          <div style={{ marginTop: '1.25rem' }}>
+                            <div className="status-badge success" style={{ marginBottom: '1rem' }}>
+                              <span>வாக்காளர் விவரங்கள் சரிபார்க்கப்பட்டன (Voter Verified)</span>
+                            </div>
                           </div>
                         )}
 
@@ -1782,10 +1839,22 @@ export default function Home() {
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            readOnly={voterVerified}
                             required
                           />
                         </div>
+                        <div className="input-group">
+                          <label htmlFor="doorNo">கதவு எண் *</label>
+                          <input
+                            id="doorNo"
+                            type="text"
+                            value={doorNo}
+                            onChange={(e) => setDoorNo(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="input-row">
                         <div className="input-group">
                           <label htmlFor="mobile">மொபைல் எண் *</label>
                           <input
@@ -1794,19 +1863,6 @@ export default function Home() {
                             value={mobile}
                             onChange={(e) => setMobile(e.target.value)}
                             required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="input-row">
-                        <div className="input-group">
-                          <label htmlFor="dob">பிறந்த தேதி (Date of Birth)</label>
-                          <input
-                            id="dob"
-                            type="text"
-                            value={dob}
-                            readOnly
-                            placeholder={voterVerified ? "" : "வாக்காளர் சரிபார்ப்புக்குப் பிறகு நிரப்பப்படும்"}
                           />
                         </div>
                         <div className="input-group">
@@ -1819,8 +1875,26 @@ export default function Home() {
                             onChange={(e) => setAadhaar(e.target.value)}
                           />
                         </div>
-                        <div className="input-row" style={{ gap: '1rem' }}>
-                          <div className="input-group">
+                      </div>
+
+                      <div className="input-row">
+                        <div className="input-group">
+                          <label htmlFor="dob">பிறந்த தேதி (Date of Birth)</label>
+                          <input
+                            id="dob"
+                            type="date"
+                            value={dob}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDob(val);
+                              if (val) {
+                                setAge(calculateAgeFromDob(val));
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="input-row" style={{ gap: '1rem', marginBottom: 0, padding: 0, border: 'none', display: 'flex' }}>
+                          <div className="input-group" style={{ marginBottom: 0 }}>
                             <label htmlFor="gender">பாலினம் *</label>
                             <select
                               id="gender"
@@ -1833,7 +1907,7 @@ export default function Home() {
                               <option value="இதர">இதர</option>
                             </select>
                           </div>
-                          <div className="input-group">
+                          <div className="input-group" style={{ marginBottom: 0 }}>
                             <label htmlFor="age">வயது *</label>
                             <input
                               id="age"
@@ -1842,7 +1916,6 @@ export default function Home() {
                               max="120"
                               value={age}
                               onChange={(e) => setAge(e.target.value)}
-                              readOnly={voterVerified && !!dob}
                               required
                             />
                           </div>
@@ -1856,8 +1929,7 @@ export default function Home() {
                           rows={3}
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
-                          readOnly={voterVerified && !locationFailed}
-                          placeholder={isIpLocating ? "இருப்பிட முகவரியைக் கண்டறிகிறது..." : "உங்கள் முகவரியை இங்கே உள்ளிடவும்"}
+                          placeholder="உங்கள் முகவரியை இங்கே உள்ளிடவும்"
                           required
                         />
                       </div>
@@ -1876,9 +1948,9 @@ export default function Home() {
                             id="constituency"
                             value={constituency}
                             onChange={(e) => setConstituency(e.target.value)}
-                            disabled={voterVerified}
                             required
                           >
+                            <option value="">தொகுதியைத் தேர்ந்தெடுக்கவும்</option>
                             {CONSTITUENCIES.map((c, i) => (
                               <option key={i} value={c}>{c}</option>
                             ))}
@@ -1891,8 +1963,40 @@ export default function Home() {
                             type="text"
                             value={ward}
                             onChange={(e) => setWard(e.target.value)}
-                            readOnly={voterVerified}
                             required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="input-row">
+                        <div className="input-group">
+                          <label htmlFor="panchayat">ஊராட்சி (Panchayat)</label>
+                          <input
+                            id="panchayat"
+                            type="text"
+                            placeholder="எ.கா. பள்ளிபாளையம்"
+                            value={panchayat}
+                            onChange={(e) => setPanchayat(e.target.value)}
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label htmlFor="taluk">வட்டம் (Taluk)</label>
+                          <input
+                            id="taluk"
+                            type="text"
+                            placeholder="எ.கா. நாமக்கல்"
+                            value={taluk}
+                            onChange={(e) => setTaluk(e.target.value)}
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label htmlFor="district">மாவட்டம் (District)</label>
+                          <input
+                            id="district"
+                            type="text"
+                            placeholder="எ.கா. நாமக்கல்"
+                            value={district}
+                            onChange={(e) => setDistrict(e.target.value)}
                           />
                         </div>
                       </div>
@@ -1948,8 +2052,8 @@ export default function Home() {
                           )}
                           {latitude && longitude && (
                             <span style={{ fontSize: '0.9rem', color: 'var(--ok)', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span> {latitude.toFixed(5)}, {longitude.toFixed(5)}</span>
-                              {address && <span style={{ fontSize: '0.8rem', color: 'var(--ink)', fontWeight: 'normal' }}>{address}</span>}
+                              <span> {latitude.toFixed(5)}, {longitude.toFixed(5)}</span>
+                              {gpsAddress && <span style={{ fontSize: '0.8rem', color: 'var(--ink)', fontWeight: 'normal' }}>{gpsAddress}</span>}
                             </span>
                           )}
                         </div>

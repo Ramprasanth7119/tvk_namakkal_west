@@ -33,10 +33,15 @@ type VoterRow = {
   dob: string;
   doorNo?: string;
   mobile: string;
+  gender: string;
+  age: string;
   address: string;
   constituency: string;
   wardNo: number | string;
   wardName: string;
+  panchayat: string;
+  taluk: string;
+  district: string;
 };
 
 type HistoryRow = {
@@ -498,7 +503,7 @@ export default function VoterRegistrySection() {
                   <div className="fb-search-input-wrapper">
                     <input
                       type="text"
-                      placeholder="Voter ID / பெயர் / மொபைல்..."
+                      placeholder="Voter ID / பெயர் / மொபைல் / கதவு எண்..."
                       value={search}
                       onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                       style={{
@@ -551,20 +556,25 @@ export default function VoterRegistrySection() {
                   <th>பிறந்த தேதி</th>
                   <th>கதவு எண்</th>
                   <th>மொபைல்</th>
+                  <th>பாலினம்</th>
+                  <th>வயது</th>
                   <th>தொகுதி</th>
                   <th>வார்டு</th>
                   <th>வார்டு பெயர்</th>
+                  <th>ஊராட்சி</th>
+                  <th>வட்டம்</th>
+                  <th>மாவட்டம்</th>
                   <th>முகவரி</th>
                 </tr>
               </thead>
               <tbody>
                 {isVotersLoading ? (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: "center", padding: "2rem" }}>ஏற்றப்படுகிறது...</td>
+                    <td colSpan={14} style={{ textAlign: "center", padding: "2rem" }}>ஏற்றப்படுகிறது...</td>
                   </tr>
                 ) : voters.length === 0 ? (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: "center", padding: "2rem", color: "var(--ink-soft)" }}>
+                    <td colSpan={14} style={{ textAlign: "center", padding: "2rem", color: "var(--ink-soft)" }}>
                       பதிவுகள் இல்லை
                     </td>
                   </tr>
@@ -576,9 +586,14 @@ export default function VoterRegistrySection() {
                       <td className="t-meta">{v.dob || "—"}</td>
                       <td className="t-meta">{v.doorNo || "—"}</td>
                       <td className="t-meta">{v.mobile || "—"}</td>
+                      <td className="t-meta">{v.gender || "—"}</td>
+                      <td className="t-meta" style={{ textAlign: "center" }}>{v.age || "—"}</td>
                       <td className="t-meta">{v.constituency || "—"}</td>
-                      <td className="t-meta">{v.wardNo ?? "—"}</td>
+                      <td className="t-meta" style={{ textAlign: "center" }}>{v.wardNo ?? "—"}</td>
                       <td className="t-meta">{v.wardName || "—"}</td>
+                      <td className="t-meta">{v.panchayat || "—"}</td>
+                      <td className="t-meta">{v.taluk || "—"}</td>
+                      <td className="t-meta">{v.district || "—"}</td>
                       <td style={{ maxWidth: 220, fontSize: "0.82rem" }}>{v.address || "—"}</td>
                     </tr>
                   ))

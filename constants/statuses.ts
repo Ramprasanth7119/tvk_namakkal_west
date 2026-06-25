@@ -53,6 +53,6 @@ export const STATUS_FILTER_LABELS: Record<string, string> = {
 
 export const TRACK_STATUS_STEPS = [
   { code: "pend", label: "பதிவில்", icon: "" },
-  { code: "warn", label: "நடவடிக்கையில்", icon: "⏳" },
+  { code: "warn", label: "நடவடிக்கையில்", icon: "" },
   { code: "ok", label: "தீர்க்கப்பட்டது", icon: "✓" },
 ];

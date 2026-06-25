@@ -7,7 +7,12 @@ export type VoterFieldKey =
   | "constituency"
   | "mobile"
   | "address"
-  | "doorNo";
+  | "doorNo"
+  | "panchayat"
+  | "taluk"
+  | "district"
+  | "gender"
+  | "age";
 
 export type ColumnMapping = Partial<Record<VoterFieldKey, string>>;
 
@@ -21,6 +26,11 @@ const FIELD_LABELS: Record<VoterFieldKey, string> = {
   mobile: "Mobile",
   address: "Address",
   doorNo: "Door Number",
+  panchayat: "Panchayat",
+  taluk: "Taluk",
+  district: "District",
+  gender: "Gender",
+  age: "Age",
 };
 
 /** English + Tamil header aliases (normalized before compare). */
@@ -119,6 +129,36 @@ const COLUMN_ALIASES: Record<VoterFieldKey, string[]> = {
     "கதவுஎண்",
     "கதவு",
     "வீட்டுஎண்",
+  ],
+  panchayat: [
+    "panchayat",
+    "panchayat name",
+    "panchayat_name",
+    "village panchayat",
+    "கிராம பஞ்சாயத்து",
+    "பஞ்சாயத்து",
+  ],
+  taluk: [
+    "taluk",
+    "taluka",
+    "tahsil",
+    "tehsil",
+    "வட்டம்",
+    "தாலுகா",
+  ],
+  district: [
+    "district",
+    "dist",
+    "மாவட்டம்",
+  ],
+  gender: [
+    "gender",
+    "sex",
+    "பாலினம்",
+  ],
+  age: [
+    "age",
+    "வயது",
   ],
 };
 

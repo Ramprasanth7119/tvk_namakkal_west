@@ -119,9 +119,12 @@ export async function POST(request: Request) {
     }
 
     // --- FALLBACK DETAIL-MATCH VERIFICATION FLOW ---
-    if (!name || !doorNo || !dob || !wardNo) {
+    const cleanName = String(name || "").trim();
+    const cleanDoor = String(doorNo || "").trim();
+
+    if (!cleanName || !cleanDoor) {
       return NextResponse.json(
-        { error: "பெயர், கதவு எண், பிறந்த தேதி மற்றும் வார்டு எண் அனைத்தும் தேவை." },
+        { error: "பெயர் மற்றும் கதவு எண் இரண்டும் தேவை. (Both Name and Door Number are required.)" },
         { status: 400 }
       );
     }
@@ -129,61 +132,69 @@ export async function POST(request: Request) {
     const db = await getDb();
     const collection = db.collection("voterRegistry");
 
-    // 1. Build DB query for DOB, Ward, and Door Number
-    const query: any = {};
+    // 1. Build DB query
+    const andClauses: any[] = [];
 
-    // Match DOB (supporting UTC/local Date ranges)
-    const d = new Date(dob);
-    if (!isNaN(d.getTime())) {
-      const utcStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-      const utcEnd = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
-      
-      const localStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      const localEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
-
-      query.$or = [
-        { dob: { $gte: utcStart, $lte: utcEnd } },
-        { dob: { $gte: localStart, $lte: localEnd } }
-      ];
-    } else {
-      return NextResponse.json(
-        { error: "முறையற்ற பிறந்த தேதி வடிவம்." },
-        { status: 400 }
-      );
-    }
-
-    // Match Ward No
-    const wardNum = Number(wardNo);
-    const wardMatches = [String(wardNo).trim()];
-    if (!isNaN(wardNum)) {
-      wardMatches.push(wardNum as any);
-    }
-
-    // Match Door No
-    const cleanDoor = String(doorNo).trim();
+    // Match Door No (Required)
     const doorRegex = new RegExp("^" + cleanDoor.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
+    andClauses.push({
+      $or: [ { doorNo: cleanDoor }, { doorNo: { $regex: doorRegex } } ]
+    });
 
-    query.$and = [
-      { $or: [ { wardNo: { $in: wardMatches } }, { ward: { $in: wardMatches } } ] },
-      { $or: [ { doorNo: cleanDoor }, { doorNo: { $regex: doorRegex } } ] }
-    ];
+    // Match DOB (Optional)
+    if (dob) {
+      const d = new Date(dob);
+      if (!isNaN(d.getTime())) {
+        const utcStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+        const utcEnd = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
+        
+        const localStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const localEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
 
-    // Search the voter registry for matches on Ward, DOB, and Door No
+        andClauses.push({
+          $or: [
+            { dob: { $gte: utcStart, $lte: utcEnd } },
+            { dob: { $gte: localStart, $lte: localEnd } }
+          ]
+        });
+      } else {
+        return NextResponse.json(
+          { error: "முறையற்ற பிறந்த தேதி வடிவம். (Invalid date of birth format.)" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Match Ward No (Optional)
+    if (wardNo) {
+      const wardNum = Number(wardNo);
+      const wardMatches = [String(wardNo).trim()];
+      if (!isNaN(wardNum)) {
+        wardMatches.push(wardNum as any);
+      }
+      andClauses.push({
+        $or: [ { wardNo: { $in: wardMatches } }, { ward: { $in: wardMatches } } ]
+      });
+    }
+
+    const query = { $and: andClauses };
+
+    // Search the voter registry
     const matchingVoters = await collection.find(query).toArray();
 
-    // Case 4: No household matches Ward + DOB + Door No at all
+    // Case 1: No household matches found in DB at all
     if (matchingVoters.length === 0) {
-      await logSecurityEvent(ip, "FALLBACK_VERIFICATION_FAILED_NO_HOUSEHOLD", { name, doorNo, dob, wardNo });
+      await logSecurityEvent(ip, "FALLBACK_VERIFICATION_FAILED_NO_HOUSEHOLD", { name: cleanName, doorNo: cleanDoor, dob, wardNo });
       return NextResponse.json({
         found: false,
-        case: 4,
-        message: " உள்ளிடப்பட்ட விவரங்களுடன் எந்த வாக்காளர் பதிவும் கண்டறியப்படவில்லை.",
+        case: 1,
+        message: "No matching voter record found.",
       });
     }
 
     // Evaluate name similarity among those living at this household
     const candidates = matchingVoters.map((doc) => {
-      const similarity = getSimilarity(name, doc.name || "");
+      const similarity = getSimilarity(cleanName, doc.name || "");
       const wardNumber = readWardNo(doc as Record<string, unknown>);
       return {
         voter: {
@@ -196,6 +207,11 @@ export async function POST(request: Request) {
           Mobile: doc.mobile || "",
           Address: doc.address || "",
           DoorNo: doc.doorNo || "",
+          Panchayat: doc.panchayat || "",
+          Taluk: doc.taluk || "",
+          District: doc.district || "",
+          Gender: doc.gender || "",
+          Age: doc.age || "",
         },
         similarity,
       };
@@ -203,13 +219,30 @@ export async function POST(request: Request) {
 
     // Exact name matches
     const exactMatches = candidates.filter((c) => c.similarity === 1.0);
-    // Similar name matches (similarity >= 75%)
+    // Similar name matches (similarity >= 75% and < 1.0)
     const similarMatches = candidates.filter((c) => c.similarity >= 0.75 && c.similarity < 1.0);
 
-    // Case 5: Exactly one confident, single match (Exact Match)
+    let verifiedVoter = null;
+
     if (exactMatches.length === 1) {
-      const verifiedVoter = exactMatches[0].voter;
-      await logSecurityEvent(ip, "FALLBACK_VERIFICATION_SUCCESS_EXACT", { voterId: verifiedVoter.VoterID });
+      // Exactly one exact name match
+      verifiedVoter = exactMatches[0].voter;
+    } else if (exactMatches.length === 0 && similarMatches.length === 1) {
+      // Exactly one similar name match (no exact matches)
+      verifiedVoter = similarMatches[0].voter;
+    } else if (exactMatches.length > 1 || (exactMatches.length === 0 && similarMatches.length > 1)) {
+      // Case 2: Multiple matching voters found (Multiple exact matches OR multiple similar matches)
+      await logSecurityEvent(ip, "FALLBACK_VERIFICATION_MULTIPLE_FOUND", { name: cleanName, doorNo: cleanDoor, dob, wardNo });
+      return NextResponse.json({
+        found: false,
+        case: 2,
+        message: "Multiple records found. Please provide additional details such as DOB or Ward Number.",
+      });
+    }
+
+    if (verifiedVoter) {
+      // Case 3: Single record found
+      await logSecurityEvent(ip, "FALLBACK_VERIFICATION_SUCCESS", { voterId: verifiedVoter.VoterID });
       return NextResponse.json({
         found: true,
         message: "வாக்காளர் விவரங்கள் சரிபார்க்கப்பட்டன",
@@ -218,35 +251,12 @@ export async function POST(request: Request) {
       });
     }
 
-    // Case 3: Multiple matching voters found (Multiple exact matches OR multiple similar matches)
-    if (exactMatches.length > 1 || (exactMatches.length === 0 && similarMatches.length > 1)) {
-      await logSecurityEvent(ip, "FALLBACK_VERIFICATION_MULTIPLE_FOUND", { name, doorNo, dob, wardNo });
-      return NextResponse.json({
-        found: false,
-        case: 3,
-        message: "ஒரே மாதிரியான பல பதிவுகள் கண்டறியப்பட்டுள்ளன. தயவுசெய்து வாக்காளர் அடையாள எண்ணைப் பயன்படுத்தவும்.",
-      });
-    }
-
-    // Case 2: One similar, but not exact name match (similarity >= 75%)
-    if (exactMatches.length === 0 && similarMatches.length === 1) {
-      // If we are extremely confident (like space normalization only), can we treat it as success?
-      // No, the prompt says:
-      // Show: "பெயர் சரிபார்ப்பில் சிறிய வேறுபாடு கண்டறியப்பட்டுள்ளது. வாக்காளர் பட்டியலில் உள்ள பெயரை சரியாக உள்ளிட்டு மீண்டும் முயற்சிக்கவும்."
-      await logSecurityEvent(ip, "FALLBACK_VERIFICATION_SIMILAR_NAME_WARNING", { name, doorNo, dob, wardNo });
-      return NextResponse.json({
-        found: false,
-        case: 2,
-        message: "பெயர் சரிபார்ப்பில் சிறிய வேறுபாடு கண்டறியப்பட்டுள்ளது. வாக்காளர் பட்டியலில் உள்ள பெயரை சரியாக உள்ளிட்டு மீண்டும் முயற்சிக்கவும்.",
-      });
-    }
-
-    // Case 1: Door No + DOB + Ward match BUT name does not match (0 matches >= 75%)
-    await logSecurityEvent(ip, "FALLBACK_VERIFICATION_NAME_MISMATCH", { name, doorNo, dob, wardNo });
+    // Case 1: No match found (0 candidates >= 75%)
+    await logSecurityEvent(ip, "FALLBACK_VERIFICATION_FAILED_NO_MATCH", { name: cleanName, doorNo: cleanDoor, dob, wardNo });
     return NextResponse.json({
       found: false,
       case: 1,
-      message: " விவரங்கள் பகுதியளவில் பொருந்துகின்றன. தயவுசெய்து வாக்காளர் பட்டியலில் உள்ள பெயரை சரியாக உள்ளிடவும்.",
+      message: "No matching voter record found.",
     });
 
   } catch (error) {

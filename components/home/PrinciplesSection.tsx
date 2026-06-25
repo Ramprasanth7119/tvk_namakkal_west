@@ -20,7 +20,7 @@ export default function PrinciplesSection() {
             </div>
           </div>
           <div className="pcard rv rv-d1">
-            <div className="pemblem">🤝</div>
+            <div className="pemblem"></div>
             <div>
               <h3>சமத்துவம்</h3>
               <p>"பிறப்பொக்கும் எல்லா உயிர்க்கும்" — பிறப்பின் அடிப்படையில் உயர்வு தாழ்வு இல்லாத சமுதாயம் அமைத்தல்.</p>

@@ -7,10 +7,11 @@ import { TVK_LOGO } from "@/lib/brand";
 import TvkAppFooter from "@/components/TvkAppFooter";
 import TvkTopBar from "@/components/TvkTopBar";
 import { normalizeStatus } from "@/lib/complaintStatus";
+import WhistleCursor, { useWhistleCursor } from "@/components/WhistleCursor";
 
 const STATUS_STEPS = [
   { code: "pend", label: "பதிவில்", icon: "" },
-  { code: "warn", label: "நடவடிக்கையில்", icon: "⏳" },
+  { code: "warn", label: "நடவடிக்கையில்", icon: "" },
   { code: "ok", label: "தீர்க்கப்பட்டது", icon: "✓" },
 ];
 
@@ -20,6 +21,9 @@ function TrackPageContent() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Enable whistle cursor
+  useWhistleCursor({ theme: "gold" });
 
   const lookupTracking = async (id: string) => {
     setError("");
@@ -58,6 +62,7 @@ function TrackPageContent() {
 
   return (
     <div className="analytics-body min-h-screen">
+      <WhistleCursor />
       <TvkTopBar
         title="மனு நிலை அறிதல்"
         brandHref="/"
@@ -78,7 +83,7 @@ function TrackPageContent() {
         </div>
       </section>
 
-      <div className="wrap" style={{ paddingBottom: "4rem" }}>
+      <div className="wrap" style={{ paddingTop: "2.5rem", paddingBottom: "4rem" }}>
         <div className="card" style={{ maxWidth: "720px", margin: "0 auto", padding: "2rem" }}>
           <form onSubmit={handleTrack} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <label htmlFor="trackingId" style={{ fontWeight: 800, color: "var(--m-800)" }}>
@@ -162,7 +167,7 @@ function TrackPageContent() {
               {(result.solvedBy || result.verifiedBy || result.approvedBy) && (
                 <div style={{ marginTop: "2rem", background: "rgba(254, 203, 2, 0.05)", border: "1px dashed var(--gold)", padding: "1.25rem", borderRadius: "0.75rem" }}>
                   <h3 style={{ fontSize: "1rem", fontWeight: 900, color: "var(--m-800)", marginBottom: "0.75rem" }}>
-                    🤝 குறைதீர் பொறுப்பாளர்கள் விவரம்
+                     குறைதீர் பொறுப்பாளர்கள் விவரம்
                   </h3>
                   <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
                     {result.solvedBy && (
