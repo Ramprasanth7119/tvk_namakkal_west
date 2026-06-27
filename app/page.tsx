@@ -219,6 +219,16 @@ export default function Home() {
 
   // Geolocation will be fetched manually via GPS click
 
+  // Normalize gender from DB (English) to Tamil form select options
+  function normalizeGender(raw: string): string {
+    const g = String(raw || '').trim().toLowerCase();
+    if (g === 'male' || g === 'ஆண்') return 'ஆண்';
+    if (g === 'female' || g === 'பெண்') return 'பெண்';
+    if (g === 'other' || g === 'others' || g === 'இதர' || g === 'மற்றவை') return 'இதர';
+    // Return as-is if already a Tamil option (no mapping needed)
+    return raw;
+  }
+
   // Handle voter verification lookup
   const handleVerifyVoter = async () => {
     if (!voterId.trim()) {
@@ -249,8 +259,8 @@ export default function Home() {
         const voterDob = data.voter.DOB || '';
         setDob(voterDob);
         
-        // Auto-fill Gender & Age
-        if (data.voter.Gender) setGender(data.voter.Gender);
+        // Auto-fill Gender & Age (normalize English DB value → Tamil option)
+        if (data.voter.Gender) setGender(normalizeGender(data.voter.Gender));
         const calculatedAge = calculateAgeFromDob(voterDob);
         if (calculatedAge) {
           setAge(calculatedAge);
@@ -328,8 +338,8 @@ export default function Home() {
         const voterDob = data.voter.DOB || '';
         setDob(voterDob);
         
-        // Auto-fill Gender & Age
-        if (data.voter.Gender) setGender(data.voter.Gender);
+        // Auto-fill Gender & Age (normalize English DB value → Tamil option)
+        if (data.voter.Gender) setGender(normalizeGender(data.voter.Gender));
         const calculatedAge = calculateAgeFromDob(voterDob);
         if (calculatedAge) {
           setAge(calculatedAge);
@@ -435,12 +445,15 @@ export default function Home() {
                 setAddress(geoData.display_name);
               }
 
-              // Try to auto-detect and set constituency from the Tamil address!
-              const addressLower = geoData.display_name.toLowerCase();
-              for (const constName of CONSTITUENCIES) {
-                if (addressLower.includes(constName.toLowerCase())) {
-                  setConstituency(constName);
-                  break;
+              // Try to auto-detect constituency from GPS address ONLY if not already set by voter lookup
+              // (voter's registered constituency takes priority over GPS-detected constituency)
+              if (!voterVerified) {
+                const addressLower = geoData.display_name.toLowerCase();
+                for (const constName of CONSTITUENCIES) {
+                  if (addressLower.includes(constName.toLowerCase())) {
+                    setConstituency(constName);
+                    break;
+                  }
                 }
               }
             }
