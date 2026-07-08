@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { chartAxisStyle, chartTooltipStyle, TVK } from "./chartTheme";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export interface ConstituencyChartRow {
   name: string;
@@ -59,6 +60,7 @@ const CustomTooltip = ({
 
 function ConstituencyBarChart({ data, loading }: ConstituencyBarChartProps) {
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
+  const { t } = useLanguage();
 
   const chartData = useMemo(
     () =>
@@ -74,7 +76,7 @@ function ConstituencyBarChart({ data, loading }: ConstituencyBarChartProps) {
   if (!loading && !hasData) {
     return (
       <p className="analytics-chart-empty" role="status">
-        தொகுதி தரவு இல்லை
+        {t("chart.constituency_empty")}
       </p>
     );
   }
@@ -87,7 +89,7 @@ function ConstituencyBarChart({ data, loading }: ConstituencyBarChartProps) {
     <div
       className="analytics-chart-host analytics-chart-reveal"
       role="img"
-      aria-label="தொகுதி வாரியான புகார் பகுப்பாய்வு bar chart"
+      aria-label={t("chart.constituency_aria")}
     >
       <div className="analytics-chart-scroll">
         <ResponsiveContainer width="100%" height={320} minWidth={280}>
@@ -124,7 +126,7 @@ function ConstituencyBarChart({ data, loading }: ConstituencyBarChartProps) {
             {!hidden.total && (
               <Bar
                 dataKey="total"
-                name="மொத்தம்"
+                name={t("chart.total")}
                 fill={TVK.red}
                 radius={[6, 6, 0, 0]}
                 animationDuration={800}
@@ -134,7 +136,7 @@ function ConstituencyBarChart({ data, loading }: ConstituencyBarChartProps) {
             {!hidden.ok && (
               <Bar
                 dataKey="ok"
-                name="தீர்க்கப்பட்டது"
+                name={t("status.ok")}
                 fill={TVK.ok}
                 radius={[6, 6, 0, 0]}
                 animationDuration={900}
@@ -143,7 +145,7 @@ function ConstituencyBarChart({ data, loading }: ConstituencyBarChartProps) {
             {!hidden.warn && (
               <Bar
                 dataKey="warn"
-                name="நடவடிக்கையில்"
+                name={t("analytics.in_progress")}
                 fill={TVK.warn}
                 radius={[6, 6, 0, 0]}
                 animationDuration={1000}
@@ -152,7 +154,7 @@ function ConstituencyBarChart({ data, loading }: ConstituencyBarChartProps) {
             {!hidden.pend && (
               <Bar
                 dataKey="pend"
-                name="பதிவில்"
+                name={t("analytics.registered")}
                 fill={TVK.pend}
                 radius={[6, 6, 0, 0]}
                 animationDuration={1100}

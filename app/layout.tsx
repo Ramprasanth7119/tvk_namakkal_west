@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { LanguageProvider } from "@/components/LanguageProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,8 +18,6 @@ export const metadata: Metadata = {
   description: "தமிழக வெற்றிக் கழகம் நாமக்கல் மேற்கு மாவட்டத்தின் அதிகாரப்பூர்வ இணையதளம். மக்கள் குரல் மையம் மூலம் புகார்கள் மற்றும் தீர்வுகள் பகுப்பாய்வு.",
   icons: {
     icon: "/tvk-logo.jpeg",
-    // Or if you use a PNG:
-    // icon: "/images/logo.png", 
   },
 };
 
@@ -40,7 +39,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <LanguageProvider>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }
+

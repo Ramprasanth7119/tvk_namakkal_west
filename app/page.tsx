@@ -9,6 +9,7 @@ import { TVK_LOGO } from '@/lib/brand';
 import { calculateAgeFromDob } from '@/lib/voterRegistry';
 import TvkHomeNav from '@/components/TvkHomeNav';
 import LaunchReveal from '@/components/LaunchReveal';
+import { useLanguage } from '@/components/LanguageProvider';
 import StatsSection from '@/components/home/StatsSection';
 import IdeologicalLeadersSection from '@/components/home/IdeologicalLeadersSection';
 import LeadershipSection from '@/components/home/LeadershipSection';
@@ -35,6 +36,7 @@ const CATEGORIES = {
 };
 
 export default function Home() {
+  const { lang, setLang, t } = useLanguage();
   const [loaderDone, setLoaderDone] = useState(false);
   const [loaderHidden, setLoaderHidden] = useState(false);
 
@@ -57,7 +59,7 @@ export default function Home() {
   const [doorNo, setDoorNo] = useState('');
   const [mobile, setMobile] = useState('');
   const [aadhaar, setAadhaar] = useState('');
-  const [gender, setGender] = useState('ஆண்');
+  const [gender, setGender] = useState('male');
   const [age, setAge] = useState('');
   const [dob, setDob] = useState('');
   const [address, setAddress] = useState('');
@@ -219,20 +221,19 @@ export default function Home() {
 
   // Geolocation will be fetched manually via GPS click
 
-  // Normalize gender from DB (English) to Tamil form select options
+  // Normalize gender from DB (English) to lowercase option values
   function normalizeGender(raw: string): string {
     const g = String(raw || '').trim().toLowerCase();
-    if (g === 'male' || g === 'ஆண்') return 'ஆண்';
-    if (g === 'female' || g === 'பெண்') return 'பெண்';
-    if (g === 'other' || g === 'others' || g === 'இதர' || g === 'மற்றவை') return 'இதர';
-    // Return as-is if already a Tamil option (no mapping needed)
-    return raw;
+    if (g === 'male' || g === 'm' || g === 'ஆண்') return 'male';
+    if (g === 'female' || g === 'f' || g === 'பெண்') return 'female';
+    if (g === 'other' || g === 'others' || g === 'o' || g === 'இதர' || g === 'மற்றவை') return 'other';
+    return g;
   }
 
   // Handle voter verification lookup
   const handleVerifyVoter = async () => {
     if (!voterId.trim()) {
-      setVerificationError('வாக்காளர் அடையாள எண் தேவை');
+      setVerificationError(t("home.form.voter_id_req"));
       return;
     }
 
@@ -283,11 +284,11 @@ export default function Home() {
           setConstituency('');
         }
       } else {
-        setVerificationError(data.message || 'வாக்காளர் அடையாளம் கண்டறியப்படவில்லை');
+        setVerificationError(data.message || (lang === 'ta' ? 'வாக்காளர் அடையாளம் கண்டறியப்படவில்லை' : 'Voter record not found'));
       }
     } catch (err) {
       console.error(err);
-      setVerificationError('சரிபார்ப்பதில் பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.');
+      setVerificationError(t("home.form.voter_verify_conn_err"));
     } finally {
       setIsVerifying(false);
     }
@@ -299,7 +300,7 @@ export default function Home() {
     const trimmedDoorNo = fbDoorNo.trim();
 
     if (!trimmedName || !trimmedDoorNo) {
-      setVerificationError('பெயர் மற்றும் கதவு எண் இரண்டும் தேவை.');
+      setVerificationError(t("home.form.voter_fallback_req"));
       return;
     }
 
@@ -362,11 +363,11 @@ export default function Home() {
           setConstituency('');
         }
       } else {
-        setVerificationError(data.message || 'வாக்காளர் அடையாளம் கண்டறியப்படவில்லை');
+        setVerificationError(data.message || (lang === 'ta' ? 'வாக்காளர் அடையாளம் கண்டறியப்படவில்லை' : 'Voter record not found'));
       }
     } catch (err) {
       console.error(err);
-      setVerificationError('சரிபார்ப்பதில் பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.');
+      setVerificationError(t("home.form.voter_verify_conn_err"));
     } finally {
       setIsFindingVoter(false);
     }
@@ -375,13 +376,13 @@ export default function Home() {
   // Geolocation lookup with Nominatim reverse geocoding to get real Tamil address!
   const handleGetLocation = () => {
     if (!voterVerified) {
-      setGpsMessage("முதலில் வாக்காளர் சரிபார்ப்பை முடிக்கவும்");
+      setGpsMessage(t("home.form.gps.first_verify"));
       return;
     }
 
     // Rule 3 & 4: If we already have 2 successful requests in the session, or if we want to avoid extra calls
     if (successLocationCount >= 2) {
-      setGpsMessage("முன்னர் பெறப்பட்ட இருப்பிடத் தகவல் பயன்படுத்தப்படுகிறது.");
+      setGpsMessage(lang === 'ta' ? "முன்னர் பெறப்பட்ட இருப்பிடத் தகவல் பயன்படுத்தப்படுகிறது." : "Previously retrieved location is being used.");
       const cachedLat = localStorage.getItem('tvk_gps_lat');
       const cachedLon = localStorage.getItem('tvk_gps_lon');
       const cachedAddr = localStorage.getItem('tvk_gps_address');
@@ -397,12 +398,12 @@ export default function Home() {
     // Rule 2: Limit GPS requests to 2 attempts per complaint session.
     if (locationAttempts >= 2) {
       setLocationFailed(true);
-      setGpsMessage("உங்கள் இருப்பிடத்தை அணுக இயலவில்லை. தயவுசெய்து முகவரியை கைமுறையாக நிரப்பவும். (Your location is not accessible. Kindly fill in the address manually.)");
+      setGpsMessage(lang === 'ta' ? "உங்கள் இருப்பிடத்தை அணுக இயலவில்லை. தயவுசெய்து முகவரியை கைமுறையாக நிரப்பவும். (Your location is not accessible. Kindly fill in the address manually.)" : "Your location is not accessible. Kindly fill in the address manually.");
       return;
     }
 
     if (!navigator.geolocation) {
-      alert('உங்கள் உலாவி இருப்பிட சேவையை ஆதரிக்கவில்லை.');
+      alert(lang === 'ta' ? 'உங்கள் உலாவி இருப்பிட சேவையை ஆதரிக்கவில்லை.' : 'Your browser does not support geolocation services.');
       return;
     }
 
@@ -473,10 +474,10 @@ export default function Home() {
         const exhausted = error.code === error.PERMISSION_DENIED || locationAttempts + 1 >= 2;
         if (exhausted) {
           setLocationFailed(true);
-          setGpsMessage("உங்கள் இருப்பிடத்தை அணுக இயலவில்லை. தயவுசெய்து முகவரியை கைமுறையாக நிரப்பவும். (Your location is not accessible. Kindly fill in the address manually.)");
+          setGpsMessage(lang === 'ta' ? "உங்கள் இருப்பிடத்தை அணுக இயலவில்லை. தயவுசெய்து முகவரியை கைமுறையாக நிரப்பவும். (Your location is not accessible. Kindly fill in the address manually.)" : "Your location is not accessible. Kindly fill in the address manually.");
         } else {
           // First attempt failed (timeout / position unavailable) — they can try once more.
-          setGpsMessage("இருப்பிடத்தை கண்டறிய முடியவில்லை. மீண்டும் ஒருமுறை முயற்சிக்கவும்.");
+          setGpsMessage(lang === 'ta' ? "இருப்பிடத்தை கண்டறிய முடியவில்லை. மீண்டும் ஒருமுறை முயற்சிக்கவும்." : "Unable to determine location. Please try again.");
         }
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -493,7 +494,7 @@ export default function Home() {
       }
     } catch (err) {
       console.error(err);
-      alert('கேமராவை இயக்க முடியவில்லை.');
+      alert(t("home.form.camera.error"));
       setIsCameraActive(false);
     }
   };
@@ -542,7 +543,7 @@ export default function Home() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        alert('வீдео கோப்பு அளவு 10MB ஐ விடக் குறைவாக இருக்க வேண்டும்.');
+        alert(t("home.form.media.photo_alert"));
         return;
       }
       const reader = new FileReader();
@@ -558,40 +559,40 @@ export default function Home() {
     e.preventDefault();
 
     if (!voterVerified) {
-      alert('வாக்காளர் அடையாளம் சரிபார்க்கப்பட வேண்டும்.');
+      alert(lang === 'ta' ? 'வாக்காளர் அடையாளம் சரிபார்க்கப்பட வேண்டும்.' : 'Voter verification is required.');
       return;
     }
 
     // Validate required citizen + complaint details before submitting
     const cleanMobile = (mobile || '').replace(/\D/g, '');
     if (!name.trim()) {
-      alert('குடிமகன் பெயர் தேவை. (Citizen name is required.)');
+      alert(lang === 'ta' ? 'குடிமகன் பெயர் தேவை.' : 'Citizen name is required.');
       return;
     }
     if (cleanMobile.length !== 10) {
-      alert('சரியான 10 இலக்க அலைபேசி எண் தேவை. (A valid 10-digit mobile number is required.)');
+      alert(lang === 'ta' ? 'சரியான 10 இலக்க அலைபேசி எண் தேவை.' : 'A valid 10-digit mobile number is required.');
       return;
     }
     // DOB validation — if provided, must be a valid date and voter must be ≥ 18
     if (dob) {
       const dobDate = new Date(dob);
       if (isNaN(dobDate.getTime())) {
-        alert('சரியான பிறந்த தேதியை உள்ளிடவும். (Please enter a valid date of birth.)');
+        alert(lang === 'ta' ? 'சரியான பிறந்த தேதியை உள்ளிடவும்.' : 'Please enter a valid date of birth.');
         return;
       }
       const minBirthYear = new Date();
       minBirthYear.setFullYear(minBirthYear.getFullYear() - 18);
       if (dobDate > minBirthYear) {
-        alert('வாக்காளர் வயது குறைந்தது 18 ஆண்டுகள் இருக்க வேண்டும். (Voter must be at least 18 years old.)');
+        alert(lang === 'ta' ? 'வாக்காளர் வயது குறைந்தது 18 ஆண்டுகள் இருக்க வேண்டும்.' : 'Voter must be at least 18 years old.');
         return;
       }
     }
     if (!address.trim()) {
-      alert('முகவரி தேவை. (Address is required.)');
+      alert(lang === 'ta' ? 'முகவரி தேவை.' : 'Address is required.');
       return;
     }
     if (!description.trim()) {
-      alert('குறை விளக்கம் தேவை. (Complaint description is required.)');
+      alert(lang === 'ta' ? 'குறை விளக்கம் தேவை.' : 'Complaint description is required.');
       return;
     }
 
@@ -720,7 +721,7 @@ export default function Home() {
     ${row('பெயர் / Name', c.name)}
     ${row('அலைபேசி / Mobile', c.mobile)}
     ${row('வாக்காளர் எண் / Voter ID', c.voterId)}
-    ${row('பாலினம் / Gender', c.gender)}
+    ${row('பாலினம் / Gender', t('gender.' + c.gender))}
     ${row('வயது / Age', c.age)}
     ${row('முகவரி / Address', c.address)}
     ${row('தெரு / Street', c.areaStreet)}
@@ -760,11 +761,11 @@ export default function Home() {
   const confettiCanvasRef = useRef(null);
 
   const flagData = {
-    none: { t: 'கொடியைத் தொடுங்கள் ', x: 'மரூன், மஞ்சள், வாகை மலர், இரு யானைகள் — ஒவ்வொரு கூறும் இயக்கத்தின் ஒரு நம்பிக்கையைச் சுமக்கிறது. கொடியின் எந்தப் பகுதியையும் தொட்டு அதன் விளக்கத்தைக் காணுங்கள்.' },
-    maroon: { t: 'மரூன் சிவப்பு — வீரம் & புரட்சி', x: 'மேலும் கீழும் அமைந்த மரூன் பட்டைகள் மாற்றத்திற்கான துணிவையும், மக்களுக்காகப் போராடும் உறுதியையும் குறிக்கின்றன.' },
-    yellow: { t: 'மஞ்சள் — செழிப்பு & நம்பிக்கை', x: 'நடுவில் ஒளிரும் மஞ்சள், அனைவருக்குமான வளமான எதிர்காலத்தின் மீது இயக்கம் கொண்ட நம்பிக்கையை உணர்த்துகிறது.' },
-    vaagai: { t: 'வாகை மலர் — வெற்றியின் அடையாளம்', x: 'தமிழ் மரபில் வெற்றி வீரர்கள் சூடும் மலர் வாகை. "வெற்றிக் கழகம்" என்ற பெயரின் ஆன்மா இந்த மலரில்தான்.' },
-    ele: { t: 'இரட்டை யானைகள் — வலிமை & கம்பீரம்', x: 'இருபுறமும் நிமிர்ந்து நிற்கும் யானைகள் இயக்கத்தின் உறுதியையும், மக்களைச் சுமக்கும் தோள்களின் கம்பீரத்தையும் காட்டுகின்றன.' }
+    none: { t: t('home.flag.touch'), x: t('home.flag.touch_desc') },
+    maroon: { t: t('home.flag.maroon.title'), x: t('home.flag.maroon.desc') },
+    yellow: { t: t('home.flag.yellow.title'), x: t('home.flag.yellow.desc') },
+    vaagai: { t: t('home.flag.vaagai.title'), x: t('home.flag.vaagai.desc') },
+    ele: { t: t('home.flag.ele.title'), x: t('home.flag.ele.desc') }
   };
 
   const unions = [
@@ -1270,8 +1271,8 @@ export default function Home() {
         }
       }}>
         <img src={TVK_LOGO} alt="" />
-        <b>தமிழக வெற்றிக் கழகம்</b>
-        <span>Namakkal West</span>
+        <b>{t("nav.brand")}</b>
+        <span>{t("home.loader.sub")}</span>
       </div>
 
       {/* WHISTLE CURSOR */}
@@ -1279,7 +1280,7 @@ export default function Home() {
         <img className="wg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANwAAACmCAYAAACx4+EmAAAiyUlEQVR42u2defwfw/3Hn18ijUzcV1zbIETVWUJRUkeEjjhb4j5L3VfdxH2UIEWp1JG66yrVdd8UQWj5uY8wEkfcxyKI/P6YWd/5zHevz3185/V45JH97M7O7ndmXjvvec/7AA8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PD48WQ5dvAo9mIQqDhYRU70RhsAuwB/BX4BtgZ2DDjFvvAk4UUv3HE87DEykMAmB74FxzSgIbAMOAJeJigKjRI38jpLrdE86j04m1JrAOsCswJ/AY8DBwWhNfax4h1ceecB7tTq6BwA/AV8AfgDNrVPVHwDzm+DPgW2A+4ABD4klmJuwPrGRmzjxMAZYSUn3lCefR6sTqD6wA7A+MqsMjpgOnA3cLqR6s8B2PB44rUPQtYLCQ6ntPOI+mrrGEVMoch8BvavyI74CTgbvNzPSukOqFOs26/YD7gMUyit4jpBruCedRT1LNBBxmxLK5gIHAJjWoeqIZ5BOBm4Cp5nwAPCmkeqNJf++BQqqxURgMMmJo2ox3k5DqYE84j2oG2zDgCEOuJa01UbW4Gji2WSSqsk0uQm81JOFMIdVhnnAeaYNnZWAM8Os6VH8x8CjwqZDqnx3WbksBe6MVMEk4SEg11hOu9xJrKHAqsCgwxJx+F1iwyvXUvcD/gAFo1f3kShUWbdy2r9G9B+jibSFV4AnXOwbCvMD/AQvUqMqHgIOFVBN96yZ+0JYCrkwpspmQ6hZPuM4dABL4dwW3vm2UFhcDXwmp7vetWVa7b2PWp0n4t5BqpCdcZ3b8jALFHgdGCqk+9C1W8/YfDLyacnm8kGoXT7jaNvh6wAi0Zm8F4EXgBiHVZQ149gjgjgJFNxZShZ4ede2Lp9FWLEk4BzisVpvnXb2oUdcCbkSbDVWKrYAbhVQ/1OB9PgXmcE5vC7yH3sj9EUIqL4nUf3zcCqxMuoJqAyHV3Z5w6Q14FbA5MGudHnEXcLiQ6r9lvtfsaJvBGEcDOwJDYmJFYdAHrV20sYmQ6lZPjbqPm2HAVcDCCZffElIN8oQrbbCTzSBuJAqRIcGMar60tVkUBosY5YiLd4VUC3lq1H0cLY/WZi6XcHmWSkXMrg5omAuAvcq8bXdgVbQlwnjgOaAP2vHxfOAGtO/Wmkbs27lAndPNPd8LqSYUUJBMElIt7oi8RwFjhFT3WmvMe5Ie5sXMho2vO9G+fD0+fMAgIdW3HU84Yy93EsVcNT4DxgFvAh8Jqf5R4TPnF1JNjcLgRmCLnOJfo20M5wX2Qbu1XG5d31lI9fcMQp4npNrfEY+3dZ7xBLCDkOoVT4uGjLl/ApulXL5cSLVTRxIuCoPFgddzio0HLhBSPVlnWf904Jdl3rqrrQU1TpyPJJQ7S0j1R+eZV6R8ZGZpJReUDibdYODZDL3AzHkKta42+mOLzCzHCalObNL7zSinvJCqKwqDFYFnMoolkW4mM3u6BspLCqle87RoSF9nGSxsK6S6pm0JF4XBpsDNGUUOAT4TUl3SAu96MHBWHaqeDqxia0RTCL5rI/YQPSAKg6XR+7Zp+EnS+q6rxf+o74GZUy5fLKT6fYu+d1/gQ2C2WtZrK0rM1sFGZi27Qtas6FHz/l0WrWgr3F8tTbgoDC5BB6ZJwp7AJ0Kq69ugY2ZUcfuf0A6jP3PO/8oNDxeFwWpoE7AYFwqp9vbUqGlfjkBbJR3kXJpC8p4dwDgh1Z4tTbiMQXqDWaO90GYdtTpwBemuIWn4ImOGfF9INdB5jqt8eUZI9QtPldz+OQIYi/Y3fBYYitYqD6dn2IY7yI6X2aN6IdWAliVcFAYv0e0H1lEiUpWzHehN2JF0m4OVbB1kPOM+IdV6nljB3Oj4mJuZU+vR07SuErxoCHoHOojt0VliZVeLNMZCZmp20TGaN7PIPoh0t/8sTAN+knJtRyHVFeYZSwEvJ5S5VEi1Wy8h1lC0o+2+wCJoA4da4jjgWuC1pC2AKAxGAyeYnz2CF3W1QAMlbep2rCVF0QV3mVhbSPWwM+iecMps0UkhFKIwWAYdGmIO4AFqF34iAj4FzkDv5w4XUt1YoTTzkZBq3pYhXIoIdIqQ6phe8CW+G1g/SQQ0Yso+ZVb5W3dgRGEwlVLviBeFVMu0cZvdC6xbg6oeAZ4EXhFS/bXG77gD3VZFNwmptmwJwqX4g/0yyQ6xwxfsbljw9YHPE2aoIuix6RqFwd7AX9pJeojC4HazZt2X8i15bEwH/oOOE/OWkOqlBrz774DrWmYNlyJSPSSkGtZLF/NHAafUWcS0v7oxjhRSnd7Ev3sd4AO098QeaC1upQGTpgOXoTXZE9FhJ75q4t8WS27PC6mWbTbhvqLUFu0kIdVoejHSrBaM+VeedvM79P7Qfc75VW1b0hQb1HXrFQ/FBEf6XEj1reUydS3Vh0+/GrgU+NKskV5rwf6M++w2IZVsCuGSRBvgBCHV8W1OlqHmS70cMH+lJmZRGAxHO7WmwU56URQLA0/THRFsEj33lir2rzOKi9WBn6OjOw+i9rEzJ6Ktae4XUn3eZh/PHlsyXU1gfYwhrepaEoXB/Oi9FYnWVNUaVwNT3Oi/ZgA/n1D+ATOLTavjnz2bkOrLlPaYG50jYCa03+DBFSh10vA18IqZ/cZ0gteDNdbvElKNaDjhEsjWkgn0ojD4A3Bhkx4/BZ0KasmU6w8Ba5vjci0eysF56MCxzwGX1GHGukFI9bsOXh7cgpXDwVWa9GkC2R5tFbK5jdNkLJynCDH/jxdS7VIDy5U07Gf+VYJY7H3ESAfDemEclqHWcQ974K46D+hznc5ruhiZspbMwmfozdWJQqpVojCYE21+9q6QSkVhMHu8tjCiaF+0p/cpaPX+EEpDsE0x4uqiVfwZO9JT69hIxFrBV4VUZ9DLYbxDdgYWwspb11BvgSgMzgAOzXp4gxtlpwLrsbOAB9GJLR6u8/vMC/yd6nKzPY/2Fax30KRJRhKYq97t0gbk2gZtTDA7OmzicmmzvWtlUjfCJYSCa0qkqSgM+pk12c45RXvEGGlihy6NVvEX2Y+KhFQDaihergC8YD6QvT5kg4ncdRBaYfQ9CSaIGdhTSDWuUYS73V7UN2N2y4nm9QmwdS0Ce9bx/Qcb0XeDBj5WtGJe7Aa1d3+0Q+9mZvaqZG3/EHB2VkKQrjq8eMm6rdFkywkh3nbeB0YUPq3AjLeoWRtOqeJxBwipzu1FJNsa7eg7P+UFDP7AiJXTgU3LCUXfVeM/wI2j2LBoUkaM/RCYJeHy2p2w9jABhKZnFLlUSLVbTi609Omtw2NdRmFwPPBTYDDwq4K3PWA+RM/W4h26avjHuJGM1o8DmjaoMWc0YhBFYdDH/ogYH7R3jIw/O/BNPS0izLr0DapL0piENYRUj3UQubZER3n7XcpHOAuHA/3qEQGuloT7EMv0qFFfyygMRqKTx7tfrH2EVBfUoP40N5pyMM3MvjcDZwipVA3eayg6OUk12wvnAS/Vop1ahGSjgdGkB55Kw/pos7xr6v2OXTX6Q11Rpy65tQrOahOFVKtUUWdWsr5aYQo6HuVB1awpozAYgI59Ugm2bcQAq2Pf7wJsDAwE1ijz47cdMEFINbnR710rwjV0dovC4DJ6qvoT9z0K1LUDWvW7UhPHzwnmI/Vmhe2xL7A/6WZhMV5F5/ieXUi1eRuRa3Ejtu9upJkis/o49D7lQEOuW1rhb6kV4eyZZqVyUziV+az36JkPu+xAORlhw5PwHdpq5EW0OdxQI7ZshU5Wvzra7nBm08kXAOdWINoA/EVItW+FbZMViLbtgjFFYXAqcGQZt/wLmADc3KrR3bpq0CiZxpo17oCkvbUlhFRvlFFHyR6hO0sCt6DD8U2u8bsvAnyMtjG8rsAtPwYHKvM5B6JdWr4HtquUvE0g10B0XraiIRQeAu4Hrm6nhCZdVTbSipTGxq/bNoArtpZL7igMvgREwqV7gCOEVBMbOLiGA5uitWf90LaRaThaSHUqHQaTAWmYkTKKKKW+RjudXuuGB2wnVEs4O47ksUKqk+vQMf1MY9u4uegaJMGAGqPgWU9I9WALDcAs86z/CalW7ACSHUZ3OIUi2BW4XUj1Xqd8aKp1z/nGOh5Tp3c8211PFSFbigf1JPT+4But1hEmnMLc5gM2hlLN2wqGkKMqzW/XRGXHsWiTqQUK3nYxcKiQ6lM6ENXOcDPquXYzpjfXljuzRWHwLD2tuNvKbCnDFvQJIdVqLf7uw9AWGkVxAjqk3LN0OLqqaFRby7dCrRsrCoOngJWtU38WUh2Yc88u6AAzLhYWUr3TpmJYmqh5XqutZaIwOJ/80AuXozWmHU+uWhOubrNbFAYTKA1RfYiQ6uyce/YALnJOL9GK4mMF7ZHqy9cK9o/GjOqGlMvj0Yq18e0QBKglCeeIet8JqfrWsPPeRBuYFh5URqX8rnO6o5JYGG/y9xMu1bT9K3ivF+iZUgvgTDdIkoeOwlQJ7HVVre3wyiXbUIds+wmpujotY4yQamrKpVmiMDixCUTra6Qcl2x7mfb3ZKsh4Wz8o4adOKNMsq1DaUjwUUKq8zuxo6IwiEXqPd2PEnBsFAaqwa/khuzb3hDtr55WNRQp3ZzbtVpDRGHwDVZKpgJk649OLh9vZh8qpBrToWSLAx9tbDs7Wh+oT9CBWCEhQ2od3qdh1kV+hisN5/aXGnXgHpTmPzshp/wZ6LRCMdmmdSrZzIC+wMweNtkCq8hc1vEjJn9Dvch2lCdbYwlny+a1Eh9s7eI5WeHPjTnZodapVYVU/Xph38XRvp4D3nKuPVcnsv2N0sQjC3oK1V+krOl2QBQGn2Klfs2q03zV7cH1qJBqzd7Wadam+ANCqnWS1r+xNFLL/cd6Gzr4Ga7+A+dgSvMs5+Vctsk2sZeSbZAhGxbZNkopPiXjWiVif4yXPXXajHBm4Ni+W7tmbYxGYfCgQ7ZVeiHZBqPtQYnXvFEYrAzcBrxuZp2bnNtuq4PYf5OnTuMJt3OVz57kKAYuyxhoJ9IdW//tXkq2QWiPbYAFhVTfmuOngOeEVINNO26Jkyuu2n06s26O8bqQ6ihPnQYQLgoD23ZvhRq+x78ynjk32uI8xia9tK9iD+Z5hFTvRWGwdLymElIt75R1NbbHmlRYlWJ36/gxT5vGzXB2rquDqvhi2g6VU4RUm2YU/8g6Xrue4RtaGUKq/mZr4GNz6h6MVUdC8aSw7c+bMOqVwDZI/pOnTeUo1x/O9n97vIrn2nEq1sgRJe1128O+y34k4CIpbbYDOipwEl6kSpcsIdX/+dZv3Axnh0+oKMSao/wgJ0ajLUqO8t2V27bzot1fXqXU3tUu81qZdc7vW7Z5hHumBs9c2zpeIKOj7ahLo9otJ0CT8IH5iC1F+ub3EsadpihsI/AzfRM3lnAfW8d/ruALbIc+3yfNAt7EIYmt0B9tp7ACTZrZhlsKlC4z08UWITsn3HJDGdXboQS/9a3dWMK9XuXXbl1LlMxy67GD/pzhuymTbGPRe2TbWgqUD8z/i5q8d9VolO1N7vG+xatDuUqTURZhDitzYGxt/fy6jEX6Lb6bMtvnQOBAq51/nOmyZqYoDIYVjFpmR9iaD/CifQNnuBFWhx1f5r0HW8ezZhDzeuvnhb6LyvqoxVpc16j4xYTiDxSsdjHreKhv5cYS7k7reEiZ99oxSjbMKPdb8/+7Qqq9fRcVItoIM7NNMHt171nX4iyvs7h7diY4bh7s5JZv+9ZuIOGEVL+3fi5exoCwjYwvF1LdmVLuQOvnir57CuM5tFHAH532XBwd1Xg2KyL2AXaXFqjbDsm3hW/qBhLOsRgvxxdqpHWctYA/wosvFa3j3nGNAqIw6ItWcu0upLJnsnINj20rk5V8azdWpPzOOi4nu6lti/dkRrkFrEEU+u6pCtNMO17inH/bIeb5OWS2LUs+883aWMLZm9E7m3S7RWAn4TgpZfa0s7wc57um4vXcULOeez5hzTYDeNk5v08UBstn1Den9XMN38KNXcNNcE7NVmAALGT9PC3DlGsj6zkn+q6piGzDMVHMhFTLOtcmoF1rYgPmQ1IkELfPP/Ut27wZzsWkAmVsuf/1jHK/8d1RNULgnoSZ7Xy0ltieoey9uf1y6j3Iqmsd38zNI9yInC/uTujMoDE+Tyk3zPp5h++WyiCk6iukGu607UZG8XG1Y0p3Xobo6KK/dewNEZpIuLy8Xe84ipDrU8qdZZXZyHdLzUTMjdAhFqYLqbZz1nIuts8gsu2/+I1v2cYSzlZo3Jfzxb27oDg5zXdFXXCb6Yc+Ftli06w5HDF+m4J1zuebtbGEe7KML+zJbuenYIjviprPbj1sKqMwuAxtG3mhkOpzIdXt1i15Gsj7fKs2h3CvllH2aOt40Yxy8bbBW75LakK2CWjTOJtswzGuOo7J3KNWmawEKJNT1twe9SSc6wia4xF8s3VcJP/3g75LqoeQajUh1ULO6Tj98szOeXtmWz2jWttN5wPfyo2b4VwR8P2McjYZX0z5Gu9k/Rzgu6S+4qWQ6gf3vIWTMqqxLVJ8XMpGEk5I9YrToSNTiq5h3fNVgTXhdb5L6kM2HNtXk/gS4IuCff65X3M3b4aDUs3ijQU6vn/KJXsgLOm7pC5k29hx2ZmKzjF3nJBq9jTpw6O1CDfaOp4lzwIhY4a70ypzsu+SmpEtDmFxgpPmajJatb+tZUK3lG+xFieckMqNNVJp+OtPfTf8SIY+URh86qxrK6lnNXTCj9ft1F9RGNyJzu+3lZDKDnMYK1Km51T9te+l5s1wUJqnbf0oDCqp73ZrQIzuxWRbHu3+NAcwsYp6JqOD9L4a5xuwZrwNgEszLH7ynjvGqm8tT5/GE+5+5/eBFdTxVRkd3qlkOxD4XzzbVBrd2KQmXtiQainr/K1mxltSSLWbc89T1s9Vcx5hLxs29/RpMOGEVC5BzorCYETKYJg3pRrbjeStXki2GcA5ZkYqUduXWc/96BTQB9ikMllLNzbnX0t49soVjpepnj6Nn+EA9nR+3xGFwTHOlxMh1Ycp99uiyRK9kGzvo5NyVKu4OMYQ9lyr/pPRvm5L2OctIp5VZibTPlZ/nu7p0wTCCanGoTO52Dip6Jez0i96J8AQZKCQ6q8OGTavoK7/OHUcjzatu1JI9YZ1Po7SvJIbdKiA0uQ1q56Rnj7NmeFwfbBSvuZFEt9P7s2dEYXBWEOGm6qsZwzaq+NxIdUO1vlLMCZeKUktZ86p2s5J4EMYNotwBu/nkPKblMEx2Pp5RS8m28eYEHbVJKw3YuQhaI+A1a3zDwO7ptR/ccHqf2Idr+bp00TCCakGVnifvZD/WS8k2nZmVpsLGFcl2UYbMfJC2yPAJEf5lZnxkupfpOAjLreOpadP+ehT4/omURoa2x4MBwqpxhYRPdNmww4j2pzAJ9ap5arYDpid7hB2u9r50qMwOB0ds2S6PeNZ178FZin4KHtdPqenT3NFSoRUWdGYs67Zi/WlewHZzjVkuwPY0ChPKiXb7YZs3wFzOGQbDRxuZrw+rghrZtZZynjcz62+vt3Tp/kzHOgIT+cknN8P2D/lnt8Dl5rjdzq90YVU+2e0BVEY7Ab82lZ4JJS5jO7cb+eZOu3rd6ItS0bZ+fWM8+gD5ufjQqrVU2KceLQD4YRUY6MwOKfM22wXndOA3Xqp4uRzSmN97pBS7h26vSzWTghz/gra80LYRuNRGLxhRP7p7oxncErGuy3jisQ+ZmWTRUoL66d02oAUktri1K69lGwzLLLdk6TciMLgGlNuQWAVI4q6ZPvYkG2IQ7YZhmyfpZAN4J8Zr2inh/6fJ1vriJQIqe6NwiDp0p8zZq+PKA2J3luI9hKlDp1bCKnSBv4o4DshVd+EehahO2/A+raTcBQGMfGeE1It79x3utVvWbastq/ieE+dFiKc6byuhLXBoIxbBmG8j6Mw+BAIMnzo2p1kA4C7gV9apzdwwgomtmlKfUcYURzgN0Kqe52ZDeBoJ75kjMPN/1NyXtsOHPQzT50WI5zBopRma5mQMZi+tGbFedDGsQM6jGiboyMeL2xO3QycnpCzoWh9e6DzewPsJ6Q6P0FMBVhVSPVkwv2Ll/G4bRs4bjzhKpzlJkdhcCbdfnNHku2oOp5uzdtLHUS0uY3I/KNobXJzV1rfysBTaTOfcUB93PyczckPF5dZEXjGOnVIGf26m6dOZehq0ICzRcufC6leKFK2GquLFiTdmsD8GeuzInUsgzYUjzWUC9qxSkyZi4A90trPOAlPddfLWW1t3v0R8/MuIdUIT53KMFMTnrltzvWNnQHWERBS/SeNbFEYLBuFwcCMAX9EnPPNkKzLzeVtyt1iyDYxhWwh2shgHmCcdSkve87qRZYFHq1JuKNzBqad+fT5Tm14Q7JnDZGeIzsIa6wQOTyFSGuZejZBW5Ws4lyPtxPiXAJLUqotXjPndc+0jn2Er1YWKR11dYwrc6woXO1mphjaZkQbgPbM3rEWorNlUZImQsZt+bjjPVBIdHcsUzpKzO84pUkUBsuar7eLTXNuXRWTydPgwzYm2OLoWC+boGNBYsS6IW5A3TLrXZ3uvAA3Cam2dK7PT7fL1O52ru8oDA6ziu6V8yjbZOxtT5kWnOHMV3wqMGtGse2FVFdl1PEY3ftUkZBqQJsSLqQ0LVSaiv5UYIKQ6pYCdf4NHTrhHmBzWwtpiPY0euvh8RQPgXh2K/EsyJM2/OzWujNckfDZV0ZhcLeTldPGMLqjO4soDPYWUl3Qhm28DXAMcH0K0bYEbsj7CEZh8Ae00+fO5lSSDaVN7q2SwuEZO0yA+wqQ7cSEdaRHK81wxiXkhILFSyzZE+oaTnfWF4DbhFQd4fho1kbX0K3iv1ZItU1K2dgYGeB5IdWyzvWz0farT6I9B/6bUs9I4F9phM3px1l7g59iy89wxpFyOXR8yZeB35Zx+2ZAKuGEVHdHYXAt2oYQ8lMctwvZ4g/JKOB2J1FGEvYBHnYHvMnXEBUR98y67U/WqfdznnmC0xeebM2c4YyZUrnBbt5FB3vd2Dq3QIZY2WMdAawrpLq/hcm0pRGHHxRS3VjH51xF957mYkKqNwuUi/G6HZW5QJunzr4eDSBcFAZPAyuZn5dS0KUm/go7nRkBSwupJmc8b3+0p0HhAdNgks2P9t5eKenvraMiJrMdUhxLPxJSzZtTf6bpmEcDRcooDK53Blb/okSzcBbdtnsCrW7uyrj/3CgMbMJNaRGiXZLxsdmgDs97iu64Iol7mSZHwZGWGO6iiMHyrdbxFp4mtcNMZXb4OmaN9gRwZaz4KHDfww6B/ki3tq0obNu/tc0eXzPJdr9Ftr3QMUXmQwcD6kpztYnCYGVjDFAJVkRnsPl1CtlGoHMUpPXJaXnrxSgMxlqKnNersf30qFKktESUccBgdODWy+kZeTkJo4RU/4jCYGv0RvZbwKvliGBRGDxrFDQtIeqYAf5wEb89x2dtmpCqXw3fox/whiHKNLSnxQru+jkh73dbr5c7mnCOywfAo0KqNc2X/tcFq0kLMBRjQyHVnTnvYYd1a6m1XMK79kXvwR1rTu2I3tx+pcC9Aw2JZs0xvdoauJaesSjd9dtmWZvqURjsi/bVi5HoWe7RuDXcMc7voRVEe8oLLnRH3kdASNU3CoNP0XnUloiNf93QAU0k2Rh07BB77XOCnRgx5/5/AFuZn19gojFnPOsQ9Ca2TbZTE0TJPAuW85zfi3h6NHeGyyPXF8CKceIIixTl4guTdzrvfe4F1k249ISQarUGkWtuYD30pvMeCUWOs9L65tX1T/S+JMB1QqqtC/ZHDxM5p6+KSA0DKLUO2tbJkOrRhBkuD6GdpQWdu3urCuqZLQqDp4VUv8iZ6daLwuBNug2CY+yWMKB2MGvNxYAfhFQqXvsIqb4xSoxvge/NLScDk4VUp5rcByugA/1MAr4B5kZrWt0Pyp/QKZR/SEjJnKWIus861cOp1Clvb5H02H9zyPbT+G/NwbNO23qytQHh3MX1/FXUtVIUBt9nhHOLB8aghJk3aT8vJv4kMyjtAZpFhlMKvOvFQqrfVzhDXmTNjOvbwX8Syh5Fd9zIF4VUyySU+W+BtnDvuQQrPL3fc2sfkRLz5X2P2hm6vi2kCgooc84G1rBO97CCN0qBNcnexphmFBVLAWPp3iu8je7EkbMBZwqpDquBSPoY2qNiA9faJgqDpdEWOaPpjlf5spBq6RQFy7vO6YkpKanc5//Sk601CWdblzQSdwipNirwfrvRM+3SAW7mT1P2RGB2tLHvYsAZQP9KgptGYSCBgWjbwzga1yPobDW5M1dCfaeiN65LZlHgyKQssiav91+sU4UMvC2FS4xDhVRjPCVah3DHo5P81RJHAq8D1+WUO0lINbrAO8YqchcfoU3QlgM2TBFPuwq2wyJoNf8eBYpfWjTCldlCeA+dtgp0ZOWJOfdsig61F6McbagtsTyTt2b2aDDhMsTK64CHKVUrPwQ8RneQ0UKiToI7jo1/Cak2LfCOQyn1Fi8HFwLnop1nR6MNrbdHGyP/JOWer4HhdsrfKAwGJIWmy3hney+zkLiaoDB6REi1VoH75gU+sE619F5mbyfcNsDVzunpwNZom8olzdf/I7TZ2FxmQM5azkxiok9tknDpISHVsILv+hXZHufVovBskvGOg2JFDgViVRp3nIvMR8BG7mxo7r/GWcPWZC3qUSfCmU5b3IiBRfAclikWTjaXnOesR7LJWO6+klXHHsB2wNpVtNG/jVLmyySP7TLbblm0pjH+mHwH3AjsJKT6NuWefc2MdJa1RrSxaJanhVWPQkfCLluM9mgi4Uzn2emSCqHSzo3C4D1KM7d8LaTqX2Yd9kySh0KiWZnPXj1BMgAdo39Ro4waL6Saaj40+6fM8DYeEFKtU/AdXqBnPoAdhVRXeAq0AeFMJx5svrpFsLCQ6p0qnlWivi5HjLLquJ7yvNEhJwxBzvP+SGk8x1rhLmBk2oxYYN3dI0SDRxsQzurQdYCSzVODt4B9nMCulT5jMI5ngYUlHAuXvLrmRu+p3VzwlhvQ0YaXM7Nkf7QlyREJdc9EafrkWqLEOLnA3/lj+AUvQnYQ4RoF44LyIdph1UVuuLeCX/+iyNK01nq/8ljgXiHVY2X8XX9Aa1wr/jB51Adtk3bIBLEZYKJdXY929oxxaRQGSwqpjiqz2iFoq5gfyhQ3DzcDexm0h8NN6D20tWpItrOMo24tPiI/92TzM1y1M17SwHoZ7ff1UhX12qHkGo1zhFQHV/jeswP/TRDty7J08fCESxtgdqjvJPRIUFhG3eXE1qwW9wBn5GU/zXjXTVPWoxOBvardyvDwhCtnHbZZkdDhBZ4xEzr4zoVo37dqcbWQarsavFdS7obPhFRz+qHtCVdP0vVB+3Sl5Z7OzGNQwbOOodvaYwDQz6wD3zG/z0eHU7gA7Y39ijGpGmKbgFXxDm5QV3ut6zWRnnANI94yZOeUS0xu0WZ/o+0XZ6NivzwPT7h6ipkAnwADi24et8Dfk+YFAQ0MKeHhCZc1SHcCxucUmwbcgt7nGtdi758XSj43grKHJ1wzBu4A4Ch6OnUm4T7gViHV2Aa/45zAieTn2gbt+rRXp2SE9YTrXOKdjA5Z0A+94V0Ub6FDsU8AjjCKie+rfJdd0A6xRfE1MKJSu04PT7hWIGAc/eptHLeVCvBndMCeo9A+gMuhtxB+ZZH2p2h70CUL1vkQ8CA6h8Arfqh6wnUaAZM8EhqNo4G+1Tq2enjCtRv5FgeuQttrLkJ6eIVqcBMmBLpfj3nCeaSTMU4XNQC9+b07OqpWX3QqqX7ovcCF0badn6Bjdn6M9kWb6lvRw8PDw8PDw8PDw8PDw6P18f+Ch9KpPC3AFQAAAABJRU5ErkJggg==" alt="" />
         <img className="wm" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANwAAACmCAYAAACx4+EmAAAixklEQVR42u2dedxew9nHvw+hERHLIWJtHIkoIryEopVaItROS+xrqZ1RO7EvJTnS2Eotee21lap9D0UQWl67TCwJEYbYBZH3j5nbM/c8Z7v35Znf55NPzn3OnDnnmZnfmWuuuRbw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDwaDJ0+CbwaBSiIFxSKPl+FIR7AfsBfwW+BfYENk259X7gNKHkvz3hPDyRgnBZYFdgnDm1ObAJMAxY3pz7Cpi/So/8rVDyHk84j3Yn1nrABsDewELAU8DjwNkNfK1AKPmJJ5xHq5OrH/Aj8DXwR+C8KlWtgMAcfwZ8BywGHGZIPMXMhL2A1c3MmYVpwApCya894TyanVi9gCHAocDIGjxiNnAO8IBQ8rEy3/EU4OQcRd8BBgglf/CE82joGkso+a45vgv4bZUf8T1wBvCAmZk+EEq+UqNZtyfwMLBcStEHhZLDPeE8akmquYCjjVi2MNAP2KoKVU8yg3wScBsww5xfFnhWKCkb9PceLpQcGwVhfyOGJs14twklhSecRyWDbRhwrCHXQGtNVCmuB05qFIkqbJNL0VsNcThPKHm0J5xH0uBZAxgN/KYG1V8OPAnMFEr+o83abQXgQLQCJg5HCCXHesJ1X2INBc4ClgEGmdMfAEtUuJ56CPgv0Butup9arsKihdv2LTr3AF28J5Rc1hOuewyERYH/AxavUpUTACGUnORbN/aDtgJwbUKRbYSSd3jCte8A2Bz4Vxm3vmeUFpcDXwslH/GtWVK772TWp3H4l1ByS0+49uz4OTmKPQ1sKZT82LdY1dt/APBmwuXxQsm9POGq2+AbASPQmr0hwKvALULJq+rw7BHAvTmKbiGUvMvTo6Z98TzaiiUO5wNHV2vzvKMbNeqvgVvRZkPlYgfgVqHkj1V4n5nAgs7pnYHp6I3cnyCU9JJI7cfHncAaJCuoNhFKPuAJl9yA1wHbAvPV6BH3A8cIJf9T4nv1QdsMFnACsDswqECsKAh7oLWLNrYSSt7pqVHzcTMMuA5YKubyO0LJ/p5wxQ12hhnE9UQuMsSYUS2WtDaLgnBpoxxx8YFQcklPjZqPo1XR2szBMZfnKVfE7GiDhrkYOKDE2/YF1kJbIowHXgJ6oB0fLwRuQfturWfEvj1z1Dnb3PODUHJiDgXJFKFk6Ii8xwOjhZIPWWvMB+Me5sXMuo2v+9C+fF0+fEB/oeR3bU84Yy93OvlcNT4DLgPeBpRQ8u9lPrOvUHJGFIS3AttlFP8GbWO4KHAQ2q3lauv6nkLJ/00h5AVCyUMd8Xhn5xnPALsJJd/wtKjLmPsHsE3C5auFknu0JeGiIAyByRnFxgMXCyWfrbGsfw7wyxJv3dvWghonzidiyo0RSv7JeeY1CR+ZeZrJBaWNSTcAeDFFLzB3lkKto4X+2Dwzy8lCydMa9H5zSikvlOyIgnA14IWUYnGkm8vMnq6B8kCh5FueFnXp6zSDhZ2Fkje0LOGiINwauD2lyJHAZ0LJK5rgXQUwpgZVzwbWtDWiCQTfux57iB4QBeGK6H3bJPwsbn3X0eR/1A/A3AmXLxdK/qFJ33te4GNggWrWaytKzNbBZmYtOyRtVvSoev+ugla05e6vpiZcFIRXoAPTxGF/4FOh5M0t0DFzKrj9z2iH0V8453/lhoeLgnBttAlYAZcIJQ/01KhqX45AWyUd4VyaRvyeHcBlQsn9m5pwKYP0FrNGe6XFOmod4BqSXUOS8EXKDPmhULKf8xxX+fKCUPJ/PFUy++dYYCza3/BFYChaqzycrmEb7iU9XqaLr4SSvZuWcFEQvkanH1hbiUgVznagN2G3pNMcrGjrIOUZDwslN/LEChdBx8fcxpzaiK6mdeXgVUPQe9FBbE9IEys7mqQxljRTs4u20byZRfYRJLv9p2EW8LOEa7sLJa8xz1gBeD2mzJVCyX26CbGGoh1tDwaWRhs4VBMnAzcCb8VtAURBOAo41fzsEryoowkaKG5Tt20tKfIuuEvE+kLJx51B94xTZrt2CqEQBeFK6NAQCwKPUr3wE18BM4Fz0fu5w4WSt5YpzSih5KJNQ7gEEehMoeSJ3eBL/ACwcZwIaMSUg0qs8nfuwIiCcAbF3hGvCiVXauE2ewjYsApVPQE8C7whlPxrld9xNzqtim4TSm7fFIRL8Af7ZZwdYpsv2N2w4BsDn8fMUHnQZdM1CsIDgYtaSXqIgvAes2Y9mNIteWzMBv6NjhPzjlDytTq8+++Bm5pmDZcgUk0QSg7rpov544Ezayxi2l/dAo4TSp7TwL97A+AjtPfEfmgtbrkBk2YDV6E12ZPQYSe+buDfVpDcXhZKrtJown1NsS3a6ULJUXRjJFktGPOvLO3m9+j9oYed82vZtqQJNqgb1ioeigmO9LlQ8jvLZepGKg+ffj1wJfClWSO91YT9Weizu4WSmzeEcHGiDXCqUPKUFifLUPOlHgz0LdfELArC4Win1iTYSS/yYingeTojgk2h695S2f51RnGxDrAyOrpzf6ofO3MS2prmEaHk5y328eyyJdPRANYXMKhZXUuiIOyL3lvZHK2pqjauB6a50X/NAH45pvyjZhabVcM/ewGh5JcJ7bEIOkfAXGi/QVGGUicJ3wBvmNlvdDt4PVhj/X6h5Ii6Ey6GbE2ZQC8Kwj8ClzTo8dPQqaAGJlyfAKxvjku1eCgFF6ADx74EXFGDGesWoeTv23h5cAdWDgdXadKjAWR7slnI5jZOg7FUliLE/D9eKLlXFSxXknCI+VcOCmLvE0Y6GNYN47AMtY672AN31HhAj3M6r+FiZMJaMg2foTdXJwkl14yCcCG0+dkHQsl3oyDsU1hbGFF0XrSn95lo9f4gikOwTTPi6jIV/Bm701XrWE8UtIJvCiXPpZvDeIfsCSyJlbeurt4CURCeCxyV9vA6N8oeOdZjY4DH0IktHq/x+ywK/C+V5WZ7Ge0rWOugSVOMJLBwrdulBci1E9qYoA86bOLgpNnetTKpGeFiQsE1JNJUFIQ9zZpsz4yiXWKMNLBDV0Sr+PPsR30llOxdRfFyCPCK+UB2+5ANJnLXEWiF0Q/EmCCmYH+h5GX1Itw99qK+EbNbRjSvT4EdqxHYs4bvP8CIvpvU8bHzN2Ne7Dq1dy+0Q+82ZvYqZ20/AYjSEoJ01ODFi9Zt9SZbRgjxlvM+MKLw2TlmvGXM2nBaBY87TCg5rhuRbEe0o29fSgsY/JERK2cDW5cSir6jyn+AG0exbtGkjBj7MTBPzOX122HtYQIIzU4pcqVQcp+MXGiJaPdYl1EQngL8HBgA/CrnbY+aD9GL1XiHjir+MW4ko40LAU3r1Jhz6jGIoiDsYX9EjA/a+0bG7wN8W0uLCLMulVSWpDEO6woln2ojcm2PjvL2+4SPcBqOAXrWIgJcNQn3MZbpUb2+llEQbolOHu9+sQ4SSl5chfqT3GhKwSwz+94OnCuUfLcK7zUUnZykku2FC4DXqtFOTUKyUcAokgNPJWFjtFneDbV+x44q/aGuqFOT3Fo5Z7VJQsk1K6gzLVlftTANHY/yiErWlFEQ9kbHPikHO9djgNWw7/cCtgD6AeuW+PHbBZgolJxa7/euFuHqOrtFQXgVXVX9sfseOeraDa36Xb2B4+dU85F6u8z2OBg4lGSzsALeROf47iOU3LaFyBUasX1fI83kmdUvQ+9T9jPkuqMZ/pZqEc6eaVYvNYVTic+aTtd82CUHykkJGx6H79FWI6+izeGGGrFlB3Sy+nXQdodzm06+GBhXhmgDcJFQ8uAy2yYtEG3LBWOKgvAs4LgSbvknMBG4vVmju3VUoVFSjTWr3AFxe2vLCyVlCXUU7RG6syRwBzoc39Qqv/vSwCdoG8ObctzyU3CgEp9zONql5Qdgl3LJ2wBy9UPnZcsbQmEC8AhwfSslNOmosJFWozg2fs22AVyxtVRyR0H4JTB/zKUHgWOFkpPqOLiGA1ujtWc90baRSThBKHkWbQaTAWmYkTLyKKW+QTud3uiGB2wlVEo4O47kSULJM2rQMT1NY9u4Pe8aJMaAGqPg2Ugo+VgTDcA086z/CiVXawOSHU1nOIU82Bu4Ryg5vV0+NJW653xrHY+uVT+566k8ZEvwoJ6C3h+UzdYRJpzCIuYDNppizdsQQ8iR5ea3a6Cy4yS0ydTiOW+7HDhKKDmTNkSlM9ycWq7djOnNjaXObFEQvkhXK+6WMltKsQV9Rii5dpO/+zC0hUZenIoOKfcibY6OChrV1vINqXZjRUH4HLCGdeovQsnDM+7ZCx1gxsVSQsn3W1QMSxI1L2i2tUwUhBeSHXrharTGtO3JVW3C1Wx2i4JwIsUhqo8USkYZ9+wHXOqcXr4Zxccy2iPRl68Z7B+NGdUtCZfHoxVr41shCFBTEs4R9b4XSs5bxc57G21gmntQGZXyB87ptkpiYbzJP4y5VNX2L+O9XqFrSi2A89wgSR7lK03sdVW17fBKJZsbR/8QoeSF7dZRQskZURDGXZonCsLT6h3b04QViIsidkC1w4e3E+aqQh1/r2InzimRbBs4ZBvZjmQzf2tBpN7f/SgBJ0VB+G6dX8kl265CyQ5PtiqLlG7O7WqtIaIg/BYrJVMOsvVCJ5cvbGYfJZQc3aZkKwQ+2sJ2drQ+UJ+iA7FCTIbUGrxP3ayL/AxXHM7toip14H4U5z87NaP8uei0QgWyzWpXspkBfbGZPWyyLWsVWdg6fsLkb6gV2Y73ZKsv4eyFcLXEB1u7eH5a+HNjTnaUdWotoWTPbth3hWhfLwHvONdeqhHZ/kZx4pElPIVqL1JWdTsgCsKZWKlf0+o0X3V7cD0plFyvu3WatSn+qFByg7j1b0Eaqeb+Y60NHfwMV/uBIyjOs5yVc9km26RuSrb+hmxYZNssofi0lGvliP0FvO6p02KEMwPH9t3aO21jNArCxxyyrdkNyTYAbQ9KYc0bBeEawN3AZDPr3ObcdncNxP7bPHXqT7g9K3z2FEcxcFXKQDuNztj673VTsvVHe2wDLCGU/M4cPwe8JJQcYNpxe5xccab9Knn2atbPyULJ4z116kC4KAht270hVXyPf6Y8cxG0xXkBW3XTvip4MAdCyelREK5YWFMJJVd1yroa25NMKqxysa91/JSnTf1mODvX1REVfDFth8ppQsmtU4or63j9WoZvaGYIJXuZrYFPzKkH0VYdccqLuLDtL5sw6uXANkj+s6dN+SjVtMv2f3u6gufacSrWzRAl7XXb477LfiLg0gltths6KnAcXqVClyyh5P/51q/fDGeHTygrxJqj/CAjRqMtSo703ZXZtoui3V/epNje1S7zVol19vUt2zjCvVCFZ65vHS+e0tF21KWRrZYToEH4yHzEViB583t5406TF7bHxXm+ietLuE+s47+U8QW2Q58fJJSckVBuHJ0uH0+2UliBBs1swy0FSoeZ6QoWIXvG3HJLCdXboQS/861dX8JNrvBrt6ElSqa59dhBf8713ZRKtrHoPbKdLQXKR+b/ZUzeu0o0yvYm93jf4pWhVKXJSIswR5c4MHa0fn5TwiL9Dt9Nqe1zOHC41c4/zXRpM1MUhMNyRi2zI2wtBnjRvo4z3Airw04pdWxYx/OlEPNm6+clvotK+qgVtLiuUfGrMcUfzVntctbxUN/K9SXcfdbxoBLvtWOUbJpS7nfm/w+Ekgf6LspFtBFmZpto9uqmW9cKWV7ncffsTHDcLNjJLd/zrV1Hwgkl/2D9DEsYELaR8dVCyfsSyh1u/VzNd09uvIQ2CviT054hOqrxAlZE7MOsIvPnqNsOybedb+o6Es6xGC/FF2pL6zhtAX+sF1/KWse97xoFmJgjk4F9hZL2TFaq4bFtZbK6b+36ipTfW8elZDe1bfGeTSm3uDWI7vLdUxFmmXa8wjn/nkPMCzPIbFuWfOabtb6Eszej9zTpdvPATsJxesLsaWd5Odl3TdnruaFmPfdyzJptDvC6c/6gKAhXTalvIevnur6F67uGm+icWiDHAFjS+nl2iinXZtZzTvNdUxbZhmOimAklV3GuTUS71hQMmI9MkEDcPp/pW7ZxM5yLKTnK2HL/5JRyv/XdUTHuAh6MmdkuRGuJ7RnK3ps7JKPeI6y6NvDN3DjCjcj44u6BzgxawOcJ5YZZP+/13VIehJLzCiWHO227mVF8XO+Y0l2QIjq66GUde0OEBhIuK2/X+44i5OaEcmOsMpv5bqmaiLkZOsTCbKHkLs5azsWuKUS2/Re/9S1bX8LZCo2HM764D+QUJ2f5rqgJ7jb90MMiW8E0a0FHjN8pZ52L+WatL+GeLeELe4bb+QkY5Lui6rNbF5vKKAivQttGXiKU/FwoeY91S5YG8mHfqo0h3JsllD3BOl4mpVxh2+Ad3yVVIdtEtGmcTbbhGFcdx2TuSatMWrahqQlrbo9aEs51BM3wCL7dOs6T//sx3yWVQyi5tlBySed0If3y3M55e2ZbJ6Va203nI9/K9ZvhXBHww5RyNhlfTfga72H97O27pLbipVDyR/e8hdNTqrEtUnxcynoSTij5htOhWyYUXde65+sca8KbfJfUhmw4tq8m8SXAFzn7/HO/5m7cDAfFmsVbc3R8r4RL9kAY6LukJmTbwnHZmYHOMXeyULJPkvTh0VyEszNuzpNlgZAyw91nlTnDd0nVyFYIYXGqk+ZqKlq1v7NlQreCb7EmJ5xQ0o01Um7465m+G34iQ48oCGc669py6lkbnfBjsp36KwrC+9D5/XYQStphDguKlNkZVX/je6lxMxwU52nbOArCcuq7xxoQo7ox2VZFuz8tCEyqoJ6p6CC9bxbyDVgz3ibAlSkWP1nPHW3V92tPn/oT7hHn9+Fl1PF1CR3ermQ7HPhvYbYpN7qxSU28lCHVCtb5O82MN1AouY9zz3PWz7UyHmEvG7b19Kkz4YSSLkHGREE4ImEwLJpQje1G8k43JNsc4HwzIxWp7Uus5xF0CujDbFKZrKVbmPNvxTx7jTLHywxPn/rPcAD7O7/vjYLwROfLiVDy44T7bdFk+W5Itg/RSTkqVVycaAg7zqr/DLSv2/L2eYuIY0rMZNrD6s9zPH0aQDih5GXoTC42Ts/75Sz3i94OMATpJ5T8q0OGbcuo699OHaegTeuuFUpK63whSvPqbtChHEqTt6x6tvT0acwMh+uDlfA1z5P4fmp37owoCMcaMtxWYT2j0V4dTwsld7POX4Ex8UpIajl3RtV2TgIfwrBRhDP4MIOU3yYMjgHWz2u6Mdk+wYSwqyRhvREjj0R7BKxjnX8c2Duh/stzVv8z63htT58GEk4o2a/M++yF/C+6IdF2MbPawsBlFZJtlBEjL7E9AkxylF+ZGS+u/qVzPuJq63hzT5/S0aPK9U2hODS2PRgOF0qOzSN6Js2GbUa0hYBPrVODK9gO6ENnCLu97XzpURCeg45ZMtue8azr3wHz5HyUvS5fyNOnsSIlQsm0aMxp1+zF+ordgGzjDNnuBTY1ypNyyXaPIdv3wIIO2UYBx5gZr4crwpqZdZ4SHrey1df3ePo0foYDHeHp/JjzhwCHJtzzB+BKc/x+uze6UPLQlLYgCsJ9gN/YCo+YMlfRmfvtAlOnff0+tGXJSDu/nnEefdT8fFoouU5CjBOPViCcUHJsFITnl3ib7aJzNrBPN1WcfE5xrM/dEsq9T6eXxfoxYc7fQHtezG8bjUdBKI3IP9ud8QzOTHm3lVyR2MesbLBIaWHjhE7rnUBSW5zau5uSbY5FtgfjlBtREN5gyi0BrGlEUZdsnxiyDXLINseQ7bMEsgH8I+UV7fTQ//Vkax6REqHkQ1EQu2T7S8rspSgOid5diPYaxQ6d2wklkwb+SOB7oeS8MfUsTWfegI1tJ+EoCAvEe0kouapz3zlWv6XZstq+iuM9dZqIcKbzOmLWBv1TbumP8T6OgvBjYNkUH7pWJ1lv4AHgl9bpTZywgrFtmlDfsUYUB/itUPIhZ2YDOMGJL1nAMeb/aRmvbQcO+oWnTpMRzmAZirO1TEwZTF9as2KANo7t3WZE2xYd8Xgpc+p24JyYnA1569sPnd8b4BCh5IUxYirAWkLJZ2PuD0t43M51HDeecGXOclOjIDyPTr+540h3VB1Pp+bttTYi2iJGZP5JtDa5ucutbw3guaSZzzigPm1+LuDkhyuUWQ14wTp1ZAn9uo+nTnnoqNOAs0XLlYWSr+QpW4nVRROSbj2gb8r6LE8dK6ENxQsayiXsWCWmzKXAfkntZ5yEZ7jr5bS2Nu/+hPl5v1ByhKdOc4qUSaLJiSnXtwD+VRhgaeRsJbjW/M6AXgX42CVPwhotbS13B7AVMCnOODkKwrvoDG9+WYGYZGfPWSfPssCjOQl3QhrhhJJ3WWu5l+s1CzdgxlsFuB4YbE5tR7JavkC2Y2JiyRTCHUwwPy9xIisTBeENaA1nAQMdkX09iuNOujjPOvYRvppZpHTU1QVcm2FF4Wo3V26Xmc5oKC8Cdq+G6GxZlCSJkIW2fNrxHsglujuWKW0l5rfdDGe+4i/FXNo649a1MJk8DT5uYYKF6FgvW6FjQYK2HR3kBtQtsd516MwLcJtQcnvnel86Xab2tXN9R0F4tFX0gIxH2SZj73nKNOEMZ77iM4D5UortKpS8LqWOp+jcp/pKKNm7RQlnr5sgWUV/FjBRKHlHjjr/hg6d8CCwra2FNER7Hr318HSCh0BhdivyLMiSNvzs1rwzXJ7w2ddGQfiAk5XTxjA6ozvPHwXhgULJi1uwjXcya9abE4i2PXBL1kcwCsI/op0+9zSn4mwobXLvEBcOz9hhAjycg2ynxawjPZpphjMuIafmLF5kyR5T13A6s74A3C2UbAvHR7M2uoFOFf+NQsmdEsoWjJEBXhZKruJcj9D2q8+iPQf+k1DPlsA/kwib0Y/zdQc/xaaf4Ywj5WB0fMnXgd+VcPs2QCLhhJIPREF4I50atultQrbCh2QkcI+TKCMOBwGPuwPe5Gv4Ko+4Z9Ztf7ZOfZjxzFOdvvBka+QMZ8yUSg128wE62OsW1rnFU8TKLusIYEOh5CNNTKbtjTj8mFDy1ho+5zo6za2WE0q+naNcAZPtqMw52jxx9vWoA+GiIHweWN38vJKcLjWFr7DTmV8BKwolp6Y871C0p0HuAVNnkvVFe2+vHvf31lARk9oOCY6lSii5aEb9qaZjHnUUKaMgvNkZWL3yEs3CGDpt9+ZHq5s7Uu4fFwWhTbhpTUK0K1I+NpvU4HnP0RlXJHYv0+QoOI7ijW4beQyW77SOt/M0qR7mKrHDNzBrtGeAawuKjxz3Pe4Q6E90atvywrb9W9/s8TWSbI9YZDsAHVNkMXQwoI4kV5soCNcwxgDlYDV0BpvfJJBtBDpHQVKfnJ21XoyCcKylyJlcie2nR4UipSWiXAYMQAduvZqukZfjMFIo+fcoCHdEb2S/A7xZiggWBeGLdJpCNVzUMQP88Tx+e4495CyhZM8qvkdPQBqizEKbbQ1x188xeb9ber3c1oRzXD4AnhRKrme+9L/JWU1SgKECNhVK3pfxHnZYt6Zay8W867zoPbiTzKnd0Zvbb+S4t58h0XwZplc7AjfSNRalu37bJm1TPQrCg9G+egXEepZ71G8N5xocDy0j2lNWcKF7sz4CQsl5oyCcic6jtrx5hy6hAxpIstHo2CH22udUOzFixv1/B3YwP7/ARGNOedaR6E1sm2xnxYiSWRYsFzi/l/b0aOwMl0WuL4DVCokjLFKUii9M3ums93kI2DDm0jNCybXrRK5FgI3Qm877xRQ52Urrm1XXP9D7kgA3CSV3zNkfXUzknL7KIzX0ptg6aGcnQ6pHA2a4LNxlZ2lB5+7eoYx6FoiC8Hmh5P9kzHQbRUH4Np0GwQXsEzOgdjNrzeWAH4WS7xbWPkLJb40S4zvgB3PLGcBUoeRZJvfBEHSgnynAt8AiaE2r+0H5MzqF8o9xbjQpiqiHrVNLJPnFmfL2FkmX/TeHbD8v/K0ZeNFpW0+2FiCcu7juW0Fdq0dB+ENKOLfCwOgfM/PG7ecViD/FDEp7gKaR4cwc73q5UPIPZc6Ql1oz48Z28J+YssfTGTfyVaHkSjFl/pOjLdx7rsAKT+/33FpHpMR8eadTPUPX94SSy+ZQ5kTAutbpLlbwRimwHunbGLOMomIFYCyde4V305k4cgHgPKHk0VUQSZ9Ce1Rs4lrbREG4ItoiZxSd8SpfF0qumKBg+cA5PSkhJZX7/F96sjUn4WzrknriXqHkZjnebx+6pl06zM38acqeBvRBG/suB5wL9ConuGkUhJsD/dC2h4VoXE+gs9Vkzlwx9Z2F3rgumkWB4+KyyJq83hdZp3IZeFsKlwKOEkqO9pRoHsKdgk7yV00cB0wGbsood7pQclSOdyyoyF0otAnaYGDTBPG0I2c7LI1W8++Xo/iVeSNcmS2E6ei0VaAjK0/KuGdrdKi9AkrRhtoSywtZa2aPOhMuRay8CXicYrXyBOApOoOM5hJ1YtxxbPxTKLl1jnccSrG3eCm4BBiHdp4dhTa03hVtjPyzhHu+AYbbQYKiIOwdF5ou5Z3tvcxc4mqMwugJoeSvc9y3KPCRdaqp9zK7O+F2Qge+sTEb2BFtUznQfP0V2mxsYTMg5ytlJrGiT7mYIJQclvNdvybd47xS5J5NUt6xf0GRQ45YlcYd51LzEbCRORua+91gQlVZi3rUiHCm00IjBubBS1imWDjZXDKesxHxJmOZ+0pWHfsBuwDrV9BG/zJKmS/jPLZLbLtV0JrGwsfke+BWYA+h5HcJ9xxsZqQx1hrRxjJpnhZWPe+iI2GXLEZ7NJBwpvPsdEm5UG7nRkE4neLMLd8IJXuVWIc9k2Qhl2hW4rPXiZEMQMfoX8Yoo8YLJWeYD82hCTO8jUeFkhvkfIdX6JoPYHeh5DWeAi1AONOJwnx182ApoeT7FTyrSH1dihhl1XEzpXmjQ0YYgozn/YnieI7Vwv3AlkkzYo51d5cQDR4tQDirQzcAijZPDd4BDhJK3lWFZwzA8SywsLxj4ZJV1yLoPbXbc95yCzra8GAzS/ZCW5IcG1P3XBSnT64mugR4zbHe+8qLkG1GuHrBuKB8jHZYdZEZ7i3n1z8v0jSt1d6vPAl4SCj5VAl/1x/RGteyP0wetUHLpB0yQWx6m2hXN6OdPQu4MgrCgULJ40usdhDaKubHEsXNY8zAXgnt4XAbeg/t11Uk2xjjqFuNj8jKnmx+hqt0xosbWK+j/b5eq6BeO5RcvXG+UFKU+d59gP/EiPYlWbp4eMIlDTA71HccuiQoLKHuUmJrVooHgXOzsp+mvOvWCevRScABlW5leHjClbIO2yZP6PAcz5gLHXznErTvW6W4Xii5SxXeKy53w2dCyYX80PaEqyXpeqB9upJyT6fmMSjjWSfSae3RG+hp1oHvm98XosMpXIz2xn7DmFQNSssTV8I7uEFd7bWu10R6wtWNeCuhc8olITa5RYv9jbZfnI2y/fI8POFqKWYCfAr0y7t53AR/T5IXBNQxpISHJ1zaIN0DGJ9RbBZwB3qf67Ime/+sUPKZEZQ9POEaMXB7A8fT1akzDg8Ddwolx9b5HRcCTiM71zZo16cD2iUjrCdc+xLvDHTIgp7oDe+8eAcdin0icKxRTPxQ4bvshXaIzYtvgBHl2nV6eMI1AwEL0a/ew3FbKQN/QQfsOR7tAzgYvYXwK4u0P0fbgw7MWecE4DF0DoE3/FD1hGs3AsZ5JNQbJwDzVurY6uEJ12rkC4Hr0PaaS5McXqES3IYJge7XY55wHslkLKSL6o3e/N4XHVVrXnQqqZ7ovcCl0Ladn6Jjdn6C9kWb4VvRw8PDw8PDw8PDw8PDw6P58f8fDrju5gqFNAAAAABJRU5ErkJggg==" alt="" />
         <span className="waves"><span></span><span></span><span></span></span>
-        <span className="clabel" id="clabel">தொடு</span>
+        <span className="clabel" id="clabel">{t("home.cursor.touch")}</span>
       </div>
 
       {/* CANVAS ELEMENTS */}
@@ -1312,10 +1313,10 @@ export default function Home() {
             <div className="hp-scrim"></div>
           </div>
           <div className="hero-grain"></div>
-          <span className="h-eyebrow" id="hEyebrow">நாமக்கல் மேற்கு மாவட்டம்</span>
+          <span className="h-eyebrow" id="hEyebrow">{t('home.hero.eyebrow')}</span>
           <h1 className="h-title" id="hTitle">
-            <span className="row"><span className="ch">விசிலொலி</span></span>
-            <span className="row gold"><span className="ch">முழங்கட்டும்</span></span>
+            <span className="row"><span className="ch">{t('home.hero.title1')}</span></span>
+            <span className="row gold"><span className="ch">{t('home.hero.title2')}</span></span>
           </h1>
 
           <div className="band" id="band">
@@ -1342,22 +1343,22 @@ export default function Home() {
           </div>
 
           <div className="h-kural">
-            <b>"பிறப்பொக்கும் எல்லா உயிர்க்கும்"</b>
-            <span>திருக்குறள் · 972</span>
+            <b>{t('home.hero.kural')}</b>
+            <span>{t('home.hero.kural_ref')}</span>
           </div>
           <div className="h-ctas">
-            <a className="btn btn-gold magnetic" href="#complaint" onClick={(e) => { e.preventDefault(); setIsComplaintOpen(true); }}>குறைதீர் மனு சமர்ப்பிக்க </a>
-            <a className="btn btn-ghost magnetic" href="#join">இப்போதே இணையுங்கள் </a>
+            <a className="btn btn-gold magnetic" href="#complaint" onClick={(e) => { e.preventDefault(); setIsComplaintOpen(true); }}>{t('home.hero.cta_complaint')}</a>
+            <a className="btn btn-ghost magnetic" href="#join">{t('home.hero.cta_join')}</a>
           </div>
-          <div className="h-cue" id="hCue">Scroll</div>
+          <div className="h-cue" id="hCue">{t('home.hero.scroll')}</div>
         </div>
       </header>
 
       {/* MARQUEE */}
       <div className="marquee" aria-hidden="true">
         <div className="mq-track" data-speed="1">
-          <span>தமிழக வெற்றிக் கழகம் <i className="star">✦</i> விசிலொலி முழங்கட்டும் <i className="star">✦</i> மக்கள் தீர்ப்பு 2026
-            <i className="star">✦</i> நாமக்கல் மேற்கு <i className="star">✦</i></span>
+          <span>{t('home.marquee.movement')} <i className="star">✦</i> {t('home.marquee.whistle')} <i className="star">✦</i> {t('home.marquee.mandate')}
+            <i className="star">✦</i> {t('home.marquee.district')} <i className="star">✦</i></span>
         </div>
       </div>
 
@@ -1365,38 +1366,38 @@ export default function Home() {
       <StatsSection />
 
       {/* TRACK COMPLAINT STATUS */}
-      <section className="sec-pad resolved-showcase-sec" data-cursor="gold" data-rail="தீர்வுகள்" id="resolved-showcase">
+      <section className="sec-pad resolved-showcase-sec" data-cursor="gold" data-rail={t('home.rail.solutions')} id="resolved-showcase">
         <div className="wrap">
           <div className="sec-head center resolved-showcase-head">
-            <span className="sec-eyebrow">பொது வெளிப்படைத்தன்மை</span>
-            <h2>தீர்க்கப்பட்ட மக்கள் குறைகள்</h2>
-            <p>உங்கள் மனுவின் தற்போதைய நிலையை எப்போது வேண்டுமானாலும் பார்க்கலாம்.</p>
+            <span className="sec-eyebrow">{t('home.resolved.eyebrow')}</span>
+            <h2>{t('home.resolved.title')}</h2>
+            <p>{t('home.resolved.desc')}</p>
           </div>
           <div className="resolved-showcase-actions">
-            <a className="btn btn-ghost magnetic" href="/track">உங்கள் மனு நிலையை அறிய</a>
+            <a className="btn btn-ghost magnetic" href="/track">{t('home.resolved.btn')}</a>
           </div>
         </div>
       </section>
 
       {/* ANALYTICS LINK */}
-      <section className="sec-pad" data-cursor="gold" data-rail="பகுப்பாய்வு" id="analytics-link">
+      <section className="sec-pad" data-cursor="gold" data-rail={t('home.rail.analytics')} id="analytics-link">
         <div className="wrap">
           <div className="sec-head center">
-            <span className="sec-eyebrow">தகவல் தரவுகள்</span>
-            <h2>மக்கள் குரல் பகுப்பாய்வு</h2>
-            <p>நாமக்கல் மேற்கு மாவட்டத்தின் மக்கள் குறைகள் மற்றும் தீர்வுகளின் துல்லியமான புள்ளிவிவரங்களைக் காண.</p>
+            <span className="sec-eyebrow">{t('home.analytics_cta.eyebrow')}</span>
+            <h2>{t('home.analytics_cta.title')}</h2>
+            <p>{t('home.analytics_cta.desc')}</p>
             <a className="btn btn-gold magnetic" href="/analytics"
-              style={{ marginTop: '2rem', display: 'inline-flex' }}>பகுப்பாய்வு பக்கம் செல்ல <i>→</i></a>
+              style={{ marginTop: '2rem', display: 'inline-flex' }}>{t('home.analytics_cta.btn')} <i>→</i></a>
           </div>
         </div>
       </section>
 
-      <section className="sec-pad" data-cursor="maroon" data-rail="பணிகள்" id="services">
+      <section className="sec-pad" data-cursor="maroon" data-rail={t('home.rail.tasks')} id="services">
         <div className="wrap">
           <div className="sec-head center">
-            <span className="sec-eyebrow">உங்கள் தொகுதி, உங்கள் கைகளில்</span>
-            <h2>மக்களாட்சியின் மாண்பு</h2>
-            <p>மாவட்டக் கிளையின் அன்றாடப் பணிகள் — அனைத்தும் ஒரே இடத்தில், உங்கள் விரல்நுனியில்.</p>
+            <span className="sec-eyebrow">{t('home.services.eyebrow')}</span>
+            <h2>{t('home.services.title')}</h2>
+            <p>{t('home.services.desc')}</p>
           </div>
           <div className="svc-grid">
             <div className="svc spot rv">
@@ -1408,9 +1409,9 @@ export default function Home() {
                 <circle cx="12" cy="12" r="3.4" />
                 <path d="M8 5l1.4-2h5.2L16 5" />
               </svg></div>
-              <h3>களப்பணிகள்</h3>
-              <p>மாவட்டத்தின் அனைத்து நிகழ்வுகளையும் புகைப்படத் தொகுப்பாகக் காணலாம்.</p>
-              <a className="go" href="#events">Gallery காண்க <i>→</i></a>
+              <h3>{t('home.services.gallery.title')}</h3>
+              <p>{t('home.services.gallery.desc')}</p>
+              <a className="go" href="#events">{t('home.services.gallery.link')} <i>→</i></a>
             </div>
             <div className="svc spot rv rv-d1">
               <img className="wm"
@@ -1421,9 +1422,9 @@ export default function Home() {
                 <path d="M7 9l5-5 5 5" />
                 <rect x="4" y="16" width="16" height="5" rx="1.5" />
               </svg></div>
-              <h3>நிகழ்வுப் பதிவு</h3>
-              <p>வார்டு வாரியாக உங்களின் பணிகளைப் புகைப்படத்துடன் பதிவேற்றவும்.</p>
-              <a className="go" href="#join">பதிவேற்றம் <i>→</i></a>
+              <h3>{t('home.services.record.title')}</h3>
+              <p>{t('home.services.record.desc')}</p>
+              <a className="go" href="#join">{t('home.services.record.link')} <i>→</i></a>
             </div>
             <div className="svc spot rv rv-d2">
               <img className="wm"
@@ -1432,9 +1433,9 @@ export default function Home() {
               <div className="svc-ic"><svg viewBox="0 0 24 24">
                 <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
               </svg></div>
-              <h3>தொடர்பு / புகார்</h3>
-              <p>நிர்வாகிகள் மற்றும் மாவட்ட அலுவலகத்தை நேரடியாகத் தொடர்பு கொள்ள.</p>
-              <a className="go" href="#contact">தொடர்புக்கு <i>→</i></a>
+              <h3>{t('home.services.contact.title')}</h3>
+              <p>{t('home.services.contact.desc')}</p>
+              <a className="go" href="#contact">{t('home.services.contact.link')} <i>→</i></a>
             </div>
             <div className="svc spot rv rv-d3">
               <img className="wm"
@@ -1445,24 +1446,24 @@ export default function Home() {
                 <path d="M17 8a4 4 0 0 1 0 8" />
                 <path d="M7 13v5a2 2 0 0 0 4 0v-3" />
               </svg></div>
-              <h3>முக்கிய அறிவிப்பு</h3>
-              <p>தலைமையின் நேரடி செய்திகள், சுற்றறிக்கைகள் மற்றும் தகவல்கள்.</p>
-              <a className="go" href="#events">தகவல்கள் <i>→</i></a>
+              <h3>{t('home.services.notice.title')}</h3>
+              <p>{t('home.services.notice.desc')}</p>
+              <a className="go" href="#events">{t('home.services.notice.link')} <i>→</i></a>
             </div>
           </div>
         </div>
       </section>
 
       {/* FLAG / IDEOLOGY */}
-      <section className="flag-sec sec-pad" data-cursor="maroon" data-rail="கொடி" id="ideology">
+      <section className="flag-sec sec-pad" data-cursor="maroon" data-rail={t('home.rail.flag')} id="ideology">
         <div className="wrap">
           <div className="sec-head">
-            <span className="sec-eyebrow">கொடியின் பொருள்</span>
-            <h2>ஒவ்வொரு நிறமும்<br />ஒரு கொள்கை.</h2>
-            <p>கொடியின் பகுதிகளைத் தொட்டுப் பாருங்கள் — ஒவ்வொன்றின் அர்த்தத்தையும் அறியலாம்.</p>
+            <span className="sec-eyebrow">{t('home.flag_sec.eyebrow')}</span>
+            <h2>{t('home.flag_sec.title_1')}<br />{t('home.flag_sec.title_2')}</h2>
+            <p>{t('home.flag_sec.desc')}</p>
           </div>
           <div className="flag-grid">
-            <div className="flag-real rv" id="flagReal" role="img" aria-label="தமிழக வெற்றிக் கழகக் கொடி">
+            <div className="flag-real rv" id="flagReal" role="img" aria-label={t('home.flag_img_alt')}>
               <div className={`flag-band ${flagPart === 'maroon' ? 'band-glow' : ''} ${flagPart === 'yellow' ? 'flag-part-glow' : ''}`} id="fBand"></div>
               <img className={`fele l ${flagPart === 'ele' ? 'flag-part-glow' : ''}`} id="fEleL"
                 src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSBHZW5lcmF0b3I6IHZpc2lvbmNvcnRleCBWVHJhY2VyIDAuNi4xMiAtLT4KPHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjI1NCIgaGVpZ2h0PSIyNDUiPgo8cGF0aCBkPSJNMCAwIEMxLjA2IDEuNjMgMi4wNSAzLjMgMyA1IEMzLjgyIDUuODIgNC42NSA2LjY1IDUuNSA3LjUgQzExLjM5IDEzLjM5IDEzLjc1IDIxLjIzIDE0LjExIDI5LjQ2IEMxMy43MyAzNC4zOCAxMi4xNyAzOC4zOSA5Ljk0IDQyLjc2IEM4LjggNDUuNDcgOC40IDQ4LjEgOCA1MSBDMTAuNCA1MC43MiAxMi43OSA1MC40MiAxNS4xOSA1MC4xMiBDMTUuODYgNTAuMDUgMTYuNTMgNDkuOTcgMTcuMjMgNDkuODkgQzIxLjEzIDQ5LjM5IDI0LjM4IDQ4LjUgMjggNDcgQzMwLjgxIDQ3LjM4IDMwLjgxIDQ3LjM4IDMzIDQ4IEMzMi4zNCA0OS42NSAzMS42OCA1MS4zIDMxIDUzIEMzMi4zMiA1My4zMyAzMy42NCA1My42NiAzNSA1NCBDMzMuMDIgNjAuMDUgMjkuNDMgNjIuMDYgMjQgNjUgQzEzLjA2IDY5Ljk1IDIuMDMgNzEuMzQgLTkuODggNzEuMTkgQy0xMC44OCA3MS4xOSAtMTEuODkgNzEuMTkgLTEyLjkyIDcxLjE5IEMtMjAuMzIgNzEuMTQgLTIwLjMyIDcxLjE0IC0yMy43NiA3MC40MyBDLTI0LjUgNzAuMjkgLTI1LjI0IDcwLjE1IC0yNiA3MCBDLTI2LjMzIDcwLjMzIC0yNi42NiA3MC42NiAtMjcgNzEgQy0yOC42OCA3MS4yMyAtMzAuMzcgNzEuNDEgLTMyLjA2IDcxLjU2IEMtMzIuOTggNzEuNjUgLTMzLjkgNzEuNzMgLTM0Ljg1IDcxLjgyIEMtMzUuNTYgNzEuODggLTM2LjI3IDcxLjk0IC0zNyA3MiBDLTM2Ljk1IDcyLjQ3IC0zNi45NSA3Mi40NyAtMzYuNjkgNzQuODggQy0zNi43NCA3NS4zOSAtMzYuNzQgNzUuMzkgLTM3IDc4IEMtNDEuMDcgODAuMjkgLTQ1LjU2IDgwLjU4IC01MC4xMiA4MS4wNiBDLTYwLjc1IDgyLjIyIC02MC43NSA4Mi4yMiAtNjQuMTcgODYuNDMgQy02Ny42OCA5MS4zMSAtNjcuNjcgOTUuMjggLTY3LjMxIDEwMS4xMiBDLTY3LjI1IDEwMi45OCAtNjcuMTkgMTA0Ljg0IC02Ny4xNCAxMDYuNyBDLTY3LjEgMTA3LjYgLTY3LjA3IDEwOC41IC02Ny4wNCAxMDkuNDMgQy02Ni45NyAxMTQuMDIgLTY3LjQ3IDExOC41MyAtNjcuOTggMTIzLjA5IEMtNjggMTI2LjQ3IC02Ny4zNSAxMjguOTEgLTY2IDEzMiBDLTY1LjM0IDEzMiAtNjQuNjggMTMyIC02NCAxMzIgQy02My43NCAxMzIuMjggLTYzLjc0IDEzMi4yOCAtNjIuNDUgMTMzLjczIEMtNTguMzkgMTM3LjQ5IC01My4yOSAxMzkuMjYgLTQ4LjI2IDE0MS40NyBDLTM4Ljg0IDE0NS43NCAtMzIuMDggMTUwLjI3IC0yOCAxNjAgQy0yNi42NCAxNjMuNjYgLTI1LjM1IDE2Ny4zNSAtMjQuMTQgMTcxLjA2IEMtMjIuODYgMTc0LjkyIC0yMS42MSAxNzcuODIgLTE5IDE4MSBDLTE5IDE4MS42NiAtMTkgMTgyLjMyIC0xOSAxODMgQy0xOC4zNCAxODMuMzMgLTE3LjY4IDE4My42NiAtMTcgMTg0IEMtMTggMTg2LjcxIC0xOC42NSAxODcuODEgLTIxLjIxIDE4OS4yMyBDLTI3LjU1IDE5MS40NiAtMzQuMiAxOTMuNjMgLTQxIDE5MyBDLTQyLjc2IDE5MS45MyAtNDIuNzYgMTkxLjkzIC00NCAxOTAgQy00NC41NSAxODYuODggLTQ0LjU1IDE4Ni44OCAtNDQuODggMTgzLjEyIEMtNDUuNjggMTc1Ljc2IC00Ny4wNiAxNjguMzkgLTUxIDE2MiBDLTU2LjA1IDE1OC40OCAtNjIuMDMgMTU3LjkgLTY4IDE1NyBDLTY4LjAxIDE1Ny4zNiAtNjguMDEgMTU3LjM2IC02OC4wNCAxNTkuMTYgQy02OC4xMiAxNjIuMzggLTY4LjIyIDE2NS41OSAtNjguMzEgMTY4LjgxIEMtNjguMzIgMTY5LjM3IC02OC4zMiAxNjkuMzcgLTY4LjM4IDE3Mi4yMSBDLTY4LjQyIDE3My4yOCAtNjguNDUgMTc0LjM1IC02OC40OSAxNzUuNDYgQy02OC41MSAxNzYuNDUgLTY4LjU0IDE3Ny40NCAtNjguNTcgMTc4LjQ2IEMtNjkuMDcgMTgxLjQxIC02OS41OCAxODIuMjcgLTcyIDE4NCBDLTc0LjA4IDE4NC44MyAtNzQuMDggMTg0LjgzIC03Ni40NiAxODUuNDYgQy03Ny4zMiAxODUuNzEgLTc4LjE5IDE4NS45NSAtNzkuMDggMTg2LjIgQy04MC44OSAxODYuNjkgLTgyLjcgMTg3LjE4IC04NC41MSAxODcuNjYgQy04OS43NiAxODkuMTQgLTkzLjYgMTkwLjggLTk4IDE5NCBDLTEwMC42OSAxOTQuNSAtMTAwLjY5IDE5NC41IC0xMDMgMTk0IEMtMTA2LjQ3IDE5MC40IC0xMDcuMTUgMTg2Ljg3IC0xMDcuMTkgMTgyIEMtMTA3LjIgMTgxLjEzIC0xMDcuMjIgMTgwLjI3IC0xMDcuMjMgMTc5LjM4IEMtMTA3IDE3NyAtMTA3IDE3NyAtMTA1IDE3NCBDLTEwMi43MiAxNzMuMDkgLTEwMi43MiAxNzMuMDkgLTEwMC4wNiAxNzIuMzggQy05OS4xOSAxNzIuMTQgLTk4LjMxIDE3MS45IC05Ny40MSAxNzEuNjUgQy05Ny4wMSAxNzEuNTQgLTk3LjAxIDE3MS41NCAtOTUgMTcxIEMtOTQuMDEgMTcwLjY3IC05My4wMiAxNzAuMzQgLTkyIDE3MCBDLTkwLjk2IDE2My41NSAtOTIuNzMgMTU5Ljk4IC05Ni4yIDE1NC41OSBDLTk4IDE1MyAtOTggMTUzIC0xMDAuMzUgMTUyLjk3IEMtMTAzLjc0IDE1NC4yOSAtMTA1Ljk1IDE1Ni4xOCAtMTA4LjY5IDE1OC41NiBDLTExMy44IDE2MyAtMTEzLjggMTYzIC0xMTYgMTYzIEMtMTE2LjMzIDE2My45OSAtMTE2LjY2IDE2NC45OCAtMTE3IDE2NiBDLTExOC42NyAxNjYuOTggLTEyMC4zOSAxNjcuODkgLTEyMi4xMiAxNjguNzUgQy0xMjQuODYgMTcwLjM1IC0xMjQuODYgMTcwLjM1IC0xMjcgMTcyIEMtMTI3LjY0IDE3Ni43IC0xMjUuNzQgMTc5LjUzIC0xMjMuNjkgMTgzLjY5IEMtMTE5LjM2IDE5Mi43MSAtMTE4LjI1IDIwMi44NyAtMTE2LjU0IDIxMi42NCBDLTExNS42NSAyMTcuNCAtMTE0LjYgMjIxLjQ4IC0xMTIuMzggMjI1LjgxIEMtMTEwLjU0IDIyOS40IC0xMDkuNTIgMjMxLjkzIC0xMTAgMjM2IEMtMTEzLjc5IDIzOS43OSAtMTIwLjMzIDIzOC40MSAtMTI1LjQ0IDIzOC40NCBDLTEyNi42OSAyMzguNDcgLTEyNy45NCAyMzguNSAtMTI5LjI0IDIzOC41NCBDLTEzMC40NCAyMzguNTQgLTEzMS42NCAyMzguNTUgLTEzMi44NyAyMzguNTYgQy0xMzMuNDIgMjM4LjU3IC0xMzMuNDIgMjM4LjU3IC0xMzYuMjEgMjM4LjYgQy0xMzkgMjM4IC0xMzkgMjM4IC0xNDAuODkgMjM1LjYgQy0xNDIuMTYgMjMyLjYyIC0xNDIuMDkgMjMxLjYyIC0xNDEuMTkgMjI4LjU2IEMtMTM4Ljk5IDIxOS40MiAtMTM5LjEyIDIwOS45NSAtMTQyIDIwMSBDLTE0Mi4zMSAxOTkuODcgLTE0Mi42MiAxOTguNzMgLTE0Mi45NCAxOTcuNTYgQy0xNDMuMjkgMTk2LjcyIC0xNDMuNjQgMTk1Ljg3IC0xNDQgMTk1IEMtMTQ0Ljk5IDE5NC42NyAtMTQ1Ljk4IDE5NC4zNCAtMTQ3IDE5NCBDLTE0OC4wMyAxOTIuMzMgLTE0OC4wMyAxOTIuMzMgLTE0OC45NCAxOTAuMjUgQy0xNTAuNjEgMTg2Ljc0IC0xNTIuMTIgMTgzLjcxIC0xNTUgMTgxIEMtMTU4LjEyIDE4MC4zOCAtMTU4LjEyIDE4MC4zOCAtMTYxIDE4MSBDLTE2My40NyAxODUuMjcgLTE2My4zMSAxODkuNzYgLTE2My4zIDE5NC41NSBDLTE2My4zIDE5NC45NiAtMTYzLjMgMTk0Ljk2IC0xNjMuMzEgMTk3LjA0IEMtMTYzLjMyIDE5OC43NyAtMTYzLjMyIDIwMC41IC0xNjMuMzIgMjAyLjIzIEMtMTYzLjMxIDIwNC44NiAtMTYzLjM0IDIwNy40OSAtMTYzLjM2IDIxMC4xMiBDLTE2My4zNiAyMTEuODEgLTE2My4zNiAyMTMuNDkgLTE2My4zNiAyMTUuMTggQy0xNjMuMzcgMjE1Ljk2IC0xNjMuMzggMjE2Ljc0IC0xNjMuMzkgMjE3LjU0IEMtMTYzLjM1IDIyMi43NCAtMTYyLjQ1IDIyNi4zOSAtMTYwIDIzMSBDLTE1OS4zNCAyMzEuMzMgLTE1OC42OCAyMzEuNjYgLTE1OCAyMzIgQy0xNTguMTYgMjMyLjk5IC0xNTguMTYgMjMyLjk5IC0xNTkgMjM4IEMtMTYyLjk1IDIzOC4xIC0xNjYuOSAyMzguMTcgLTE3MC44NSAyMzguMjIgQy0xNzIuODYgMjM4LjI1IC0xNzQuODcgMjM4LjMgLTE3Ni44NyAyMzguMzUgQy0xNzguMTMgMjM4LjM2IC0xNzkuMzggMjM4LjM4IC0xODAuNjggMjM4LjM5IEMtMTgxLjg0IDIzOC40MSAtMTgzIDIzOC40MyAtMTg0LjIgMjM4LjQ1IEMtMTg3IDIzOCAtMTg3IDIzOCAtMTg4LjUyIDIzNi4xNiBDLTE4OC42OCAyMzUuNDUgLTE4OC44NCAyMzQuNzQgLTE4OSAyMzQgQy0xODguMzQgMjMzLjAxIC0xODcuNjggMjMyLjAyIC0xODcgMjMxIEMtMTg1LjM3IDIyMy43OSAtMTg1Ljg2IDIxNi4zNSAtMTg2IDIwOSBDLTE4Ni4wMSAyMDguMjkgLTE4Ni4wMSAyMDcuNTkgLTE4Ni4wMiAyMDYuODYgQy0xODYuMTYgMTk2Ljg0IC0xODcuMzkgMTg4LjkzIC0xOTMuNjYgMTgwLjg2IEMtMTk1IDE3OSAtMTk1IDE3OSAtMTk1IDE3NyBDLTE5NS45OSAxNzYuNjcgLTE5Ni45OCAxNzYuMzQgLTE5OCAxNzYgQy0xOTkuNDYgMTczLjQ1IC0yMDAuNzUgMTcwLjk2IC0yMDIgMTY4LjMxIEMtMjAyLjM0IDE2Ny42IC0yMDIuNjkgMTY2LjkgLTIwMy4wNCAxNjYuMTcgQy0yMDMuNzIgMTY0Ljc2IC0yMDQuMzkgMTYzLjM1IC0yMDUuMDYgMTYxLjk0IEMtMjA1Ljg2IDE2MC4yOCAtMjA2LjczIDE1OC42NSAtMjA3LjYxIDE1Ny4wMyBDLTIwOS4zOCAxNTMuMTYgLTIxMC4zMyAxNDkuMzMgLTIxMS4yNSAxNDUuMTkgQy0yMTEuNDQgMTQ0LjQzIC0yMTEuNjIgMTQzLjY4IC0yMTEuODEgMTQyLjkgQy0yMTQuMDggMTMyLjg0IC0yMTIuMTIgMTIyLjYxIC0yMDcuMTIgMTEzLjYyIEMtMjA0LjkgMTEwLjg4IC0yMDIuODggMTA5LjA1IC0yMDAgMTA3IEMtMTk5LjM0IDEwNi41MyAtMTk4LjY4IDEwNi4wNSAtMTk4IDEwNS41NiBDLTE5My42OSAxMDIuNTcgLTE4OS40NSAxMDAuMTYgLTE4NC42MSA5OC4xNCBDLTE4MC41NSA5Ni4zNyAtMTc2LjYzIDk0LjMyIC0xNzIuNyA5Mi4yOSBDLTE2OC4yMSA5MCAtMTY4LjIxIDkwIC0xNjYgOTAgQy0xNjUuODQgODkuNSAtMTY1Ljg0IDg5LjUgLTE2NSA4NyBDLTE2Mi44NCA4NS43OCAtMTYwLjc1IDg0LjcyIC0xNTguNSA4My42OSBDLTE1Mi42NCA4MC44NyAtMTQ3LjI4IDc3LjgyIC0xNDIgNzQgQy0xNDEuNDEgNzMuNTggLTE0MC44MiA3My4xNiAtMTQwLjIxIDcyLjczIEMtMTM4LjE4IDcxLjI5IC0xMzYuMTUgNjkuODMgLTEzNC4xMiA2OC4zOCBDLTEzMy40NyA2Ny45MSAtMTMyLjgxIDY3LjQ0IC0xMzIuMTQgNjYuOTYgQy0xMjcuNTcgNjMuNjIgLTEyNC40NiA2MC42NSAtMTIyLjQ0IDU1LjI1IEMtMTIxLjk2IDU0LjE4IC0xMjEuNDkgNTMuMSAtMTIxIDUyIEMtMTIwLjM0IDUyIC0xMTkuNjggNTIgLTExOSA1MiBDLTExOC42NyA1MS4wMSAtMTE4LjM0IDUwLjAyIC0xMTggNDkgQy0xMTcuNjcgNDguMDEgLTExNy4zNCA0Ny4wMiAtMTE3IDQ2IEMtMTE2LjM0IDQ2IC0xMTUuNjggNDYgLTExNSA0NiBDLTExNSA0NS4zNCAtMTE1IDQ0LjY4IC0xMTUgNDQgQy0xMTMuNjMgNDMuMDcgLTExMi4yNSA0Mi4xNSAtMTEwLjg1IDQxLjI2IEMtMTA2LjE4IDM4LjA4IC0xMDIuMDEgMzQuNTcgLTk4Ljk0IDI5LjgxIEMtOTYuNTEgMjYuMjggLTk0LjA4IDI0LjIzIC05MCAyMyBDLTgyLjk2IDIyLjUyIC03Ni4wOCAyNC42MiAtNjkuMzMgMjYuNDIgQy02NC4zNyAyNy43MyAtNTkuNDQgMjguNjEgLTU0LjM4IDI5LjM4IEMtNDcuMzEgMzAuNDggLTQxLjU5IDMyLjcxIC0zNS4wNyAzNS43IEMtMzAuOTYgMzcuNDQgLTI3LjQ0IDM4LjA3IC0yMyAzOCBDLTIyLjA5IDM4IC0yMS4xOSAzOCAtMjAuMjUgMzggQy0xMy42NiAzNy43MiAtOS44NSAzNi41NCAtNSAzMiBDLTIuNzkgMjYuMTggLTMuMDkgMTkuMDggLTQgMTMgQy01LjY2IDEwLjcyIC02Ljc4IDEwLjIxIC05LjQ2IDkuMzggQy0xOC43OCA3Ljk5IC0yNS40OSA5LjExIC0zNCAxMyBDLTM4LjE4IDE0LjU2IC00MS42NSAxNS41NCAtNDYgMTQgQy00Ni4zMyAxMy4zNCAtNDYuNjYgMTIuNjggLTQ3IDEyIEMtNDYuNjcgMTEuMzQgLTQ2LjM0IDEwLjY4IC00NiAxMCBDLTQ0Ljg5IDEwLjA4IC00My43NyAxMC4xNiAtNDIuNjIgMTAuMjUgQy0zNy40NCAxMC40MyAtMzMuOTMgOC4wNSAtMjkuNjEgNS40MSBDLTI3LjAyIDQuMDEgLTI0LjkgMy40MSAtMjIgMyBDLTIyIDIuMDEgLTIyIDEuMDIgLTIyIDAgQy0xNS4wMSAtMi4wMyAtNi42MSAtNC4wOSAwIDAgWiAiIGZpbGw9IiM5MjkyOTIiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxNyw1KSIvPgo8cGF0aCBkPSJNMCAwIEMxLjA2IDEuNjMgMi4wNSAzLjMgMyA1IEMzLjgyIDUuODIgNC42NSA2LjY1IDUuNSA3LjUgQzExLjM5IDEzLjM5IDEzLjc1IDIxLjIzIDE0LjExIDI5LjQ2IEMxMy43MyAzNC4zOCAxMi4xNyAzOC4zOSA5Ljk0IDQyLjc2IEM4LjggNDUuNDcgOC40IDQ4LjEgOCA1MSBDMTAuNCA1MC43MiAxMi43OSA1MC40MiAxNS4xOSA1MC4xMiBDMTUuODYgNTAuMDUgMTYuNTMgNDkuOTcgMTcuMjMgNDkuODkgQzIxLjEzIDQ5LjM5IDI0LjM4IDQ4LjUgMjggNDcgQzMwLjgxIDQ3LjM4IDMwLjgxIDQ3LjM4IDMzIDQ4IEMzMi4zNCA0OS42NSAzMS42OCA1MS4zIDMxIDUzIEMzMi4zMiA1My4zMyAzMy42NCA1My42NiAzNSA1NCBDMzMuMDIgNjAuMDUgMjkuNDMgNjIuMDYgMjQgNjUgQzEzLjA2IDY5Ljk1IDIuMDMgNzEuMzQgLTkuODggNzEuMTkgQy0xMC44OCA3MS4xOSAtMTEuODkgNzEuMTkgLTEyLjkyIDcxLjE5IEMtMjAuMzIgNzEuMTQgLTIwLjMyIDcxLjE0IC0yMy43NiA3MC40MyBDLTI0LjUgNzAuMjkgLTI1LjI0IDcwLjE1IC0yNiA3MCBDLTI2LjMzIDcwLjMzIC0yNi42NiA3MC42NiAtMjcgNzEgQy0yOC42OCA3MS4yMyAtMzAuMzcgNzEuNDEgLTMyLjA2IDcxLjU2IEMtMzIuOTggNzEuNjUgLTMzLjkgNzEuNzMgLTM0Ljg1IDcxLjgyIEMtMzUuNTYgNzEuODggLTM2LjI3IDcxLjk0IC0zNyA3MiBDLTM2LjkgNzIuOTUgLTM2Ljc5IDczLjkgLTM2LjY5IDc0Ljg4IEMtMzYuNzkgNzUuOTEgLTM2Ljg5IDc2Ljk0IC0zNyA3OCBDLTQxLjA3IDgwLjI5IC00NS41NiA4MC41OCAtNTAuMTIgODEuMDYgQy02MC43NyA4Mi4yMiAtNjAuNzcgODIuMjIgLTY0LjE5IDg2LjEyIEMtNjggOTEuMjcgLTY3LjM1IDk2LjM1IC02Ni45MiAxMDIuNTEgQy02Ny4wMSAxMDYuNjIgLTY4LjA5IDEwOS4wOSAtNzEgMTEyIEMtNzkuMzkgMTEyLjU1IC04Ni42IDExMS45MyAtOTQuMDIgMTA3LjkxIEMtOTYgMTA3IC05NiAxMDcgLTk5LjY5IDEwNi41IEMtMTAzLjY1IDEwNS45IC0xMDUuMTkgMTA0LjgxIC0xMDggMTAyIEMtMTExIDk3LjY2IC0xMTEgOTcuNjYgLTExMSA5NSBDLTExMS41NyA5NS4wNiAtMTEyLjE0IDk1LjEyIC0xMTIuNzIgOTUuMTggQy0xMTguMTYgOTUuNDkgLTEyMS4yNiA5NC44IC0xMjUuNTkgOTEuNDggQy0xMjkuODMgODcuMDIgLTEyOS4yOSA4Mi4yNSAtMTI5LjE5IDc2LjQgQy0xMjguODEgNjkuNjYgLTEyOC4xOSA2NC4zOCAtMTI0IDU5IEMtMTIzLjQ0IDU3Ljc3IC0xMjIuOTEgNTYuNTIgLTEyMi40NCA1NS4yNSBDLTEyMS45NiA1NC4xOCAtMTIxLjQ5IDUzLjEgLTEyMSA1MiBDLTEyMC4zNCA1MiAtMTE5LjY4IDUyIC0xMTkgNTIgQy0xMTguNjcgNTEuMDEgLTExOC4zNCA1MC4wMiAtMTE4IDQ5IEMtMTE3LjY3IDQ4LjAxIC0xMTcuMzQgNDcuMDIgLTExNyA0NiBDLTExNi4zNCA0NiAtMTE1LjY4IDQ2IC0xMTUgNDYgQy0xMTUgNDUuMzQgLTExNSA0NC42OCAtMTE1IDQ0IEMtMTEzLjYzIDQzLjA3IC0xMTIuMjUgNDIuMTUgLTExMC44NSA0MS4yNiBDLTEwNi4xOCAzOC4wOCAtMTAyLjAxIDM0LjU3IC05OC45NCAyOS44MSBDLTk2LjUxIDI2LjI4IC05NC4wOCAyNC4yMyAtOTAgMjMgQy04Mi45NiAyMi41MiAtNzYuMDggMjQuNjIgLTY5LjMzIDI2LjQyIEMtNjQuMzcgMjcuNzMgLTU5LjQ0IDI4LjYxIC01NC4zOCAyOS4zOCBDLTQ3LjMxIDMwLjQ4IC00MS41OSAzMi43MSAtMzUuMDcgMzUuNyBDLTMwLjk2IDM3LjQ0IC0yNy40NCAzOC4wNyAtMjMgMzggQy0yMi4wOSAzOCAtMjEuMTkgMzggLTIwLjI1IDM4IEMtMTMuNjYgMzcuNzIgLTkuODUgMzYuNTQgLTUgMzIgQy0yLjc5IDI2LjE4IC0zLjA5IDE5LjA4IC00IDEzIEMtNS42NiAxMC43MiAtNi43OCAxMC4yMSAtOS40NiA5LjM4IEMtMTguNzggNy45OSAtMjUuNDkgOS4xMSAtMzQgMTMgQy0zOC4xOCAxNC41NiAtNDEuNjUgMTUuNTQgLTQ2IDE0IEMtNDYuMTYgMTMuNjcgLTQ2LjE2IDEzLjY3IC00NyAxMiBDLTQ2LjY3IDExLjM0IC00Ni4zNCAxMC42OCAtNDYgMTAgQy00NS40NCAxMC4wNCAtNDUuNDQgMTAuMDQgLTQyLjYyIDEwLjI1IEMtMzcuNDQgMTAuNDMgLTMzLjkzIDguMDUgLTI5LjYxIDUuNDEgQy0yNy4wMiA0LjAxIC0yNC45IDMuNDEgLTIyIDMgQy0yMiAyLjAxIC0yMiAxLjAyIC0yMiAwIEMtMTUuMDEgLTIuMDMgLTYuNjEgLTQuMDkgMCAwIFogIiBmaWxsPSIjOTI5MjkxIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMTcsNSkiLz4KPHBhdGggZD0iTTAgMCBDMC45OSAwIDEuOTggMCAzIDAgQzIuOTkgMC45MiAyLjk4IDEuODQgMi45NiAyLjc4IEMyLjg2IDE2LjczIDIuODYgMTYuNzMgNCAyMiBDNC41IDIyLjE2IDQuNSAyMi4xNiA3IDIzIEM4LjM1IDI0LjY1IDkuNjkgMjYuMzIgMTEgMjggQzExLjk5IDI4LjY2IDEyLjk4IDI5LjMyIDE0IDMwIEMxNCAzMC42NiAxNCAzMS4zMiAxNCAzMiBDMTQuOTMgMzIuMTQgMTUuODYgMzIuMjkgMTYuODEgMzIuNDQgQzIwIDMzIDIwIDMzIDIzIDM0IEMyNC41MiAzNC4xNyAyNi4wNCAzNC4yOSAyNy41NyAzNC4zOSBDMjguNDcgMzQuNDYgMjkuMzYgMzQuNTMgMzAuMjkgMzQuNiBDMzIuMTYgMzQuNzQgMzQuMDIgMzQuODcgMzUuODkgMzQuOTkgQzQzLjM0IDM1LjU5IDQ5LjczIDM3LjI5IDU1LjU2IDQyLjEyIEM1NyA0NCA1NyA0NCA1NyA0NiBDNTcuNjYgNDYgNTguMzIgNDYgNTkgNDYgQzYzLjQyIDUxLjIyIDY1LjI2IDU3LjI5IDY2LjgxIDYzLjgxIEM2Ny4wMyA2NC42NiA2Ny4yNCA2NS41IDY3LjQ3IDY2LjM3IEM2OC4zIDY5LjY5IDY5IDcyLjU2IDY5IDc2IEM3MS40NCA3NS42MiA3MS40NCA3NS42MiA3NCA3NSBDNzQuMzMgNzQuMzQgNzQuNjYgNzMuNjggNzUgNzMgQzc3LjExIDcyLjYyIDc3LjExIDcyLjYyIDc5Ljc1IDcyLjQ0IEM4My4yNCA3Mi4xNiA4Ni41OCA3MS44IDkwIDcxIEM4OS4wOSA3NC4xIDg4LjYxIDc1LjY0IDg1Ljc5IDc3LjMzIEM3OS40NSA3OS40NyA3Mi43NyA4MS42MyA2NiA4MSBDNjQuMjQgNzkuOTMgNjQuMjQgNzkuOTMgNjMgNzggQzYyLjQ1IDc0Ljg4IDYyLjQ1IDc0Ljg4IDYyLjEyIDcxLjEyIEM2MS4zMiA2My43NiA1OS45NCA1Ni4zOSA1NiA1MCBDNTAuOTUgNDYuNDggNDQuOTcgNDUuOSAzOSA0NSBDMzguOTkgNDUuNzEgMzguOTcgNDYuNDIgMzguOTYgNDcuMTYgQzM4Ljg4IDUwLjM4IDM4Ljc4IDUzLjU5IDM4LjY5IDU2LjgxIEMzOC42NiA1Ny45MyAzOC42NCA1OS4wNSAzOC42MiA2MC4yMSBDMzguNiA2MC43NCAzOC42IDYwLjc0IDM4LjUxIDYzLjQ2IEMzOC40OSA2NC40NSAzOC40NiA2NS40NCAzOC40MyA2Ni40NiBDMzcuOTMgNjkuNDEgMzcuNDIgNzAuMjcgMzUgNzIgQzMyLjkyIDcyLjgzIDMyLjkyIDcyLjgzIDMwLjU0IDczLjQ2IEMyOS42OCA3My43MSAyOC44MSA3My45NSAyNy45MiA3NC4yIEMyNi4xMSA3NC42OSAyNC4zIDc1LjE4IDIyLjQ5IDc1LjY2IEMxNy4yNCA3Ny4xNCAxMy40IDc4LjggOSA4MiBDNi4zMSA4Mi41IDYuMzEgODIuNSA0IDgyIEMwLjUzIDc4LjQgLTAuMTUgNzQuODcgLTAuMTkgNzAgQy0wLjIgNjkuMTMgLTAuMjIgNjguMjcgLTAuMjMgNjcuMzggQzAgNjUgMCA2NSAyIDYyIEM0LjI4IDYxLjA5IDQuMjggNjEuMDkgNi45NCA2MC4zOCBDNy44MSA2MC4xNCA4LjY5IDU5LjkgOS41OSA1OS42NSBDMTAuMzkgNTkuNDMgMTEuMTggNTkuMjIgMTIgNTkgQzEyLjk5IDU4LjY3IDEzLjk4IDU4LjM0IDE1IDU4IEMxNi4wNCA1MS41NSAxNC4yNyA0Ny45OCAxMC44IDQyLjU5IEM5IDQxIDkgNDEgNi42NSA0MC45NyBDMy4yNiA0Mi4yOSAxLjA1IDQ0LjE4IC0xLjY5IDQ2LjU2IEMtNi44IDUxIC02LjggNTEgLTkgNTEgQy05LjMzIDUxLjk5IC05LjY2IDUyLjk4IC0xMCA1NCBDLTExLjY3IDU0Ljk4IC0xMy4zOSA1NS44OSAtMTUuMTIgNTYuNzUgQy0xNy44NiA1OC4zNSAtMTcuODYgNTguMzUgLTIwIDYwIEMtMjAuNjQgNjQuNyAtMTguNzQgNjcuNTMgLTE2LjY5IDcxLjY5IEMtMTIuMzYgODAuNzEgLTExLjI1IDkwLjg3IC05LjU0IDEwMC42NCBDLTguNjUgMTA1LjQgLTcuNiAxMDkuNDggLTUuMzggMTEzLjgxIEMtMy41NCAxMTcuNCAtMi41MiAxMTkuOTMgLTMgMTI0IEMtNi43OSAxMjcuNzkgLTEzLjMzIDEyNi40MSAtMTguNDQgMTI2LjQ0IEMtMTkuNjkgMTI2LjQ3IC0yMC45NCAxMjYuNSAtMjIuMjQgMTI2LjU0IEMtMjMuNDQgMTI2LjU0IC0yNC42NCAxMjYuNTUgLTI1Ljg3IDEyNi41NiBDLTI2LjQyIDEyNi41NyAtMjYuNDIgMTI2LjU3IC0yOS4yMSAxMjYuNiBDLTMyIDEyNiAtMzIgMTI2IC0zMy44OSAxMjMuNiBDLTM1LjE2IDEyMC42MiAtMzUuMDkgMTE5LjYyIC0zNC4xOSAxMTYuNTYgQy0zMS45OSAxMDcuNDIgLTMyLjEyIDk3Ljk1IC0zNSA4OSBDLTM1LjMxIDg3Ljg3IC0zNS42MiA4Ni43MyAtMzUuOTQgODUuNTYgQy0zNi4yOSA4NC43MiAtMzYuNjQgODMuODcgLTM3IDgzIEMtMzcuNSA4Mi44NCAtMzcuNSA4Mi44NCAtNDAgODIgQy00MS4wMyA4MC4zMyAtNDEuMDMgODAuMzMgLTQxLjk0IDc4LjI1IEMtNDUuMDkgNzEuNjYgLTQ1LjA5IDcxLjY2IC00OCA2OSBDLTUxLjc1IDY4LjY5IC01MS43NSA2OC42OSAtNTUgNjkgQy01NS42NiA2NS43IC01Ni4zMiA2Mi40IC01NyA1OSBDLTU3LjY2IDU5IC01OC4zMiA1OSAtNTkgNTkgQy01OS44OCA1Ni43MyAtNjAuNDggNTQuNDIgLTYxLjEyIDUyLjA3IEMtNjEuNDEgNTEuMzggLTYxLjcgNTAuNyAtNjIgNTAgQy02Mi45OSA0OS42NyAtNjMuOTggNDkuMzQgLTY1IDQ5IEMtNjUgNDguMDEgLTY1IDQ3LjAyIC02NSA0NiBDLTYyLjYxIDQ2LjU4IC02MC4zMyA0Ny4yMiAtNTggNDggQy01Ni4zNyA0OC4wOCAtNTQuNzQgNDguMTEgLTUzLjExIDQ4LjEgQy01Mi4xOCA0OC4wOSAtNTEuMjQgNDguMDkgLTUwLjI3IDQ4LjA5IEMtNDkuMyA0OC4wOCAtNDguMzIgNDguMDcgLTQ3LjMxIDQ4LjA2IEMtNDYuMzIgNDguMDYgLTQ1LjM0IDQ4LjA1IC00NC4zMiA0OC4wNSBDLTQxLjg4IDQ4LjA0IC0zOS40NCA0OC4wMiAtMzcgNDggQy0zNyA0Ny4zNCAtMzcgNDYuNjggLTM3IDQ2IEMtMzUuMzcgNDUuMDUgLTMzLjc0IDQ0LjEgLTMyLjA4IDQzLjIgQy0yMi43NSAzNy44NCAtMjIuNzUgMzcuODQgLTIwLjYyIDMyLjYyIEMtMjAuNDIgMzEuNzYgLTIwLjIxIDMwLjg5IC0yMCAzMCBDLTE5LjM0IDMwIC0xOC42OCAzMCAtMTggMzAgQy0xNy4wNiAyOC4zOSAtMTcuMDYgMjguMzkgLTE2IDI2IEMtMTUuMDEgMjMuOTEgLTE0LjAxIDIxLjgzIC0xMyAxOS43NSBDLTEyLjQ4IDE4LjY3IC0xMS45NyAxNy41OSAtMTEuNDQgMTYuNDggQy0xMC45NiAxNS42NiAtMTAuNDkgMTQuODQgLTEwIDE0IEMtOS4zNCAxNCAtOC42OCAxNCAtOCAxNCBDLTYuOCAxMS4zOCAtNS45MSA4LjczIC01IDYgQy00LjAxIDUuMzQgLTMuMDIgNC42OCAtMiA0IEMtMS42NyAzLjMgLTEuMzQgMi42IC0xIDEuODggQy0wLjY3IDEuMjYgLTAuMzQgMC42NCAwIDAgWiAiIGZpbGw9IiM2RTZENkIiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDExMCwxMTcpIi8+CjxwYXRoIGQ9Ik0wIDAgQy0wLjY2IDEuNjUgLTEuMzIgMy4zIC0yIDUgQy0wLjY4IDUuMzMgMC42NCA1LjY2IDIgNiBDMC4wMiAxMi4wNSAtMy41NyAxNC4wNiAtOSAxNyBDLTE5Ljk5IDIxLjk3IC0zMS4xNiAyMy4zNSAtNDMuMTIgMjMuMzEgQy00My42NCAyMy4zMiAtNDMuNjQgMjMuMzIgLTQ2LjI3IDIzLjM2IEMtNDcuMjYgMjMuMzYgLTQ4LjI0IDIzLjM2IC00OS4yNiAyMy4zNiBDLTUwLjE1IDIzLjM3IC01MS4wMyAyMy4zNyAtNTEuOTUgMjMuMzcgQy01Mi42MyAyMy4yNSAtNTMuMyAyMy4xMyAtNTQgMjMgQy01NS4yMSAxOS4zNiAtNTQuNTkgMTguMzYgLTUzIDE1IEMtNTAuOTEgMTIuOTEgLTQ2LjUyIDEzLjYzIC00My42MiAxMy41IEMtMzUuNCAxMy4xMyAtMzUuNCAxMy4xMyAtMzIgMTIgQy0zMiAxMS4zNCAtMzIgMTAuNjggLTMyIDEwIEMtMzAuMzggOC4yOSAtMjguNzEgNi42MyAtMjcgNSBDLTI2LjM0IDQuMzQgLTI1LjY4IDMuNjggLTI1IDMgQy0yMi41NSAyLjU4IC0yMC4xNiAyLjI1IC0xNy42OSAyIEMtMTEuNTUgMS4zNiAtNS45NCAtMS43IDAgMCBaICIgZmlsbD0iI0VFRUNFNyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjUwLDUzKSIvPgo8cGF0aCBkPSJNMCAwIEMwLjY2IDAuMzMgMS4zMiAwLjY2IDIgMSBDMS45OCAzLjk0IDEuOTggMy45NCAxLjYyIDcuNTYgQzEuNTcgOC4xNiAxLjU3IDguMTYgMS4yOSAxMS4xOSBDMS4xOSAxMi4xMiAxLjEgMTMuMDUgMSAxNCBDMi45OCAxMi42OCA0Ljk2IDExLjM2IDcgMTAgQzYuNjkgMTIuMzggNi42OSAxMi4zOCA2IDE1IEM1LjAxIDE1LjY2IDQuMDIgMTYuMzIgMyAxNyBDMS4xNyAyMS41MSAwLjE0IDI2LjI4IC0xIDMxIEMtMC4yIDMwLjk2IDAuNjEgMzAuOTIgMS40NCAzMC44OCBDMi4yOCAzMC45MiAzLjEzIDMwLjk2IDQgMzEgQzQuMzMgMzEuNjYgNC42NiAzMi4zMiA1IDMzIEM3LjQ0IDMzLjM4IDcuNDQgMzMuMzggMTAgMzMgQzExLjA2IDMxLjA2IDExLjA2IDMxLjA2IDEyIDI5IEMxNC4xMiAyOC4yNSAxNC4xMiAyOC4yNSAxNiAyOCBDMTYgMjguOTkgMTYgMjkuOTggMTYgMzEgQzE1LjM0IDMxIDE0LjY4IDMxIDE0IDMxIEMxNC42NiAzNC45NiAxNS4zMiAzOC45MiAxNiA0MyBDMTguMzEgNDMgMjAuNjIgNDMgMjMgNDMgQzIzIDQ0LjY1IDIzIDQ2LjMgMjMgNDggQzIzLjY0IDQ4LjEgMjQuMjggNDguMiAyNC45MyA0OC4zIEMyNS43NiA0OC40NSAyNi41OSA0OC42IDI3LjQ0IDQ4Ljc1IEMyOC4yNiA0OC44OSAyOS4wOCA0OS4wMyAyOS45MyA0OS4xNyBDMzAuNjIgNDkuNDUgMzEuMyA0OS43MiAzMiA1MCBDMzIuNzkgNTIuMDggMzIuNzkgNTIuMDggMzMgNTQgQzM1LjMzIDU0LjA0IDM3LjY3IDU0LjA0IDQwIDU0IEM0MC4zMyA1My42NyA0MC42NiA1My4zNCA0MSA1MyBDNDMuNTggNTIuNzYgNDYuMTYgNTIuNjIgNDguNzUgNTIuNDggQzQ5LjQ5IDUyLjMyIDUwLjI0IDUyLjE2IDUxIDUyIEM1MS4zMyA1MS4wMSA1MS42NiA1MC4wMiA1MiA0OSBDNTIuOTkgNDkgNTMuOTggNDkgNTUgNDkgQzU0LjM5IDU1LjQ2IDU0LjM5IDU1LjQ2IDUyLjc1IDU3LjcxIEM0OC42OCA2MC43IDQyLjE2IDU5LjA4IDM3LjM4IDU4Ljc1IEMzMy44IDU3Ljk2IDMxLjE3IDU2LjY0IDI3Ljk4IDU0LjkxIEMyNiA1NCAyNiA1NCAyMi4zMSA1My41IEMxOC4zNSA1Mi45IDE2LjgxIDUxLjgxIDE0IDQ5IEMxMSA0NC42NiAxMSA0NC42NiAxMSA0MiBDMTAuNDMgNDIuMDYgOS44NiA0Mi4xMiA5LjI4IDQyLjE4IEMzLjg0IDQyLjQ5IDAuNzQgNDEuOCAtMy41OSAzOC40OCBDLTcuODMgMzQuMDIgLTcuMjkgMjkuMjUgLTcuMTkgMjMuNCBDLTYuODEgMTYuNjYgLTYuMTkgMTEuMzggLTIgNiBDLTEuMjggNC4wMiAtMC42IDIuMDIgMCAwIFogIiBmaWxsPSIjNzA3MDZGIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg5NSw1OCkiLz4KPHBhdGggZD0iTTAgMCBDMC42NiAwIDEuMzIgMCAyIDAgQzIgMC45OSAyIDEuOTggMiAzIEMyLjk5IDMgMy45OCAzIDUgMyBDNSAzLjY2IDUgNC4zMiA1IDUgQzYuNjUgNSA4LjMgNSAxMCA1IEM5LjM0IDcuOTcgOC42OCAxMC45NCA4IDE0IEM5LjY1IDE0IDExLjMgMTQgMTMgMTQgQzEzIDE1LjY3IDEzIDE3LjMzIDEzIDE5IEMxMi4wMSAxOSAxMS4wMiAxOSAxMCAxOSBDMTAgMTkuOTkgMTAgMjAuOTggMTAgMjIgQzExLjMyIDIyIDEyLjY0IDIyIDE0IDIyIEMxNCAyMi42NiAxNCAyMy4zMiAxNCAyNCBDMTMuMDEgMjQuMzMgMTIuMDIgMjQuNjYgMTEgMjUgQzExLjk5IDI1Ljk5IDEyLjk4IDI2Ljk4IDE0IDI4IEM3LjM4IDI4LjEyIDcuMzggMjguMTIgNCAyNyBDNCAyNy42NiA0IDI4LjMyIDQgMjkgQzUuMzIgMjkuMzMgNi42NCAyOS42NiA4IDMwIEM4IDMwLjY2IDggMzEuMzIgOCAzMiBDNi4zNSAzMiA0LjcgMzIgMyAzMiBDMy42NiAzMi4zMyA0LjMyIDMyLjY2IDUgMzMgQzUgMzMuNjYgNSAzNC4zMiA1IDM1IEM1LjY2IDM1IDYuMzIgMzUgNyAzNSBDNyAzNS45OSA3IDM2Ljk4IDcgMzggQzQuOCAzNy4wMSAzLjE4IDM2LjE5IDEuNSAzNC40NCBDLTAuMjcgMzIuNzQgLTEuNjEgMzIuNDEgLTQgMzIgQy0zLjE4IDMyLjk1IC0yLjM1IDMzLjkgLTEuNSAzNC44OCBDMSAzNy43NSAxIDM3Ljc1IDEgNDAgQzEuNjYgNDAgMi4zMiA0MCAzIDQwIEMzIDQwLjk5IDMgNDEuOTggMyA0MyBDMi4wMSA0MyAxLjAyIDQzIDAgNDMgQy0wLjE2IDQyLjUgLTAuMTYgNDIuNSAtMSA0MCBDLTEuOTkgMzkuNjcgLTIuOTggMzkuMzQgLTQgMzkgQy00LjMzIDM4LjM0IC00LjY2IDM3LjY4IC01IDM3IEMtNS45OSAzNi42NyAtNi45OCAzNi4zNCAtOCAzNiBDLTggMzUuMzQgLTggMzQuNjggLTggMzQgQy04LjY2IDM0IC05LjMyIDM0IC0xMCAzNCBDLTkuNjUgMzQuNzQgLTkuMyAzNS40OCAtOC45NCAzNi4yNSBDLTcuOTMgMzkuMjEgLTguMTIgNDAuMTIgLTkgNDMgQy05Ljg0IDQxLjU0IC0xMC42NyA0MC4wOSAtMTEuNSAzOC42MiBDLTExLjczIDM4LjIyIC0xMS43MyAzOC4yMiAtMTIuOTEgMzYuMTYgQy0xNCAzNCAtMTQgMzQgLTE0IDMyIEMtMTMuNDMgMzEuOTkgLTEyLjg2IDMxLjk3IC0xMi4yOCAzMS45NiBDLTYuNTEgMzEuNiAtMS45OSAzMC40MSAyIDI2IEM0LjIyIDIwLjI2IDMuODkgMTMuMDIgMyA3IEMwLjcgNC41OCAtMC42MSA0LjU0IC00IDQgQy0zLjAxIDMuNjcgLTIuMDIgMy4zNCAtMSAzIEMtMC42NyAyLjAxIC0wLjM0IDEuMDIgMCAwIFogIiBmaWxsPSIjNzM3NDcyIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMTAsMTEpIi8+CjxwYXRoIGQ9Ik0wIDAgQy0wLjY2IDEuNjUgLTEuMzIgMy4zIC0yIDUgQy0wLjY4IDUuMzMgMC42NCA1LjY2IDIgNiBDMC4wMiAxMi4wNSAtMy41NyAxNC4wNiAtOSAxNyBDLTIxLjE0IDIyLjQ5IC0zMi45IDIzLjMyIC00NiAyMyBDLTQ2IDIyLjY3IC00NiAyMi4zNCAtNDYgMjIgQy00My4wMyAyMS42NyAtNDAuMDYgMjEuMzQgLTM3IDIxIEMtMzcgMjAuNjcgLTM3IDIwLjM0IC0zNyAyMCBDLTM0LjQyIDE5LjUgLTMxLjgzIDE5IC0yOS4yNSAxOC41IEMtMjguNTIgMTguMzYgLTI3Ljc5IDE4LjIxIC0yNy4wNCAxOC4wNyBDLTIzLjYxIDE3LjQxIC0yMC41MSAxNyAtMTcgMTcgQy0xNy4wNCAxNi4yMiAtMTcuMDggMTUuNDMgLTE3LjEyIDE0LjYyIEMtMTcgMTIgLTE3IDEyIC0xNSAxMCBDLTE1LjA4IDkuNjkgLTE1LjA4IDkuNjkgLTE1LjUgOC4xMiBDLTE2IDYgLTE2IDYgLTE1LjMgMy45OCBDLTEzLjI2IDAuODggLTEwLjcgMC40OSAtNy4yNyAtMC41NCBDLTQuNTggLTEuMDkgLTIuNTkgLTAuOTIgMCAwIFogIiBmaWxsPSIjRjJFRkJCIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNTAsNTMpIi8+CjxwYXRoIGQ9Ik0wIDAgQzAuNjYgMCAxLjMyIDAgMiAwIEMyLjcyIDEuOTggMy4zOCAzLjk4IDQgNiBDNS41OCA3LjU4IDcuMzggNy4zNSA5LjU2IDcuNTYgQzEwLjM5IDcuNjUgMTEuMjIgNy43MyAxMi4wNyA3LjgyIEMxMi43IDcuODggMTMuMzQgNy45NCAxNCA4IEMxNC4zMyA5LjY1IDE0LjY2IDExLjMgMTUgMTMgQzE1LjY2IDEzIDE2LjMyIDEzIDE3IDEzIEMxNyAxMy45OSAxNyAxNC45OCAxNyAxNiBDMTcuOTkgMTYuMzMgMTguOTggMTYuNjYgMjAgMTcgQzE4LjM1IDE3LjE2IDE4LjM1IDE3LjE2IDEwIDE4IEMxMC4xIDE4Ljk1IDEwLjIxIDE5LjkgMTAuMzEgMjAuODggQzEwLjIxIDIxLjkxIDEwLjExIDIyLjk0IDEwIDI0IEMzLjg3IDI3Ljc4IC00LjA1IDI3LjEyIC0xMSAyNyBDLTcuNTggMjQuNzIgLTYuMzIgMjQuNzggLTIuMzEgMjQuODggQy0xLjgyIDI0Ljg4IC0xLjgyIDI0Ljg4IDAuNyAyNC45MyBDMS40NiAyNC45NSAyLjIyIDI0Ljk4IDMgMjUgQzIuMjYgMjAuMiAyLjI2IDIwLjIgLTAuMDYgMTguMzggQy0yLjg1IDE0Ljk2IC0yLjQgMTIuMDQgLTIuMzQgNy43NSBDLTEuOTggNC44NCAtMS4zNCAyLjYxIDAgMCBaICIgZmlsbD0iIzZFNkU3MCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTcwLDU5KSIvPgo8cGF0aCBkPSJNMCAwIEMwLjYyIDAuMjcgMS4yNCAwLjU0IDEuODggMC44MSBDNi4xOCAyLjQ1IDEwLjU4IDMuNzEgMTUgNSBDMTUgNS42NiAxNSA2LjMyIDE1IDcgQzE1LjY2IDcgMTYuMzIgNyAxNyA3IEMyMC4wMiAxMC4yIDIxLjUgMTIuNjIgMjIgMTcgQzIyLjY2IDE3IDIzLjMyIDE3IDI0IDE3IEMyNS40OSAyMS40NiAyNS4yMyAyNS45NyAyNS4zMyAzMC42NSBDMjYgMzQgMjYgMzQgMjguMzYgMzYuMzIgQzI5LjIzIDM2Ljg3IDMwLjEgMzcuNDMgMzEgMzggQzMxLjk5IDM4LjY2IDMyLjk4IDM5LjMyIDM0IDQwIEMzMy4wMSA0MC4zMyAzMi4wMiA0MC42NiAzMSA0MSBDMjkuNDMgNDIuODUgMjkuNDMgNDIuODUgMjcuODggNDUuMDYgQzI2Ljk0IDQ2LjM5IDI1Ljk4IDQ3LjcxIDI1IDQ5IEMyNC42NyA0OSAyNC4zNCA0OSAyNCA0OSBDMjQgNDQuNzEgMjQgNDAuNDIgMjQgMzYgQzIzLjM0IDM2IDIyLjY4IDM2IDIyIDM2IEMyMC40MSAzMi44MyAyMC42MiAyOS4zNiAyMC40NCAyNS44OCBDMjAuMzkgMjUuMTIgMjAuMzUgMjQuMzcgMjAuMzEgMjMuNTkgQzIwLjIgMjEuNzMgMjAuMSAxOS44NiAyMCAxOCBDMTkuMDEgMTggMTguMDIgMTggMTcgMTggQzE2Ljk2IDE3LjUzIDE2Ljk2IDE3LjUzIDE2Ljc1IDE1LjEyIEMxNi41IDE0LjA5IDE2LjI1IDEzLjA2IDE2IDEyIEMxNC4yMiAxMC45MyAxNC4yMiAxMC45MyAxMiAxMCBDMTAuNTggOS4zNCA5LjE2IDguNjcgNy43NSA4IEM3LjA0IDcuNjcgNi4zNCA3LjM0IDUuNjEgNyBDNS4zNCA2Ljg0IDUuMzQgNi44NCA0IDYgQzQgNS4zNCA0IDQuNjggNCA0IEMzLjM0IDMuNjcgMi42OCAzLjM0IDIgMyBDMS4zNCAyLjY3IDAuNjggMi4zNCAwIDIgQzAgMS4zNCAwIDAuNjggMCAwIFogIiBmaWxsPSIjNzY3Njc2IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMjUsNDcpIi8+CjxwYXRoIGQ9Ik0wIDAgQy0yLjY5IDEuMzUgLTQuNjkgMC45NSAtNy42OSAwLjgxIEMtMTMuNDIgMC43NCAtMTYuNCAxLjY1IC0yMSA1IEMtMjAuNjcgNS4zMyAtMjAuMzQgNS42NiAtMjAgNiBDLTE3LjE1IDUuOTkgLTE0LjMxIDUuODcgLTExLjQ3IDUuNzQgQy0xMS4wNiA1Ljc4IC0xMS4wNiA1Ljc4IC05IDYgQy04Ljg0IDYuNSAtOC44NCA2LjUgLTggOSBDLTguNTIgOC45OCAtOC41MiA4Ljk4IC0xMS4xNSA4Ljg2IEMtMTkuNzcgOC41OSAtMjYuMTMgOS4xNyAtMzQgMTMgQy0zOC4xNyAxNC41NyAtNDEuNjUgMTUuNTMgLTQ2IDE0IEMtNDYuMzMgMTMuMzQgLTQ2LjY2IDEyLjY4IC00NyAxMiBDLTQ2LjY3IDExLjM0IC00Ni4zNCAxMC42OCAtNDYgMTAgQy00NC44OSAxMC4wOCAtNDMuNzcgMTAuMTYgLTQyLjYyIDEwLjI1IEMtMzcuNDQgMTAuNDMgLTMzLjkzIDguMDUgLTI5LjYxIDUuNDEgQy0yNy4wMiA0LjAxIC0yNC45IDMuNDEgLTIyIDMgQy0yMiAyLjAxIC0yMiAxLjAyIC0yMiAwIEMtMTQuNiAtMi4xNSAtNy4xNiAtMy43IDAgMCBaICIgZmlsbD0iIzk3OEM4MyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjE3LDUpIi8+CjxwYXRoIGQ9Ik0wIDAgQzMuMjUgMC4xOSAzLjI1IDAuMTkgNi4zMSAwLjc1IEM5LjMyIDEuMiAxMS4zMiAwLjg0IDE0LjI1IDAuMTkgQzE0LjkxIDAuNTIgMTUuNTcgMC44NSAxNi4yNSAxLjE5IEMxNS45MiAzLjE3IDE1LjU5IDUuMTUgMTUuMjUgNy4xOSBDMTEuMyA3LjI5IDcuMzUgNy4zNiAzLjQgNy40MSBDMS4zOSA3LjQ0IC0wLjYyIDcuNDkgLTIuNjIgNy41NCBDLTMuODggNy41NSAtNS4xMyA3LjU2IC02LjQzIDcuNTggQy03LjU5IDcuNiAtOC43NSA3LjYyIC05Ljk1IDcuNjQgQy0xMi43NSA3LjE5IC0xMi43NSA3LjE5IC0xNC4yMSA1LjI5IEMtMTQuNzUgMy4xOSAtMTQuNzUgMy4xOSAtMTMuNzUgMS4xOSBDLTExLjQyIDEuMyAtOS4xOCAxLjcxIC02Ljg4IDIuMDkgQy02LjE4IDIuMTIgLTUuNDcgMi4xNiAtNC43NSAyLjE5IEMtMi43NSAwLjE5IC0yLjc1IDAuMTkgMCAwIFogIiBmaWxsPSIjODI3NDZFIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0Mi43NSwyMzUuODEyNSkiLz4KPHBhdGggZD0iTTAgMCBDMC4zMyAwLjY2IDAuNjYgMS4zMiAxIDIgQzMuMDYgMi42MiAzLjA2IDIuNjIgNSAzIEM1IDMuNjYgNSA0LjMyIDUgNSBDMy4zNSA1IDEuNyA1IDAgNSBDMC42NiA1LjMzIDEuMzIgNS42NiAyIDYgQzIgNi42NiAyIDcuMzIgMiA4IEMyLjY2IDggMy4zMiA4IDQgOCBDNCA4Ljk5IDQgOS45OCA0IDExIEMxLjggMTAuMDEgMC4xOCA5LjE5IC0xLjUgNy40NCBDLTMuMjcgNS43NCAtNC42MSA1LjQxIC03IDUgQy02LjE4IDUuOTUgLTUuMzUgNi45IC00LjUgNy44OCBDLTIgMTAuNzUgLTIgMTAuNzUgLTIgMTMgQy0xLjM0IDEzIC0wLjY4IDEzIDAgMTMgQzAgMTMuOTkgMCAxNC45OCAwIDE2IEMtMC45OSAxNiAtMS45OCAxNiAtMyAxNiBDLTMuMzMgMTUuMDEgLTMuNjYgMTQuMDIgLTQgMTMgQy00Ljk5IDEyLjY3IC01Ljk4IDEyLjM0IC03IDEyIEMtNy4zMyAxMS4zNCAtNy42NiAxMC42OCAtOCAxMCBDLTguOTkgOS42NyAtOS45OCA5LjM0IC0xMSA5IEMtMTEgOC4zNCAtMTEgNy42OCAtMTEgNyBDLTExLjY2IDcgLTEyLjMyIDcgLTEzIDcgQy0xMi42NSA3Ljc0IC0xMi4zIDguNDggLTExLjk0IDkuMjUgQy0xMC45MyAxMi4yMSAtMTEuMTIgMTMuMTIgLTEyIDE2IEMtMTIuODQgMTQuNTQgLTEzLjY3IDEzLjA5IC0xNC41IDExLjYyIEMtMTQuOTYgMTAuODEgLTE1LjQzIDEwIC0xNS45MSA5LjE2IEMtMTcgNyAtMTcgNyAtMTcgNSBDLTE2LjM5IDQuOTUgLTE1Ljc3IDQuOSAtMTUuMTQgNC44NSBDLTE0LjMzIDQuNzggLTEzLjUyIDQuNyAtMTIuNjkgNC42MiBDLTExLjg5IDQuNTYgLTExLjA5IDQuNDkgLTEwLjI2IDQuNDEgQy04IDQgLTggNCAtNSAyIEMtMi4zMSAxLjg4IC0yLjMxIDEuODggMCAyIEMwIDEuMzQgMCAwLjY4IDAgMCBaICIgZmlsbD0iIzc5Nzk3MiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjEzLDM4KSIvPgo8cGF0aCBkPSJNMCAwIEMwLjk5IDAgMS45OCAwIDMgMCBDMy4wMSAwLjk2IDMuMDMgMS45MyAzLjA0IDIuOTIgQzMuMDkgNC4xOSAzLjE0IDUuNDUgMy4xOSA2Ljc1IEMzLjIyIDggMy4yNiA5LjI2IDMuMjkgMTAuNTUgQzQgMTQgNCAxNCA2LjM2IDE2LjMzIEM3LjIzIDE2Ljg4IDguMSAxNy40MyA5IDE4IEM5Ljk5IDE4LjY2IDEwLjk4IDE5LjMyIDEyIDIwIEMxMS4wMSAyMC4zMyAxMC4wMiAyMC42NiA5IDIxIEM3LjQzIDIyLjg1IDcuNDMgMjIuODUgNS44OCAyNS4wNiBDNC45NCAyNi4zOSAzLjk4IDI3LjcxIDMgMjkgQzIuNjcgMjkgMi4zNCAyOSAyIDI5IEMxLjk0IDI4LjEgMS44OCAyNy4xOSAxLjgyIDI2LjI2IEMxLjczIDI1LjA4IDEuNjUgMjMuOSAxLjU2IDIyLjY5IEMxLjQ4IDIxLjUyIDEuNCAyMC4zNCAxLjMyIDE5LjE0IEMxIDE2IDEgMTYgMCAxMyBDLTAuMDcgMTAuNzcgLTAuMDggOC41NCAtMC4wNiA2LjMxIEMtMC4wNSA1LjEzIC0wLjA0IDMuOTUgLTAuMDQgMi43NCBDLTAuMDIgMS44MyAtMC4wMSAwLjkzIDAgMCBaICIgZmlsbD0iIzcxNkY2QiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTQ3LDY3KSIvPgo8cGF0aCBkPSJNMCAwIEMyLjA3IDMuNjUgMy4wOCA3LjUzIDQuMTIgMTEuNTYgQzQuMzEgMTIuMjMgNC40OSAxMi45MSA0LjY4IDEzLjYgQzUuNDQgMTYuNDkgNiAxOSA2IDIyIEM4LjQ0IDIxLjYyIDguNDQgMjEuNjIgMTEgMjEgQzExLjMzIDIwLjM0IDExLjY2IDE5LjY4IDEyIDE5IEMxNC4xOCAxOC42MiAxNC4xOCAxOC42MiAxNi44OCAxOC40NCBDMTkuODcgMTguMjIgMjIuMTMgMTcuOTYgMjUgMTcgQzI0LjY3IDE4LjMyIDI0LjM0IDE5LjY0IDI0IDIxIEMyMS4zNiAyMSAxOC43MiAyMSAxNiAyMSBDMTYgMjEuNjYgMTYgMjIuMzIgMTYgMjMgQzEzLjA4IDI0LjkgMTAuNzUgMjUuMjUgNy4zMSAyNS4xOSBDNi41MiAyNS4xOCA1Ljc0IDI1LjE3IDQuOTMgMjUuMTcgQzMgMjUgMyAyNSAyIDI0IEMxLjc5IDIyLjI1IDEuNjMgMjAuNSAxLjUgMTguNzUgQzEuMjkgMTUuOTEgMS4wNCAxMy4yIDAuNDcgMTAuNDEgQy0wLjIyIDYuOSAtMC4wNiAzLjU3IDAgMCBaICIgZmlsbD0iIzcwNkY3MSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTczLDE3MSkiLz4KPHBhdGggZD0iTTAgMCBDMC42MiAwLjAyIDAuNjIgMC4wMiAzLjc1IDAuMTIgQzQuMzggMiA0LjM4IDIgNC43NSA0LjEyIEMyLjc1IDYuMTIgMi43NSA2LjEyIDAuMDQgNi4zNSBDLTEuMDggNi4zNCAtMi4yIDYuMzMgLTMuMzUgNi4zMiBDLTMuOTYgNi4zMiAtMy45NiA2LjMyIC03LjAyIDYuMyBDLTguMjkgNi4yOCAtOS41NyA2LjI3IC0xMC44OCA2LjI1IEMtMTIuMTUgNi4yNCAtMTMuNDMgNi4yMyAtMTQuNzUgNi4yMiBDLTE3LjkyIDYuMiAtMjEuMDggNi4xNyAtMjQuMjUgNi4xMiBDLTI0LjI1IDUuMTMgLTI0LjI1IDQuMTUgLTI0LjI1IDMuMTIgQy0yMy4xNCAzLjA4IC0yMi4wMyAzLjAzIC0yMC44OSAyLjk4IEMtMTkuNDMgMi45IC0xNy45NiAyLjgzIC0xNi41IDIuNzUgQy0xNi4xNCAyLjczIC0xNi4xNCAyLjczIC0xNC4yOSAyLjY2IEMtOS4xMSAyLjM3IC01LjA0IC0wLjE3IDAgMCBaICIgZmlsbD0iIzg2NkY2RSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAyLjI1LDIzNi44NzUpIi8+CjxwYXRoIGQ9Ik0wIDAgQzAgMiAwIDIgLTEuODggNC4xMiBDLTQgNiAtNCA2IC02IDYgQy02IDYuNjYgLTYgNy4zMiAtNiA4IEMtNy41NCA4LjQ4IC05LjA4IDguOTYgLTEwLjYyIDkuNDQgQy0xMS40OCA5LjcgLTEyLjM0IDkuOTcgLTEzLjIzIDEwLjI1IEMtMTguODEgMTEuNzYgLTI0LjExIDEyLjE0IC0yOS44OCAxMi4wNiBDLTMwLjIyIDEyLjA2IC0zMC4yMiAxMi4wNiAtMzEuOTYgMTIuMDUgQy0zMy42NCAxMi4wNCAtMzUuMzIgMTIuMDIgLTM3IDEyIEMtMzcgMTEuNjcgLTM3IDExLjM0IC0zNyAxMSBDLTM1LjUxIDEwLjg0IC0zNS41MSAxMC44NCAtMjggMTAgQy0yOCA5LjY3IC0yOCA5LjM0IC0yOCA5IEMtMjUuNDIgOC41IC0yMi44MyA4IC0yMC4yNSA3LjUgQy0xOS41MiA3LjM2IC0xOC43OSA3LjIxIC0xOC4wNCA3LjA3IEMtMTQuNjEgNi40MSAtMTEuNTEgNiAtOCA2IEMtOCA0LjM1IC04IDIuNyAtOCAxIEMtNS4yNCAwLjQgLTIuODQgMCAwIDAgWiAiIGZpbGw9IiNGREY5REIiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDI0MSw2NCkiLz4KPHBhdGggZD0iTTAgMCBDMC42NiAwIDEuMzIgMCAyIDAgQzIgMC42NiAyIDEuMzIgMiAyIEMyLjY2IDIgMy4zMiAyIDQgMiBDNC4zMyAzLjMyIDQuNjYgNC42NCA1IDYgQzUuNjYgNiA2LjMyIDYgNyA2IEMxMS4wMiAxMy44IDkuOTggMjIuNDcgOS41NiAzMC45NCBDOS41MSAzMi4xIDkuNDYgMzMuMjYgOS40IDM0LjQ2IEM5LjI4IDM3LjMgOS4xNCA0MC4xNSA5IDQzIEM4LjAxIDQzIDcuMDIgNDMgNiA0MyBDNS4wMyAzOS44OCA1LjAxIDM4Ljk1IDUuOTQgMzUuNjIgQzguMzIgMjYuOTcgNy43MyAxNy40OCA1IDkgQzQuNjkgNy44NyA0LjM4IDYuNzMgNC4wNiA1LjU2IEMzLjcxIDQuNzIgMy4zNiAzLjg3IDMgMyBDMi4wMSAyLjY3IDEuMDIgMi4zNCAwIDIgQzAgMS4zNCAwIDAuNjggMCAwIFogIiBmaWxsPSIjNzg2RTVDIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg3MCwxOTcpIi8+CjxwYXRoIGQ9Ik0wIDAgQzMgNC41IDMuMTkgNy42NyAzIDEzIEMyLjY3IDEzLjY2IDIuMzQgMTQuMzIgMiAxNSBDMS45MyAxNyAxLjkyIDE5IDEuOTQgMjEgQzEuOTUgMjIuMjIgMS45NSAyMy40NCAxLjk2IDI0LjY5IEMxLjk5IDI3LjI0IDIuMDEgMjkuOCAyLjA0IDMyLjM1IEMyLjA4IDM5IDEuOTIgNDUuNDEgMSA1MiBDMC4zNCA1MS4zNCAtMC4zMiA1MC42OCAtMSA1MCBDLTAuOTggNDcuMzEgLTAuOTggNDcuMzEgLTAuNjIgNDQgQy0wLjEgMzguMzUgMC40MSAzMi42OCAwIDI3IEMtMC4zMyAyNi42NyAtMC42NiAyNi4zNCAtMSAyNiBDLTEuMzggMjEuODQgLTEuMzkgMTguMDYgMC4wNiAxNC4xMiBDMS40OSA5LjM3IDAuNjQgNC44NyAwIDAgWiAiIGZpbGw9IiM5NTkwODQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDUyLDE3NikiLz4KPHBhdGggZD0iTTAgMCBDMC42NiAwIDEuMzIgMCAyIDAgQzIuMDUgMS42IDIuMDkgMy4yMSAyLjEyIDQuODEgQzIuMTUgNS43MSAyLjE3IDYuNiAyLjIgNy41MiBDMiAxMCAyIDEwIDAgMTMgQy00LjExIDE1LjIgLTguMzIgMTYuNDQgLTEzIDE2IEMtMTIuODMgMTYuNzggLTEyLjY3IDE3LjU3IC0xMi41IDE4LjM4IEMtMTEuODcgMjIuOTQgLTExLjkyIDI3LjQgLTEyIDMyIEMtMTUuMDggMjguOTIgLTE1LjE2IDI2LjE3IC0xNS4xOSAyMiBDLTE1LjIgMjEuMTMgLTE1LjIyIDIwLjI3IC0xNS4yMyAxOS4zOCBDLTE1IDE3IC0xNSAxNyAtMTMgMTQgQy0xMC43MiAxMy4wOSAtMTAuNzIgMTMuMDkgLTguMDYgMTIuMzggQy03LjE5IDEyLjE0IC02LjMxIDExLjkgLTUuNDEgMTEuNjUgQy00LjYxIDExLjQzIC0zLjgyIDExLjIyIC0zIDExIEMtMi4wMSAxMC42NyAtMS4wMiAxMC4zNCAwIDEwIEMwLjI5IDcuNzEgMC4yOSA3LjcxIDAuMTkgNC45NCBDMC4xNyA0LjQ4IDAuMTcgNC40OCAwLjExIDIuMTUgQzAuMDcgMS40NCAwLjA0IDAuNzMgMCAwIFogIiBmaWxsPSIjNzc3MDVBIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMjUsMTY1KSIvPgo8cGF0aCBkPSJNMCAwIEMtMS4zOCAyIC0xLjM4IDIgLTMgNCBDLTMuNjYgNCAtNC4zMiA0IC01IDQgQy01IDQuNjYgLTUgNS4zMiAtNSA2IEMtNi42OCA2Ljg1IC02LjY4IDYuODUgLTguODggNy42MiBDLTkuNTkgNy44OSAtMTAuMzEgOC4xNSAtMTEuMDUgOC40MSBDLTEzIDkgLTEzIDkgLTE1IDkgQy0xNiA2IC0xNiA2IC0xNS4zMyAzLjkzIEMtMTIuMTYgLTAuNjYgLTUuMDQgLTEuNzkgMCAwIFogIiBmaWxsPSIjRkNGOUQzIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNTAsNTMpIi8+CjxwYXRoIGQ9Ik0wIDAgQzAuOSAwLjAyIDEuODEgMC4wNSAyLjc0IDAuMDcgQzMuNjUgMC4wOSA0LjU2IDAuMTEgNS41IDAuMTIgQzYuMiAwLjE1IDYuOSAwLjE3IDcuNjIgMC4yIEM3LjYyIDEuMTkgNy42MiAyLjE4IDcuNjIgMy4yIEM3LjI5IDMuNTMgNi45NiAzLjg2IDYuNjIgNC4yIEM0LjI4IDQuMiAxLjk1IDQuMiAtMC4zOCA0LjIgQy0yLjA2IDQuNDggLTMuNzMgNC43OSAtNS4zOCA1LjIgQy01LjM4IDUuODYgLTUuMzggNi41MiAtNS4zOCA3LjIgQy00LjM5IDcuNTMgLTMuNCA3Ljg2IC0yLjM4IDguMiBDLTQuOTMgMTAuNTUgLTYuMDkgMTEuMTggLTkuNjMgMTEuMzggQy0xMC41NCAxMS4zMiAtMTEuNDUgMTEuMjYgLTEyLjM4IDExLjIgQy0xMi4wNSAxMC41NCAtMTEuNzIgOS44OCAtMTEuMzggOS4yIEMtMTAuNzIgOS4yIC0xMC4wNiA5LjIgLTkuMzggOS4yIEMtOS4zOCA4LjU0IC05LjM4IDcuODggLTkuMzggNy4yIEMtNy43NiA1LjQ5IC02LjA5IDMuODIgLTQuMzggMi4yIEMtMi4zOCAwLjIgLTIuMzggMC4yIDAgMCBaICIgZmlsbD0iI0U5RTdENSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjI3LjM4MjgxMjUsNTUuODA0Njg3NSkiLz4KPHBhdGggZD0iTTAgMCBDMy42MyAwIDcuMjYgMCAxMSAwIEMxMSAwLjMzIDExIDAuNjYgMTEgMSBDNy43IDEuMzMgNC40IDEuNjYgMSAyIEMxLjEgMi45NSAxLjIxIDMuOSAxLjMxIDQuODggQzEuMjEgNS45MSAxLjExIDYuOTQgMSA4IEMtNS4xMyAxMS43OCAtMTMuMDUgMTEuMTIgLTIwIDExIEMtMTYuNTggOC43MiAtMTUuMzIgOC43OCAtMTEuMzEgOC44OCBDLTEwLjgyIDguODggLTEwLjgyIDguODggLTguMyA4LjkzIEMtNy41NCA4Ljk1IC02Ljc4IDguOTggLTYgOSBDLTYuMzMgNi4zNiAtNi42NiAzLjcyIC03IDEgQy01LjI5IDIuNjMgLTQuMDcgMy44NyAtMyA2IEMtMi4wMSA1LjY3IC0xLjAyIDUuMzQgMCA1IEMwIDMuMzUgMCAxLjcgMCAwIFogIiBmaWxsPSIjNzI2RDVBIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNzksNzUpIi8+CjxwYXRoIGQ9Ik0wIDAgQzAuNjYgMCAxLjMyIDAgMiAwIEMyIDAuOTkgMiAxLjk4IDIgMyBDMi45OSAzIDMuOTggMyA1IDMgQzUgMy42NiA1IDQuMzIgNSA1IEM2LjMyIDUgNy42NCA1IDkgNSBDOC42NyA1Ljk5IDguMzQgNi45OCA4IDggQzcuNTcgMTEuNjEgNy4xOSAxNS4yMiA2Ljg0IDE4Ljg0IEM2LjQ0IDIyLjU5IDYuMTIgMjQuODEgNCAyOCBDMy4wMSAyNy42NyAyLjAyIDI3LjM0IDEgMjcgQzEuNjYgMjYuMzQgMi4zMiAyNS42OCAzIDI1IEM1LjExIDE5LjE0IDQuOSAxMi4xIDQgNiBDMS43IDMuNTggMC4zOSAzLjU0IC0zIDMgQy0yLjAxIDIuNjcgLTEuMDIgMi4zNCAwIDIgQzAgMS4zNCAwIDAuNjggMCAwIFogIiBmaWxsPSIjNzQ2RTU4IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMDksMTIpIi8+Cjwvc3ZnPgo="
@@ -1492,10 +1493,10 @@ export default function Home() {
                 <p id="fiText">{flagData[flagPart].x}</p>
               </div>
               <div className="flag-chips rv rv-d2">
-                <button className={`fchip ${flagPart === 'maroon' ? 'active' : ''}`} data-part="maroon" onClick={() => handlePartShow('maroon')} onMouseEnter={() => handlePartShow('maroon')}>மரூன் சிவப்பு</button>
-                <button className={`fchip ${flagPart === 'yellow' ? 'active' : ''}`} data-part="yellow" onClick={() => handlePartShow('yellow')} onMouseEnter={() => handlePartShow('yellow')}>மஞ்சள்</button>
-                <button className={`fchip ${flagPart === 'vaagai' ? 'active' : ''}`} data-part="vaagai" onClick={() => handlePartShow('vaagai')} onMouseEnter={() => handlePartShow('vaagai')}>வாகை மலர்</button>
-                <button className={`fchip ${flagPart === 'ele' ? 'active' : ''}`} data-part="ele" onClick={() => handlePartShow('ele')} onMouseEnter={() => handlePartShow('ele')}>இரட்டை யானைகள்</button>
+                <button className={`fchip ${flagPart === 'maroon' ? 'active' : ''}`} data-part="maroon" onClick={() => handlePartShow('maroon')} onMouseEnter={() => handlePartShow('maroon')}>{t('home.flag.chip.maroon')}</button>
+                <button className={`fchip ${flagPart === 'yellow' ? 'active' : ''}`} data-part="yellow" onClick={() => handlePartShow('yellow')} onMouseEnter={() => handlePartShow('yellow')}>{t('home.flag.chip.yellow')}</button>
+                <button className={`fchip ${flagPart === 'vaagai' ? 'active' : ''}`} data-part="vaagai" onClick={() => handlePartShow('vaagai')} onMouseEnter={() => handlePartShow('vaagai')}>{t('home.flag.chip.vaagai')}</button>
+                <button className={`fchip ${flagPart === 'ele' ? 'active' : ''}`} data-part="ele" onClick={() => handlePartShow('ele')} onMouseEnter={() => handlePartShow('ele')}>{t('home.flag.chip.ele')}</button>
               </div>
             </div>
           </div>
@@ -1505,8 +1506,8 @@ export default function Home() {
       {/* MARQUEE ALT */}
       <div className="marquee alt" aria-hidden="true">
         <div className="mq-track" data-speed="-1">
-          <span>சமூக நீதி <i className="star">✦</i> சமத்துவம் <i className="star">✦</i> ஊழலற்ற நிர்வாகம் <i className="star">✦</i>
-            மனிதநேயம் <i className="star">✦</i></span>
+          <span>{t('principles.social_justice.title')} <i className="star">✦</i> {t('principles.equality.title')} <i className="star">✦</i> {t('principles.corruption_free.title')} <i className="star">✦</i>
+            {t('principles.humanism.title')} <i className="star">✦</i></span>
         </div>
       </div>
 
@@ -1530,39 +1531,39 @@ export default function Home() {
       />
 
       {/* EVENTS */}
-      <section className="sec-pad" data-cursor="maroon" data-rail="நிகழ்வு" id="events">
+      <section className="sec-pad" data-cursor="maroon" data-rail={t('home.rail.events')} id="events">
         <div className="wrap">
           <div className="sec-head center">
-            <span className="sec-eyebrow">களத்தில் நாங்கள்</span>
-            <h2>நிகழ்வுகள் & களப்பணிகள்</h2>
-            <p>மாவட்டக் கிளையின் நிகழ்வுகள் — புகைப்படங்கள் பதிவேற்றியதும் இங்கே தானாக வரிசையாகும்.</p>
+            <span className="sec-eyebrow">{t('home.events.eyebrow')}</span>
+            <h2>{t('home.events.title')}</h2>
+            <p>{t('home.events.desc')}</p>
           </div>
           <div className="egrid">
             <article className="ecard rv">
               <div className="ebg"></div><img className="emed"
                 src="data:image/webp;base64,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"
                 alt="" />
-              <div className="ebody"><span className="etag">உறுப்பினர் சேர்க்கை</span>
-                <h3>தெரு முகாம் — வார்டு வாரியான இணைப்பு</h3>
-                <p>புதிய உறுப்பினர்களைச் சேர்க்கும் கள முகாம்கள்.</p>
+              <div className="ebody"><span className="etag">{t('home.events.membership.tag')}</span>
+                <h3>{t('home.events.membership.title')}</h3>
+                <p>{t('home.events.membership.desc')}</p>
               </div>
             </article>
             <article className="ecard rv rv-d1">
               <div className="ebg"></div><img className="emed"
                 src="data:image/webp;base64,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"
                 alt="" />
-              <div className="ebody"><span className="etag">சமூகப் பணி</span>
-                <h3>இரத்த தான முகாம்</h3>
-                <p>மனிதநேயக் கொள்கையின் கள வடிவம் — தொண்டர்களின் பங்களிப்பு.</p>
+              <div className="ebody"><span className="etag">{t('home.events.social.tag')}</span>
+                <h3>{t('home.events.social.title')}</h3>
+                <p>{t('home.events.social.desc')}</p>
               </div>
             </article>
             <article className="ecard rv rv-d2">
               <div className="ebg"></div><img className="emed"
                 src="data:image/webp;base64,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"
                 alt="" />
-              <div className="ebody"><span className="etag">கொள்கை விளக்கம்</span>
-                <h3>கிராமசபை சந்திப்புகள்</h3>
-                <p>"என் தெரு, என் திட்டம்" கோரிக்கைகளை நேரடியாகக் கேட்டல்.</p>
+              <div className="ebody"><span className="etag">{t('home.events.policy.tag')}</span>
+                <h3>{t('home.events.policy.title')}</h3>
+                <p>{t('home.events.policy.desc')}</p>
               </div>
             </article>
           </div>
@@ -1583,7 +1584,7 @@ export default function Home() {
               <img src={TVK_LOGO} alt="" className="complaint-modal-whistle" aria-hidden="true" />
               <div>
                 <small style={{ color: '#FECB02', fontWeight: 800, letterSpacing: '0.05em' }}>TVK · NAMAKKAL WEST</small>
-                <h2 style={{ margin: '0.25rem 0 0', fontSize: '1.25rem', fontWeight: 900, color: '#fff' }}>பொதுமக்கள் குறைதீர் மனு</h2>
+                <h2 style={{ margin: '0.25rem 0 0', fontSize: '1.25rem', fontWeight: 900, color: '#fff' }}>{t('home.form.title')}</h2>
               </div>
               <button
                 className="modal-close-btn"
@@ -1591,7 +1592,7 @@ export default function Home() {
                   setIsComplaintOpen(false);
                   if (isCameraActive) stopCamera();
                 }}
-                aria-label="மூடு"
+                aria-label={t('common.close')}
                 style={{ position: 'static', background: 'rgba(255,255,255,0.15)', color: '#fff' }}
               >
                 ✕
@@ -1607,15 +1608,15 @@ export default function Home() {
                     </svg>
                   </div>
                   <h2 style={{ color: 'var(--ok)', fontSize: '1.6rem', fontWeight: 800, marginBottom: '1rem' }}>
-                    மனு வெற்றிகரமாகச் சமர்ப்பிக்கப்பட்டது!
+                    {t("home.form.submit_success").split(".")[0] + "!"}
                   </h2>
                   <p style={{ color: 'var(--ink-soft)', fontSize: '1rem', marginBottom: '1.25rem' }}>
-                    உங்கள் மனுவின் கண்காணிப்பு எண் கீழே தரப்பட்டுள்ளது. இதைப் பயன்படுத்தி உங்கள் மனுவின் நிலையை அறிந்து கொள்ளலாம்.
+                    {t("home.receipt.warning").split("—")[0]}
                   </p>
                   <div className="tracking-id-box">{trackingId}</div>
 
                   <div style={{ background: 'rgba(160,0,0,0.06)', border: '1px solid rgba(160,0,0,0.2)', borderRadius: '0.6rem', padding: '0.85rem 1rem', margin: '0 0 1.1rem', fontSize: '0.9rem', lineHeight: 1.55, color: '#7a0000', fontWeight: 600, textAlign: 'left' }}>
-                    <b>முக்கியம்:</b> இந்த மனு எண்ணைக் கட்டாயம் பத்திரமாக வைத்துக் கொள்ளுங்கள் — உங்கள் மனுவின் நிலையை அறிய இந்த எண் மட்டுமே பயன்படும். கீழே உள்ள பட்டனை அழுத்தி, இந்த விவரங்களையும் நீங்கள் பதிவேற்றிய படம்/வீடியோ இணைப்புகளையும் <b>PDF ஆகப் பதிவிறக்கி வைத்துக் கொள்வது மிகவும் அவசியம்.</b>
+                    <b>{t("common.important")}:</b> {t("home.receipt.warning")}
                   </div>
 
                   <button
@@ -1623,13 +1624,13 @@ export default function Home() {
                     className="verify-btn"
                     onClick={generateComplaintPdf}
                   >
-                    விவரங்களை PDF ஆகப் பதிவிறக்கவும்
+                    {t("home.receipt.btn_print")}
                   </button>
                   <a
                     className="verify-btn"
                     href={`/track?trackingId=${encodeURIComponent(trackingId)}`}
                   >
-                    மனு நிலையை அறிய
+                    {t("nav.track")}
                   </a>
                   <button
                     type="button"
@@ -1644,7 +1645,7 @@ export default function Home() {
                       setMobile('');
                       setAadhaar('');
                       setAge('');
-                      setGender('ஆண்');
+                      setGender('male');
                       setAddress('');
                       setAreaStreet('');
                       setDescription('');
@@ -1671,14 +1672,14 @@ export default function Home() {
                       sessionStorage.removeItem('tvk_complaint_form_data');
                     }}
                   >
-                    புதிய மனுவைச் சமர்ப்பிக்க
+                    {t("home.receipt.btn_close")}
                   </button>
                 </div>
               ) : (
                 <div className="form-card">
                   <div className="form-header">
-                    <h1>பொதுமக்கள் குறைதீர் மனு</h1>
-                    <p>உங்கள் குறைகளைத் தொகுதி வாரியாகப் பதிவு செய்து தீர்வு காணுங்கள்</p>
+                    <h1>{t("home.receipt.title").split("/")[0].trim()}</h1>
+                    <p>{t("home.form.voter_check_desc")}</p>
                   </div>
 
                   <form onSubmit={handleSubmitComplaint} autoComplete="off">
@@ -1696,15 +1697,15 @@ export default function Home() {
                     {/* SECTION 1: VOTER VERIFICATION */}
                     <div className="form-section">
                       <div className="form-section-title">
-                        <span>1. வாக்காளர் சரிபார்ப்பு</span>
+                        <span>{t("home.form.step1")}</span>
                       </div>
                       <div className="input-group">
-                        <label htmlFor="voterId">வாக்காளர் அடையாள எண் (Voter ID) *</label>
+                        <label htmlFor="voterId">{t("home.form.voter_id_lbl")}</label>
                         <div className="verify-box">
                           <input
                             id="voterId"
                             type="text"
-                            placeholder="எ.கா. TN0010001"
+                            placeholder={t("home.form.voter_id_ph")}
                             value={voterId}
                             onChange={(e) => setVoterId(e.target.value)}
                             disabled={voterVerified}
@@ -1717,7 +1718,7 @@ export default function Home() {
                               onClick={handleVerifyVoter}
                               disabled={isVerifying}
                             >
-                              {isVerifying ? 'சரிபார்க்கிறது...' : 'சரிபார்'}
+                              {isVerifying ? t("home.form.voter_id_verifying") : t("home.form.voter_id_btn").split("(")[0].trim()}
                             </button>
                           ) : (
                             <button
@@ -1733,7 +1734,7 @@ export default function Home() {
                                 setAddress('');
                                 setDob('');
                                 setAge('');
-                                setGender('ஆண்');
+                                setGender('male');
                                 setPanchayat('');
                                 setTaluk('');
                                 setDistrict('');
@@ -1749,7 +1750,7 @@ export default function Home() {
                                 setLongitude(null);
                               }}
                             >
-                              மாற்று
+                              {t("common.change")}
                             </button>
                           )}
                         </div>
@@ -1757,28 +1758,27 @@ export default function Home() {
                         {!voterVerified && (
                           <div className="fallback-verify-section" style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--line)' }}>
                             <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '1rem', lineHeight: '1.5' }}>
-                              <strong>வாக்காளர் அடையாள எண் தற்போது இல்லையா?</strong><br />
-                              பெயர், கதவு எண், பிறந்த தேதி மற்றும் வார்டு எண்ணை பயன்படுத்தி உங்கள் வாக்காளர் விவரங்களை கண்டறியலாம்.
+                              {t("home.form.voter_id_fallback_desc")}
                             </p>
 
                             <div className="input-row" style={{ marginBottom: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                               <div className="input-group" style={{ marginBottom: 0 }}>
-                                <label htmlFor="fbName" style={{ fontSize: '0.85rem', fontWeight: 600 }}>பெயர் *</label>
+                                <label htmlFor="fbName" style={{ fontSize: '0.85rem', fontWeight: 600 }}>{t("home.form.voter_fallback.name")}</label>
                                 <input
                                   id="fbName"
                                   type="text"
-                                  placeholder="எ.கா. அருண் குமார்"
+                                  placeholder={t("home.form.citizen.name_ph")}
                                   value={fbName}
                                   onChange={(e) => setFbName(e.target.value)}
                                   style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '6px', border: '1.5px solid var(--cream-2)' }}
                                 />
                               </div>
                               <div className="input-group" style={{ marginBottom: 0 }}>
-                                <label htmlFor="fbDoorNo" style={{ fontSize: '0.85rem', fontWeight: 600 }}>கதவு எண் *</label>
+                                <label htmlFor="fbDoorNo" style={{ fontSize: '0.85rem', fontWeight: 600 }}>{t("home.form.voter_fallback.door")}</label>
                                 <input
                                   id="fbDoorNo"
                                   type="text"
-                                  placeholder="எ.கா. 12/4A"
+                                  placeholder={t("home.form.citizen.door_ph")}
                                   value={fbDoorNo}
                                   onChange={(e) => setFbDoorNo(e.target.value)}
                                   style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '6px', border: '1.5px solid var(--cream-2)' }}
@@ -1788,7 +1788,7 @@ export default function Home() {
 
                             <div className="input-row" style={{ marginBottom: '1.25rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                               <div className="input-group" style={{ marginBottom: 0 }}>
-                                <label htmlFor="fbDob" style={{ fontSize: '0.85rem', fontWeight: 600 }}>பிறந்த தேதி (விருப்பத்தேர்வு)</label>
+                                <label htmlFor="fbDob" style={{ fontSize: '0.85rem', fontWeight: 600 }}>{t("home.form.voter_fallback.dob")}</label>
                                 <input
                                   id="fbDob"
                                   type="date"
@@ -1798,11 +1798,11 @@ export default function Home() {
                                 />
                               </div>
                               <div className="input-group" style={{ marginBottom: 0 }}>
-                                <label htmlFor="fbWard" style={{ fontSize: '0.85rem', fontWeight: 600 }}>வார்டு எண் (விருப்பத்தேர்வு)</label>
+                                <label htmlFor="fbWard" style={{ fontSize: '0.85rem', fontWeight: 600 }}>{t("home.form.voter_fallback.ward")}</label>
                                 <input
                                   id="fbWard"
                                   type="text"
-                                  placeholder="எ.கா. 5"
+                                  placeholder="5"
                                   value={fbWard}
                                   onChange={(e) => setFbWard(e.target.value)}
                                   style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '6px', border: '1.5px solid var(--cream-2)' }}
@@ -1817,7 +1817,7 @@ export default function Home() {
                               onClick={handleFallbackVerify}
                               disabled={isFindingVoter}
                             >
-                              {isFindingVoter ? 'தேடுகிறது...' : 'வாக்காளர் விவரத்தை கண்டறி'}
+                              {isFindingVoter ? t("home.form.voter_fallback.searching") : t("home.form.voter_fallback.btn").split("(")[0].trim()}
                             </button>
                           </div>
                         )}
@@ -1825,7 +1825,7 @@ export default function Home() {
                         {voterVerified && (
                           <div style={{ marginTop: '1.25rem' }}>
                             <div className="status-badge success" style={{ marginBottom: '1rem' }}>
-                              <span>வாக்காளர் விவரங்கள் சரிபார்க்கப்பட்டன (Voter Verified)</span>
+                              <span>{t("home.form.voter_success")}</span>
                             </div>
                           </div>
                         )}
@@ -1841,25 +1841,27 @@ export default function Home() {
                     {/* SECTION 2: CITIZEN DETAILS */}
                     <div className="form-section">
                       <div className="form-section-title">
-                        <span>2. பொதுமக்கள் விவரங்கள்</span>
+                        <span>{t("home.form.step2")}</span>
                       </div>
 
                       <div className="input-row">
                         <div className="input-group">
-                          <label htmlFor="name">பெயர் *</label>
+                          <label htmlFor="name">{t("home.form.citizen.name")}</label>
                           <input
                             id="name"
                             type="text"
+                            placeholder={t("home.form.citizen.name_ph")}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
                           />
                         </div>
                         <div className="input-group">
-                          <label htmlFor="doorNo">கதவு எண் *</label>
+                          <label htmlFor="doorNo">{t("home.form.citizen.door")}</label>
                           <input
                             id="doorNo"
                             type="text"
+                            placeholder={t("home.form.citizen.door_ph")}
                             value={doorNo}
                             onChange={(e) => setDoorNo(e.target.value)}
                             required
@@ -1869,17 +1871,18 @@ export default function Home() {
 
                       <div className="input-row">
                         <div className="input-group">
-                          <label htmlFor="mobile">மொபைல் எண் *</label>
+                          <label htmlFor="mobile">{t("home.form.citizen.phone")}</label>
                           <input
                             id="mobile"
                             type="tel"
+                            placeholder="9876543210"
                             value={mobile}
                             onChange={(e) => setMobile(e.target.value)}
                             required
                           />
                         </div>
                         <div className="input-group">
-                          <label htmlFor="aadhaar">ஆதார் எண் (விருப்பத்தேர்வு)</label>
+                          <label htmlFor="aadhaar">{t("home.form.citizen.aadhaar")}</label>
                           <input
                             id="aadhaar"
                             type="text"
@@ -1892,7 +1895,7 @@ export default function Home() {
 
                       <div className="input-row">
                         <div className="input-group">
-                          <label htmlFor="dob">பிறந்த தேதி (Date of Birth)</label>
+                          <label htmlFor="dob">{t("home.form.citizen.dob")}</label>
                           <input
                             id="dob"
                             type="date"
@@ -1908,20 +1911,20 @@ export default function Home() {
                         </div>
                         <div className="input-row" style={{ gap: '1rem', marginBottom: 0, padding: 0, border: 'none', display: 'flex' }}>
                           <div className="input-group" style={{ marginBottom: 0 }}>
-                            <label htmlFor="gender">பாலினம் *</label>
+                            <label htmlFor="gender">{t("home.form.citizen.gender")} *</label>
                             <select
                               id="gender"
                               value={gender}
                               onChange={(e) => setGender(e.target.value)}
                               required
                             >
-                              <option value="ஆண்">ஆண்</option>
-                              <option value="பெண்">பெண்</option>
-                              <option value="இதர">இதர</option>
+                              <option value="male">{t("gender.male")}</option>
+                              <option value="female">{t("gender.female")}</option>
+                              <option value="other">{t("gender.other")}</option>
                             </select>
                           </div>
                           <div className="input-group" style={{ marginBottom: 0 }}>
-                            <label htmlFor="age">வயது *</label>
+                            <label htmlFor="age">{t("home.form.citizen.age")}</label>
                             <input
                               id="age"
                               type="number"
@@ -1936,13 +1939,13 @@ export default function Home() {
                       </div>
 
                       <div className="input-group">
-                        <label htmlFor="address">முகவரி *</label>
+                        <label htmlFor="address">{t("home.form.citizen.address")}</label>
                         <textarea
                           id="address"
                           rows={3}
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
-                          placeholder="உங்கள் முகவரியை இங்கே உள்ளிடவும்"
+                          placeholder={t("home.form.citizen.address_ph")}
                           required
                         />
                       </div>
@@ -1951,26 +1954,26 @@ export default function Home() {
                     {/* SECTION 3: LOCATION DETAILS */}
                     <div className="form-section">
                       <div className="form-section-title">
-                        <span>3. இருப்பிட விவரங்கள்</span>
+                        <span>3. {t("home.form.gps.btn").includes("GPS") ? t("home.form.gps.btn").split("(")[0].trim() : "இருப்பிட விவரங்கள்"}</span>
                       </div>
 
                       <div className="input-row">
                         <div className="input-group">
-                          <label htmlFor="constituency">தொகுதி *</label>
+                          <label htmlFor="constituency">{t("home.form.citizen.constituency")}</label>
                           <select
                             id="constituency"
                             value={constituency}
                             onChange={(e) => setConstituency(e.target.value)}
                             required
                           >
-                            <option value="">தொகுதியைத் தேர்ந்தெடுக்கவும்</option>
+                            <option value="">{t("home.form.gps.btn").includes("Select") ? "Select Constituency" : "தொகுதியைத் தேர்ந்தெடுக்கவும்"}</option>
                             {CONSTITUENCIES.map((c, i) => (
-                              <option key={i} value={c}>{c}</option>
+                              <option key={i} value={c}>{t(c)}</option>
                             ))}
                           </select>
                         </div>
                         <div className="input-group">
-                          <label htmlFor="ward">வார்டு எண் *</label>
+                          <label htmlFor="ward">{t("home.form.citizen.ward")}</label>
                           <input
                             id="ward"
                             type="text"
@@ -1983,31 +1986,31 @@ export default function Home() {
 
                       <div className="input-row">
                         <div className="input-group">
-                          <label htmlFor="panchayat">ஊராட்சி (Panchayat)</label>
+                          <label htmlFor="panchayat">Panchayat</label>
                           <input
                             id="panchayat"
                             type="text"
-                            placeholder="எ.கா. பள்ளிபாளையம்"
+                            placeholder="e.g. Pallipalayam"
                             value={panchayat}
                             onChange={(e) => setPanchayat(e.target.value)}
                           />
                         </div>
                         <div className="input-group">
-                          <label htmlFor="taluk">வட்டம் (Taluk)</label>
+                          <label htmlFor="taluk">Taluk</label>
                           <input
                             id="taluk"
                             type="text"
-                            placeholder="எ.கா. நாமக்கல்"
+                            placeholder="e.g. Namakkal"
                             value={taluk}
                             onChange={(e) => setTaluk(e.target.value)}
                           />
                         </div>
                         <div className="input-group">
-                          <label htmlFor="district">மாவட்டம் (District)</label>
+                          <label htmlFor="district">District</label>
                           <input
                             id="district"
                             type="text"
-                            placeholder="எ.கா. நாமக்கல்"
+                            placeholder="e.g. Namakkal"
                             value={district}
                             onChange={(e) => setDistrict(e.target.value)}
                           />
@@ -2015,11 +2018,11 @@ export default function Home() {
                       </div>
 
                       <div className="input-group">
-                        <label htmlFor="areaStreet">பகுதி / தெரு பெயர் *</label>
+                        <label htmlFor="areaStreet">{t("home.form.citizen.street")}</label>
                         <input
                           id="areaStreet"
                           type="text"
-                          placeholder="எ.கா. காந்தி நகர், மெயின் ரோடு"
+                          placeholder="e.g. Gandhi Nagar, Main Road"
                           value={areaStreet}
                           onChange={(e) => setAreaStreet(e.target.value)}
                           required
@@ -2027,7 +2030,7 @@ export default function Home() {
                       </div>
 
                       <div className="input-group">
-                        <label>தற்போதைய இருப்பிடம் (GPS)</label>
+                        <label>{t("home.form.gps.btn").includes("GPS") ? "GPS Location" : "தற்போதைய இருப்பிடம் (GPS)"}</label>
                         <div className="geo-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
                           <button
                             type="button"
@@ -2047,7 +2050,7 @@ export default function Home() {
                               <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
                               <circle cx="12" cy="10" r="3" />
                             </svg>
-                            {!voterVerified ? 'முதலில் வாக்காளர் சரிபார்ப்பை முடிக்கவும்' : isLocating ? 'கண்டறிகிறது...' : 'இருப்பிடத்தை கண்டறி'}
+                            {!voterVerified ? t("home.form.gps.first_verify") : isLocating ? t("home.form.gps.locating") : t("home.form.gps.btn").split("(")[0].trim()}
                           </button>
                           {gpsMessage && (
                             <div className="status-badge" style={{
@@ -2055,9 +2058,9 @@ export default function Home() {
                               padding: '0.4rem 0.75rem',
                               borderRadius: '4px',
                               fontWeight: 600,
-                              background: gpsMessage.includes('மறுக்கப்பட்டுள்ளது') || gpsMessage.includes('முடியவில்லை') || gpsMessage.includes('முயற்சிகள்') ? 'rgba(211, 47, 47, 0.08)' : 'rgba(254, 203, 2, 0.12)',
-                              color: gpsMessage.includes('மறுக்கப்பட்டுள்ளது') || gpsMessage.includes('முடியவில்லை') || gpsMessage.includes('முயற்சிகள்') ? '#d32f2f' : '#A06800',
-                              border: `1px solid ${gpsMessage.includes('மறுக்கப்பட்டுள்ளது') || gpsMessage.includes('முடியவில்லை') || gpsMessage.includes('முயற்சிகள்') ? '#ef5350' : '#FECB02'}`,
+                              background: gpsMessage.includes('மறுக்கப்பட்டுள்ளது') || gpsMessage.includes('முடியவில்லை') || gpsMessage.includes('முயற்சிகள்') || gpsMessage.includes('denied') || gpsMessage.includes('unable') ? 'rgba(211, 47, 47, 0.08)' : 'rgba(254, 203, 2, 0.12)',
+                              color: gpsMessage.includes('மறுக்கப்பட்டுள்ளது') || gpsMessage.includes('முடியவில்லை') || gpsMessage.includes('முயற்சிகள்') || gpsMessage.includes('denied') || gpsMessage.includes('unable') ? '#d32f2f' : '#A06800',
+                              border: `1px solid ${gpsMessage.includes('மறுக்கப்பட்டுள்ளது') || gpsMessage.includes('முடியவில்லை') || gpsMessage.includes('முயற்சிகள்') || gpsMessage.includes('denied') || gpsMessage.includes('unable') ? '#ef5350' : '#FECB02'}`,
                               width: '100%'
                             }}>
                               <span>{gpsMessage}</span>
@@ -2065,7 +2068,7 @@ export default function Home() {
                           )}
                           {latitude && longitude && (
                             <span style={{ fontSize: '0.9rem', color: 'var(--ok)', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span> {latitude.toFixed(5)}, {longitude.toFixed(5)}</span>
+                              <span>&nbsp;{latitude.toFixed(5)}, {longitude.toFixed(5)}</span>
                               {gpsAddress && <span style={{ fontSize: '0.8rem', color: 'var(--ink)', fontWeight: 'normal' }}>{gpsAddress}</span>}
                             </span>
                           )}
@@ -2076,12 +2079,12 @@ export default function Home() {
                     {/* SECTION 4: COMPLAINT DETAILS */}
                     <div className="form-section">
                       <div className="form-section-title">
-                        <span>4. குறைபாடு விவரங்கள்</span>
+                        <span>{t("home.form.step3").split("&")[0].trim() || "4. குறைபாடு விவரங்கள்"}</span>
                       </div>
 
                       <div className="input-row">
                         <div className="input-group">
-                          <label htmlFor="category">குறைபாடு வகை *</label>
+                          <label htmlFor="category">{t("common.category")}</label>
                           <select
                             id="category"
                             value={category}
@@ -2089,12 +2092,12 @@ export default function Home() {
                             required
                           >
                             {Object.keys(CATEGORIES).map((cat, i) => (
-                              <option key={i} value={cat}>{cat}</option>
+                              <option key={i} value={cat}>{t(cat)}</option>
                             ))}
                           </select>
                         </div>
                         <div className="input-group">
-                          <label htmlFor="subcategory">குறைபாடு துணை வகை *</label>
+                          <label htmlFor="subcategory">{t("common.subcategory")}</label>
                           <select
                             id="subcategory"
                             value={subcategory}
@@ -2102,7 +2105,7 @@ export default function Home() {
                             required
                           >
                             {CATEGORIES[category].map((sub, i) => (
-                              <option key={i} value={sub}>{sub}</option>
+                              <option key={i} value={sub}>{t(sub)}</option>
                             ))}
                           </select>
                         </div>
@@ -2110,26 +2113,26 @@ export default function Home() {
 
                       <div className="input-row">
                         <div className="input-group">
-                          <label htmlFor="urgency">அவசர நிலை *</label>
+                          <label htmlFor="urgency">{t("home.form.grievance.urgency.lbl") || "அவசர நிலை *"}</label>
                           <select
                             id="urgency"
                             value={urgency}
                             onChange={(e) => setUrgency(e.target.value)}
                             required
                           >
-                            <option value="சாதாரண">சாதாரண</option>
-                            <option value="முக்கியம்">முக்கியம்</option>
-                            <option value="அதி அவசரம்">அதி அவசரம்</option>
+                            <option value="சாதாரண">{t("home.form.grievance.urgency.normal")}</option>
+                            <option value="முக்கியம்">{t("home.form.grievance.urgency.important")}</option>
+                            <option value="அதி அவசரம்">{t("home.form.grievance.urgency.critical")}</option>
                           </select>
                         </div>
                       </div>
 
                       <div className="input-group">
-                        <label htmlFor="description">குறைபாடு விவரம் *</label>
+                        <label htmlFor="description">{t("home.form.grievance.desc")}</label>
                         <textarea
                           id="description"
                           rows={4}
-                          placeholder="உங்கள் குறைபாட்டைப் பற்றி விரிவாக எழுதவும்..."
+                          placeholder={t("home.form.grievance.desc_ph")}
                           value={description}
                           onChange={(e) => setDescription(e.target.value)}
                           required
@@ -2140,36 +2143,36 @@ export default function Home() {
                     {/* SECTION 5: CAMERA & MEDIA SUPPORT */}
                     <div className="form-section">
                       <div className="form-section-title">
-                        <span>5. புகைப்படங்கள் & வீடியோக்கள்</span>
+                        <span>{t("home.form.step3").split("&")[1]?.trim() || "5. புகைப்படங்கள் & வீடியோக்கள்"}</span>
                       </div>
 
                       <div className="input-row">
                         {/* Photo Section */}
                         <div className="media-box">
-                          <label style={{ marginBottom: '1rem' }}>புகைப்படங்கள் (Photos)</label>
+                          <label style={{ marginBottom: '1rem' }}>{t("home.form.media.photos").split("-")[0].trim() || "புகைப்படங்கள்"}</label>
                           {isCameraActive ? (
                             <div>
                               <video ref={videoRef} autoPlay playsInline className="camera-preview" />
                               <div className="media-actions">
                                 <button type="button" className="media-btn" style={{ background: 'var(--ok)', color: '#fff' }} onClick={capturePhoto}>
-                                  படம் எடு
+                                  {t("home.form.camera.capture")}
                                 </button>
                                 <button type="button" className="media-btn" onClick={stopCamera}>
-                                  நிறுத்து
+                                  {t("home.form.camera.stop")}
                                 </button>
                               </div>
                             </div>
                           ) : (
                             <div>
                               <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '1rem' }}>
-                                கேமரா மூலம் படம் எடுக்கவும் அல்லது கோப்புகளைப் பதிவேற்றவும் (பல புகைப்படங்கள் சேர்க்கலாம்)
+                                {lang === 'ta' ? "கேமரா மூலம் படம் எடுக்கவும் அல்லது கோப்புகளைப் பதிவேற்றவும் (பல புகைப்படங்கள் சேர்க்கலாம்)" : "Take photo via camera or upload files (multiple photos can be added)"}
                               </p>
                               <div className="media-actions">
                                 <button type="button" className="media-btn" onClick={startCamera}>
-                                  கேமரா
+                                  {t("tasks.modal.camera_btn")}
                                 </button>
                                 <button type="button" className="media-btn" onClick={() => fileInputRef.current?.click()}>
-                                  பதிவேற்று
+                                  {t("common.upload") || (lang === 'ta' ? "பதிவேற்று" : "Upload")}
                                 </button>
                               </div>
                               <input
@@ -2206,24 +2209,24 @@ export default function Home() {
 
                         {/* Video Section */}
                         <div className="media-box">
-                          <label style={{ marginBottom: '1rem' }}>வீடியோ (Video)</label>
+                          <label style={{ marginBottom: '1rem' }}>{t("home.form.media.video").split("-")[0].trim() || "வீடியோ"}</label>
                           {video ? (
                             <div>
                               <video src={video} controls className="preview-video" />
                               <div className="media-actions">
                                 <button type="button" className="media-btn" onClick={() => setVideo(null)}>
-                                  நீக்கு
+                                  {t("common.delete") || (lang === 'ta' ? "நீக்கு" : "Delete")}
                                 </button>
                               </div>
                             </div>
                           ) : (
                             <div>
                               <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '1rem' }}>
-                                குறுகிய வீடியோ பதிவேற்றவும் (அதிகபட்சம் 10MB)
+                                {t("home.form.media.video").includes("Max") ? "Upload short video (Max 10MB)" : "குறுகிய வீடியோ பதிவேற்றவும் (அதிகபட்சம் 10MB)"}
                               </p>
                               <div className="media-actions">
                                 <button type="button" className="media-btn" onClick={() => videoInputRef.current?.click()}>
-                                  வீடியோ பதிவேற்று
+                                  {lang === 'ta' ? "வீடியோ பதிவேற்று" : "Upload Video"}
                                 </button>
                               </div>
                               <input
@@ -2251,7 +2254,7 @@ export default function Home() {
                       className="submit-btn"
                       disabled={isSubmitting || !voterVerified}
                     >
-                      {isSubmitting ? 'சமர்ப்பிக்கப்படுகிறது...' : 'மனுவைச் சமர்ப்பி '}
+                      {isSubmitting ? (t("tasks.modal.submit_btn_loading") || "சமர்ப்பிக்கப்படுகிறது...") : (t("home.form.submit_btn") || "மனுவைச் சமர்ப்பி")}
                     </button>
                   </form>
                 </div>
@@ -2260,6 +2263,44 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* FLOATING LANGUAGE SWITCHER */}
+      <button
+        type="button"
+        onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+        className="floating-lang-toggle"
+        style={{
+          position: "fixed",
+          left: "26px",
+          bottom: "26px",
+          zIndex: 1500,
+          background: "var(--night)",
+          border: "1px solid var(--gline)",
+          color: "var(--gold)",
+          fontWeight: 800,
+          fontFamily: "var(--f-head)",
+          fontSize: "0.75rem",
+          letterSpacing: "0.15em",
+          padding: "0 1.25rem",
+          height: "44px",
+          borderRadius: "999px",
+          cursor: "pointer",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.5), 0 0 0 2px rgba(254, 203, 2, 0.2)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "6px",
+          transition: "all 0.3s ease",
+          textTransform: "uppercase"
+        }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+        {lang === "ta" ? "English" : "தமிழ்"}
+      </button>
     </>
   );
 }

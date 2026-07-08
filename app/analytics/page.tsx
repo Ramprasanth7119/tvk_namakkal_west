@@ -13,6 +13,7 @@ import AnalyticsEmptyState from '@/components/analytics/AnalyticsEmptyState';
 import { buildRadialMetrics } from '@/components/analytics/ResolutionRadialCharts';
 import type { CategoryChartSlice } from '@/components/analytics/CategoryDoughnutChart';
 import type { TrendChartPoint } from '@/components/analytics/MonthlyTrendChart';
+import { useLanguage } from '@/components/LanguageProvider';
 
 const ConstituencyBarChart = dynamic(
   () => import('@/components/analytics/ConstituencyBarChart'),
@@ -36,6 +37,7 @@ const ResolutionRadialCharts = dynamic(
 );
 
 const TAMIL_MONTHS = ['', 'ஜன', 'பிப்', 'மார்', 'ஏப்', 'மே', 'ஜூன்', 'ஜூலை', 'ஆக', 'செப்', 'அக்', 'நவ', 'டிச'];
+const EN_MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const CATEGORIES: Record<string, string[]> = {
   "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
@@ -78,13 +80,7 @@ const TITLES: Record<string, string[]> = {
   civic: ["பூங்கா பராமரிப்பு இல்லை", "பொதுக் கழிப்பிடம் சுத்தம் தேவை", "குளம் தூர்வாரம் கோரிக்கை", "மயானச் சாலை மேம்பாடு", "சந்தை கூடம் பழுது"],
 };
 
-const MONTHS = ["ஜன", "பிப்", "மார்", "ஏப்", "மே", "ஜூன்"];
-const STATUSES = [
-  ["all", "அனைத்தும்"],
-  ["ok", "தீர்க்கப்பட்டது"],
-  ["warn", "நடவடிக்கையில்"],
-  ["pend", "பதிவில்"]
-];
+const STATUS_KEYS = ["all", "ok", "warn", "pend"] as const;
 
 // Deterministic seed-based mock data generator
 let seed = 20260613;
@@ -136,7 +132,8 @@ function genData(): Complaint[] {
 const DATA = genData();
 
 export default function AnalyticsDashboard() {
-  const [curArea, setCurArea] = useState("அனைத்தும்");
+  const { t, lang } = useLanguage();
+  const [curArea, setCurArea] = useState("");
   const [curStatus, setCurStatus] = useState("all");
   const [curSearch, setCurSearch] = useState("");
   const [demoMode, setDemoMode] = useState(false);
@@ -147,6 +144,20 @@ export default function AnalyticsDashboard() {
   const [isManagedDemoLoading, setIsManagedDemoLoading] = useState(false);
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
+
+  const MONTHS = useMemo(
+    () => (lang === "ta" ? TAMIL_MONTHS.slice(1, 7) : EN_MONTHS.slice(1, 7)),
+    [lang]
+  );
+
+  const STATUSES = useMemo(
+    () =>
+      STATUS_KEYS.map((key) => [
+        key,
+        key === "all" ? t("status.all") : t(`status.${key}`),
+      ] as const),
+    [t]
+  );
 
   // Memoize allowed areas based on user role
   const allowedAreas = useMemo(() => {
@@ -184,7 +195,7 @@ export default function AnalyticsDashboard() {
     if (sessionUser?.role === "REPRESENTATIVE" && sessionUser.constituency) {
       return sessionUser.constituency;
     }
-    return curArea !== "அனைத்தும்" ? curArea : "";
+    return curArea && curArea !== "" ? curArea : "";
   }, [sessionUser, curArea]);
 
   const refreshLiveAnalytics = async () => {
@@ -203,13 +214,13 @@ export default function AnalyticsDashboard() {
           setLiveError(
             typeof body.error === "string"
               ? body.error
-              : "பகுப்பாய்வு தரவைப் பெறுவதில் பிழை"
+              : t("analytics.error_fetch")
           );
         }
       } catch (err) {
         console.error("Error fetching live analytics:", err);
         setLiveAnalytics(null);
-        setLiveError("தரவுத்தள இணைப்பு தோல்வி — இணையம் மற்றும் MongoDB URI சரிபார்க்கவும்.");
+        setLiveError(t("analytics.db_error"));
     } finally {
       setIsLiveLoading(false);
     }
@@ -298,7 +309,7 @@ export default function AnalyticsDashboard() {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [aadhaar, setAadhaar] = useState('');
-  const [gender, setGender] = useState('ஆண்');
+  const [gender, setGender] = useState('male');
   const [age, setAge] = useState('');
   const [address, setAddress] = useState('');
   const [constituency, setConstituency] = useState<string>(CONSTITUENCIES[0]);
@@ -308,7 +319,7 @@ export default function AnalyticsDashboard() {
   const [subcategory, setSubcategory] = useState(CATEGORIES[Object.keys(CATEGORIES)[0]][0]);
   const [description, setDescription] = useState('');
   const [emailHoneypot, setEmailHoneypot] = useState('');
-  const [urgency, setUrgency] = useState('சாதாரண');
+  const [urgency, setUrgency] = useState('normal');
 
   // Media state - Support multiple photos!
   const [photos, setPhotos] = useState<string[]>([]);
@@ -392,7 +403,7 @@ export default function AnalyticsDashboard() {
   // Handle voter verification lookup
   const handleVerifyVoter = async () => {
     if (!voterId.trim()) {
-      setVerificationError('வாக்காளர் அடையாள எண் தேவை');
+      setVerificationError(t('api.voter_id_needed'));
       return;
     }
 
@@ -423,11 +434,11 @@ export default function AnalyticsDashboard() {
           setConstituency(matchedConstituency);
         }
       } else {
-        setVerificationError(data.message || 'வாக்காளர் அடையாளம் கண்டறியப்படவில்லை');
+        setVerificationError(data.message || t('api.voter_not_found'));
       }
     } catch (err) {
       console.error(err);
-      setVerificationError('சரிபார்ப்பதில் பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.');
+      setVerificationError(t('login.error_conn'));
     } finally {
       setIsVerifying(false);
     }
@@ -436,7 +447,7 @@ export default function AnalyticsDashboard() {
   // Geolocation lookup with Nominatim reverse geocoding to get real Tamil address!
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      alert('உங்கள் உலாவி இருப்பிட சேவையை ஆதரிக்கவில்லை.');
+      alert(t('home.form.geo_unsupported'));
       return;
     }
 
@@ -479,7 +490,7 @@ export default function AnalyticsDashboard() {
       },
       (error) => {
         console.error(error);
-        alert('இருப்பிடத்தைப் பெறுவதில் தோல்வி. அனுமதி வழங்கப்பட்டுள்ளதா எனச் சரிபார்க்கவும்.');
+        alert(t('home.form.geo_error'));
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -496,7 +507,7 @@ export default function AnalyticsDashboard() {
       }
     } catch (err) {
       console.error(err);
-      alert('கேமராவை இயக்க முடியவில்லை.');
+      alert(t('home.form.camera_error'));
       setIsCameraActive(false);
     }
   };
@@ -545,7 +556,7 @@ export default function AnalyticsDashboard() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        alert('வீடியோ கோப்பு அளவு 10MB ஐ விடக் குறைவாக இருக்க வேண்டும்.');
+        alert(t('home.form.video_size_error'));
         return;
       }
       const reader = new FileReader();
@@ -561,7 +572,7 @@ export default function AnalyticsDashboard() {
     e.preventDefault();
 
     if (!voterVerified) {
-      alert('வாக்காளர் அடையாளம் சரிபார்க்கப்பட வேண்டும்.');
+      alert(t('home.form.unverified_alert'));
       return;
     }
 
@@ -611,11 +622,11 @@ export default function AnalyticsDashboard() {
           await refreshLiveAnalytics();
         }
       } else {
-        setSubmissionError(data.error || 'புகாரைச் சமர்ப்பிப்பதில் பிழை ஏற்பட்டது.');
+        setSubmissionError(data.error || t('home.form.submit_success'));
       }
     } catch (err) {
       console.error(err);
-      setSubmissionError('இணைப்புப் பிழை. மீண்டும் முயற்சிக்கவும்.');
+      setSubmissionError(t('login.error_conn'));
     } finally {
       setIsSubmitting(false);
     }
@@ -627,7 +638,7 @@ export default function AnalyticsDashboard() {
       const fetchManagedDemo = async () => {
         setIsManagedDemoLoading(true);
         try {
-          const constituency = sessionUser.role === "REPRESENTATIVE" ? sessionUser.constituency : (curArea !== "அனைத்தும்" ? curArea : "");
+          const constituency = sessionUser.role === "REPRESENTATIVE" ? sessionUser.constituency : (curArea !== "" ? curArea : "");
           const q = constituency ? `?constituency=${encodeURIComponent(constituency)}` : "";
           const res = await fetch(`/api/admin/demo${q}`);
           if (res.ok) {
@@ -679,7 +690,7 @@ export default function AnalyticsDashboard() {
     if (sessionUser?.role === "REPRESENTATIVE" && sessionUser.constituency) {
       return activeData;
     }
-    return curArea === "அனைத்தும்"
+    return curArea === ""
       ? activeData
       : activeData.filter((d) => d.area === curArea);
   }, [curArea, activeData, demoMode, sessionUser]);
@@ -744,7 +755,7 @@ export default function AnalyticsDashboard() {
     if (!demoMode && liveAnalytics?.monthlyTrends?.length) {
       return liveAnalytics.monthlyTrends.slice(-6).map(
         (item: { month: number; total: number; resolved: number }) => ({
-          label: TAMIL_MONTHS[item.month] || String(item.month),
+          label: (lang === "ta" ? TAMIL_MONTHS[item.month] : EN_MONTHS[item.month]) || String(item.month),
           registered: item.total,
           resolved: item.resolved,
         })
@@ -755,9 +766,9 @@ export default function AnalyticsDashboard() {
       registered: areaFilteredData.filter((x) => x.month === i).length,
       resolved: areaFilteredData.filter((x) => x.month === i && x.status === 'ok').length,
     }));
-  }, [areaFilteredData, demoMode, liveAnalytics]);
+  }, [areaFilteredData, demoMode, liveAnalytics, MONTHS, lang]);
 
-  const radialMetrics = useMemo(() => buildRadialMetrics(stats), [stats]);
+  const radialMetrics = useMemo(() => buildRadialMetrics(stats, t), [stats, t]);
 
   // Dynamic Insights Generator
   const insights = useMemo(() => {
@@ -766,7 +777,7 @@ export default function AnalyticsDashboard() {
     // 1. Find category with most complaints in the selected area
     const catCounts: Record<string, number> = {};
     areaFilteredData.forEach(item => {
-      const secName = SECMAP[item.sector]?.name || 'பொது';
+      const secName = SECMAP[item.sector]?.name || t('analytics.all_areas');
       catCounts[secName] = (catCounts[secName] || 0) + 1;
     });
     let topCat = '';
@@ -780,20 +791,20 @@ export default function AnalyticsDashboard() {
 
     if (topCat) {
       list.push({
-        title: `${curArea === 'அனைத்தும்' ? 'ஒட்டுமொத்த' : curArea} பகுதியில் ${topCat} புகார்கள் அதிகம்`,
-        desc: `இப்பகுதியில் பதிவான புகார்களில் ${topCat} துறை சார்ந்த புகார்கள் அதிகபட்சமாக ${topCatCount} பதிவாகியுள்ளன.`,
+        title: t('analytics.insight.top_cat_title').replace('{topCat}', topCat),
+        desc: t('analytics.insight.top_cat_desc').replace('{topCat}', topCat).replace('{topCatCount}', String(topCatCount)),
         type: 'warning'
       });
     } else {
       list.push({
-        title: `புகார்கள் எதுவும் இல்லை`,
-        desc: `தேர்ந்தெடுக்கப்பட்ட பகுதியில் தற்போது புகார்கள் எதுவும் பதிவாகவில்லை.`,
+        title: t('analytics.insight.empty_title'),
+        desc: t('analytics.insight.empty_desc'),
         type: 'info'
       });
     }
 
     // 2. Find constituency with highest resolution rate
-    if (curArea === 'அனைத்தும்') {
+    if (curArea === '') {
       const constStats = CONSTITUENCIES.map(c => {
         const items = activeData.filter(d => d.area === c);
         const total = items.length;
@@ -813,8 +824,8 @@ export default function AnalyticsDashboard() {
 
       if (bestConst) {
         list.push({
-          title: `${bestConst} பகுதியில் தீர்வு விகிதம் உயர்வு`,
-          desc: `இப்பகுதியில் பதிவான புகார்களில் ${bestRate}% புகார்கள் வெற்றிகரமாகத் தீர்க்கப்பட்டு முதலிடத்தில் உள்ளது.`,
+          title: t('analytics.insight.best_area_title').replace('{bestConst}', bestConst),
+          desc: t('analytics.insight.best_area_desc').replace('{bestConst}', bestConst).replace('{bestRate}', String(bestRate)),
           type: 'success'
         });
       }
@@ -831,8 +842,8 @@ export default function AnalyticsDashboard() {
 
       if (worstConst) {
         list.push({
-          title: `${worstConst} பகுதியில் கூடுதல் கவனம் தேவை`,
-          desc: `நாமக்கல் மேற்கு மாவட்டத்தில் அதிகபட்சமாக ${worstConst} பகுதியில் ${worstCount} புகார்கள் பதிவாகியுள்ளன.`,
+          title: t('analytics.insight.worst_area_title').replace('{worstConst}', worstConst),
+          desc: t('analytics.insight.worst_area_desc').replace('{worstConst}', worstConst).replace('{worstCount}', String(worstCount)),
           type: 'info'
         });
       }
@@ -841,22 +852,22 @@ export default function AnalyticsDashboard() {
       const rate = areaFilteredData.length ? Math.round((okCount / areaFilteredData.length) * 100) : 0;
       
       list.push({
-        title: `${curArea} பகுதி தீர்வு விகிதம்: ${rate}%`,
-        desc: `இப்பகுதியில் மொத்தம் பதிவான ${areaFilteredData.length} புகார்களில் ${okCount} புகார்கள் தற்போதைக்குத் தீர்க்கப்பட்டுள்ளன.`,
+        title: t('analytics.insight.area_rate_title').replace('{curArea}', curArea).replace('{rate}', String(rate)),
+        desc: t('analytics.insight.area_rate_desc').replace('{total}', String(areaFilteredData.length)).replace('{ok}', String(okCount)),
         type: 'success'
       });
 
       const sortedCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
       if (sortedCats.length > 1) {
         list.push({
-          title: `அடுத்தபடியாக ${sortedCats[1][0]} புகார்கள் அதிகம்`,
-          desc: `இப்பகுதியில் ${sortedCats[1][0]} துறை சார்ந்த புகார்கள் ${sortedCats[1][1]} பதிவாகி இரண்டாம் இடத்தில் உள்ளன.`,
+          title: t('analytics.insight.second_cat_title').replace('{cat}', sortedCats[1][0]),
+          desc: t('analytics.insight.second_cat_desc').replace('{cat}', sortedCats[1][0]).replace('{count}', String(sortedCats[1][1])),
           type: 'info'
         });
       } else {
         list.push({
-          title: `விரைவான தீர்வு நடவடிக்கை`,
-          desc: `நாமக்கல் மேற்கு தொகுதி நிர்வாகிகள் இப்பகுதிப் புகார்களை உடனுக்குடன் ஆய்வு செய்து வருகின்றனர்.`,
+          title: t('analytics.insight.quick_action_title'),
+          desc: t('analytics.insight.quick_action_desc'),
           type: 'info'
         });
       }
@@ -941,26 +952,26 @@ export default function AnalyticsDashboard() {
 
   const topBarLinks = useMemo((): TopBarLink[] => {
     const links: TopBarLink[] = [
-      { href: "/track", label: "மனு நிலை அறிதல்", highlight: true },
+      { href: "/track", label: t("nav.track"), highlight: true },
     ];
 
     if (sessionUser?.role === "SUPER_ADMIN") {
-      links.push({ href: "/admin", label: "நிர்வாகக் கட்டுப்பாடு", highlight: true });
+      links.push({ href: "/admin", label: t("nav.admin_panel"), highlight: true });
     }
 
     if (sessionUser) {
-      links.push({ href: "/complaints", label: "புகார்கள் மேலாண்மை" });
+      links.push({ href: "/complaints", label: t("complaints.title") });
     } else {
-      links.push({ href: "/login?redirect=/analytics", label: "பிரதிநிதி உள்நுழைவு" });
+      links.push({ href: "/login?redirect=/analytics", label: t("login.title") });
     }
 
-    links.push({ href: "/", label: "முகப்புக்குத் திரும்பு" });
+    links.push({ href: "/", label: t("nav.home") });
     return links;
-  }, [sessionUser]);
+  }, [sessionUser, t]);
 
   return (
     <div className="analytics-body">
-      <TvkTopBar title="மக்கள் குரல் மையம்" brandHref="#top" links={topBarLinks} />
+      <TvkTopBar title={t("footer.tagline")} brandHref="#top" links={topBarLinks} />
 
       {/* PAGE HERO */}
       <section className="phero" id="top">
@@ -1035,7 +1046,7 @@ export default function AnalyticsDashboard() {
                   type="button"
                   onClick={() => setDemoMode(!demoMode)}
                   title={demoMode ? "மாதிரி தரவு இயக்கத்தில் — அணைக்க அழுத்தவும்" : "நேரடி தரவு — மாதிரி தரவுக்கு மாற்ற அழுத்தவும்"}
-                  aria-pressed={demoMode ? "true" : "false"}
+                  aria-pressed={demoMode}
                   style={{
                     position: 'relative', width: '40px', height: '22px', borderRadius: '11px',
                     background: demoMode ? '#FECB02' : '#ccc', border: 'none', cursor: 'pointer',

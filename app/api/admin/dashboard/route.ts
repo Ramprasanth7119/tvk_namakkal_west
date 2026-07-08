@@ -1,3 +1,4 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/mongodb";
@@ -18,11 +19,12 @@ async function verifySuperAdminSession() {
 }
 
 export async function GET(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
   try {
     const session = await verifySuperAdminSession();
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized access)" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized_access") }, { status: 401 });
     }
 
     const db = await getDb();
@@ -54,7 +56,7 @@ export async function GET(request: Request) {
       const cTotal = await db.collection("citizenComplaints").countDocuments({ constituency: c });
       const cResolved = await db.collection("citizenComplaints").countDocuments({ constituency: c, status: { $in: ["ok", "resolved"] } });
       const cPending = cTotal - cResolved;
-      const repName = repMap[c] || "பிரதிநிதி நியமிக்கப்படவில்லை (No Representative)";
+      const repName = repMap[c] || t("api.no_rep");
 
       constituencyOverview.push({
         constituency: c,
@@ -77,6 +79,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Error fetching admin dashboard data:", error);
-    return NextResponse.json({ error: "சேவையக பிழை" }, { status: 500 });
+    return NextResponse.json({ error: t("api.server_error") }, { status: 500 });
   }
 }

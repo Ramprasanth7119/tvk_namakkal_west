@@ -1,3 +1,4 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { lookupVoter } from "@/lib/voterLookup";
 import { getDb } from "@/lib/mongodb";
@@ -62,6 +63,7 @@ function getSimilarity(s1: string, s2: string): number {
 }
 
 export async function POST(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
 
   try {
@@ -76,7 +78,7 @@ export async function POST(request: Request) {
     if (!rateLimit.success) {
       return NextResponse.json(
         {
-          error: "அதிகப்படியான முயற்சிகள். ஒரு மணி நேரம் கழித்து மீண்டும் முயற்சிக்கவும். (Too many verification attempts. Please try again in an hour.)",
+          error: t("api.rate_limit_verify"),
         },
         { status: 429 }
       );
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
     if (!isFallback) {
       if (!voterId) {
         return NextResponse.json(
-          { error: "வாக்காளர் அடையாள எண் தேவை" },
+          { error: t("api.voter_id_needed") },
           { status: 400 }
         );
       }
@@ -104,7 +106,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
           found: false,
           case: 4,
-          message: " உள்ளிடப்பட்ட விவரங்களுடன் எந்த வாக்காளர் பதிவும் கண்டறியப்படவில்லை.",
+          message: t("api.voter_not_found"),
         });
       }
 
@@ -112,7 +114,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         found: true,
-        message: "வாக்காளர் விவரங்கள் சரிபார்க்கப்பட்டன",
+        message: t("api.voter_verified"),
         voter,
         verificationMethod: "VOTER_ID",
       });
@@ -124,7 +126,7 @@ export async function POST(request: Request) {
 
     if (!cleanName || !cleanDoor) {
       return NextResponse.json(
-        { error: "பெயர் மற்றும் கதவு எண் இரண்டும் தேவை. (Both Name and Door Number are required.)" },
+        { error: t("api.name_door_req") },
         { status: 400 }
       );
     }
@@ -159,7 +161,7 @@ export async function POST(request: Request) {
         });
       } else {
         return NextResponse.json(
-          { error: "முறையற்ற பிறந்த தேதி வடிவம். (Invalid date of birth format.)" },
+          { error: t("api.invalid_dob") },
           { status: 400 }
         );
       }
@@ -245,7 +247,7 @@ export async function POST(request: Request) {
       await logSecurityEvent(ip, "FALLBACK_VERIFICATION_SUCCESS", { voterId: verifiedVoter.VoterID });
       return NextResponse.json({
         found: true,
-        message: "வாக்காளர் விவரங்கள் சரிபார்க்கப்பட்டன",
+        message: t("api.voter_verified"),
         voter: verifiedVoter,
         verificationMethod: "DETAIL_MATCH",
       });
@@ -263,7 +265,7 @@ export async function POST(request: Request) {
     console.error("Error in fallback voter verification API:", error);
     await logSecurityEvent(ip, "VOTER_VERIFICATION_ERROR", { error: String(error) });
     return NextResponse.json(
-      { error: "உள் சேவையகப் பிழை" },
+      { error: t("api.internal_server_error_simple") },
       { status: 500 }
     );
   }

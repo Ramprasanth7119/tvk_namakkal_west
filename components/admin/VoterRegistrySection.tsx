@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { CONSTITUENCIES } from "@/lib/constituencies";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type AnalyzeResponse = {
   fileName: string;
@@ -62,17 +63,6 @@ type StatsResponse = {
   lastImport: ImportSummary | null;
 };
 
-const FIELD_LABELS: Record<string, string> = {
-  voterId: "Voter ID",
-  name: "Name",
-  dob: "DOB / பிறந்த தேதி",
-  wardNo: "Ward No",
-  wardName: "Ward Name",
-  constituency: "Constituency",
-  mobile: "Mobile",
-  address: "Address",
-};
-
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 export default function VoterRegistrySection() {
@@ -101,6 +91,18 @@ export default function VoterRegistrySection() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalVoters, setTotalVoters] = useState(0);
   const [isVotersLoading, setIsVotersLoading] = useState(false);
+  const { lang, t } = useLanguage();
+
+  const FIELD_LABELS: Record<string, string> = {
+    voterId: "Voter ID",
+    name: t("home.form.citizen.name"),
+    dob: t("home.form.citizen.dob"),
+    wardNo: t("common.ward"),
+    wardName: t("home.receipt.ward"),
+    constituency: t("common.constituency"),
+    mobile: t("common.mobile"),
+    address: t("complaints.modal.address"),
+  };
 
   const constituencyFilterOptions = useMemo(() => {
     const fromData = stats?.byConstituency?.map((c) => c.constituency).filter(Boolean) || [];
@@ -167,8 +169,6 @@ export default function VoterRegistrySection() {
     fetchVoters();
   }, [fetchVoters]);
 
-  const constituencyOptions = constituencyFilterOptions;
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setSelectedFile(file);
@@ -181,7 +181,7 @@ export default function VoterRegistrySection() {
 
   const handleAnalyze = async () => {
     if (!selectedFile) {
-      setUploadError("முதலில் கோப்பைத் தேர்ந்தெடுக்கவும்");
+      setUploadError(t("voters.import.err_select"));
       return;
     }
 
@@ -199,7 +199,7 @@ export default function VoterRegistrySection() {
       const data = await res.json();
 
       if (!res.ok) {
-        setUploadError(data.error || "பகுப்பாய்வு தோல்வி");
+        setUploadError(data.error || t("voters.import.err_fail"));
         setAnalyzeResult(null);
         return;
       }
@@ -207,10 +207,10 @@ export default function VoterRegistrySection() {
       setAnalyzeResult(data);
       setSheetName(data.sheetName);
       if (data.canImport) setShowConfirm(true);
-      else setUploadError("வாக்காளர் ID புலம் கண்டறியப்படவில்லை — mapping சரிபார்க்கவும்");
+      else setUploadError(t("voters.import.err_no_voter_id"));
     } catch (err) {
       console.error(err);
-      setUploadError("இணைப்புப் பிழை. மீண்டும் முயற்சிக்கவும்.");
+      setUploadError(t("track.conn_error"));
     } finally {
       setIsAnalyzing(false);
     }
@@ -218,7 +218,7 @@ export default function VoterRegistrySection() {
 
   const handleDeleteHistory = async (row: HistoryRow) => {
     const ok = window.confirm(
-      `"${row.fileName}" import பதிவையும் அந்த import-ல் சேர்க்கப்பட்ட வாக்காளர் பதிவுகளையும் நீக்க விரும்புகிறீர்களா?\n\nஇந்தச் செயலை மீள முடியாது.`
+      t("voters.history.confirm_delete", { file: row.fileName })
     );
     if (!ok) return;
 
@@ -234,14 +234,14 @@ export default function VoterRegistrySection() {
       const data = await res.json();
 
       if (!res.ok) {
-        setUploadError(data.error || "நீக்குதல் தோல்வி");
+        setUploadError(data.error || t("common.error"));
         return;
       }
 
       await Promise.all([fetchStats(), fetchHistory(), fetchVoters()]);
     } catch (err) {
       console.error(err);
-      setUploadError("Import நீக்குதல் — இணைப்புப் பிழை");
+      setUploadError(t("track.conn_error"));
     } finally {
       setDeletingHistoryId(null);
     }
@@ -263,7 +263,7 @@ export default function VoterRegistrySection() {
       const data = await res.json();
 
       if (!res.ok) {
-        setUploadError(data.error || "Import தோல்வி");
+        setUploadError(data.error || t("common.error"));
         return;
       }
 
@@ -274,7 +274,7 @@ export default function VoterRegistrySection() {
       await Promise.all([fetchStats(), fetchHistory(), fetchVoters()]);
     } catch (err) {
       console.error(err);
-      setUploadError("Import இணைப்புப் பிழை");
+      setUploadError(t("track.conn_error"));
     } finally {
       setIsImporting(false);
     }
@@ -287,19 +287,19 @@ export default function VoterRegistrySection() {
         <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
           <div className="kpi" style={{ "--accent": "var(--gold)", "--accent-bg": "rgba(254,203,2,.12)" } as React.CSSProperties}>
             <b>{isStatsLoading ? "..." : stats?.totalVoters ?? 0}</b>
-            <span>மொத்த வாக்காளர்கள்</span>
+            <span>{t("voters.kpi.total")}</span>
           </div>
           <div className="kpi" style={{ "--accent": "var(--ok)", "--accent-bg": "var(--ok-bg)" } as React.CSSProperties}>
-            <b>{isStatsLoading ? "..." : constituencyOptions.length}</b>
-            <span>தொகுதிகள் (தரவில்)</span>
+            <b>{isStatsLoading ? "..." : constituencyFilterOptions.length}</b>
+            <span>{t("voters.kpi.constituencies")}</span>
           </div>
           <div className="kpi" style={{ "--accent": "var(--red)", "--accent-bg": "rgba(160,0,0,.1)" } as React.CSSProperties}>
             <b>{history[0]?.imported ?? "—"}</b>
-            <span>கடைசி import (புதிய)</span>
+            <span>{t("voters.kpi.imported")}</span>
           </div>
           <div className="kpi" style={{ "--accent": "var(--warn)", "--accent-bg": "var(--warn-bg)" } as React.CSSProperties}>
             <b>{history[0]?.updated ?? "—"}</b>
-            <span>கடைசி import (புதுப்பிப்பு)</span>
+            <span>{t("voters.kpi.updated")}</span>
           </div>
         </div>
 
@@ -307,16 +307,16 @@ export default function VoterRegistrySection() {
         <div className="card table-card">
           <div className="tc-head">
             <div>
-              <h3> வாக்காளர் பதிவேடு — Excel Import</h3>
+              <h3>{t("voters.import.title")}</h3>
               <span className="sub" style={{ display: "block", marginTop: "0.35rem", color: "var(--ink-soft)", fontSize: "0.88rem" }}>
-                xlsx · xls · csv — பகுப்பாய்வு → preview → உறுதிப்படுத்தல் → import
+                {t("voters.import.subtitle")}
               </span>
             </div>
           </div>
 
           <div style={{ padding: "1.25rem 1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div className="admin-modal-field">
-              <label htmlFor="voter-file">வாக்காளர் பட்டியல் கோப்பு</label>
+              <label htmlFor="voter-file">{t("voters.import.file_lbl")}</label>
               <input
                 id="voter-file"
                 type="file"
@@ -327,7 +327,7 @@ export default function VoterRegistrySection() {
 
             {analyzeResult && analyzeResult.sheetNames.length > 1 && (
               <div className="admin-modal-field">
-                <label htmlFor="voter-sheet">விரிதாள் (Sheet)</label>
+                <label htmlFor="voter-sheet">{t("voters.import.sheet_lbl")}</label>
                 <select
                   id="voter-sheet"
                   value={sheetName}
@@ -348,7 +348,7 @@ export default function VoterRegistrySection() {
                 onClick={handleAnalyze}
                 disabled={!selectedFile || isAnalyzing}
               >
-                {isAnalyzing ? "பகுப்பாய்வு..." : " கோப்பை பகுப்பாய்வு செய்"}
+                {isAnalyzing ? t("voters.import.btn_analyzing") : t("voters.import.btn_analyze")}
               </button>
               {showConfirm && analyzeResult?.canImport && (
                 <button
@@ -357,7 +357,7 @@ export default function VoterRegistrySection() {
                   onClick={handleImport}
                   disabled={isImporting}
                 >
-                  {isImporting ? "Import செய்கிறது..." : "உறுதிப்படுத்தி Import செய்"}
+                  {isImporting ? t("voters.import.btn_importing") : t("voters.import.btn_confirm")}
                 </button>
               )}
             </div>
@@ -366,9 +366,12 @@ export default function VoterRegistrySection() {
 
             {importSummary && (
               <div className="admin-form-message success">
-                Import முடிந்தது — மொத்தம்: {importSummary.totalRows} · புதிய: {importSummary.imported} ·
-                புதுப்பிப்பு: {importSummary.updated} · தவிர்க்கப்பட்டது: {importSummary.skipped}
-                {importSummary.durationMs ? ` · ${importSummary.durationMs}ms` : ""}
+                {t("voters.import.msg_success", {
+                  total: String(importSummary.totalRows),
+                  imported: String(importSummary.imported),
+                  updated: String(importSummary.updated),
+                  skipped: String(importSummary.skipped)
+                })}
               </div>
             )}
 
@@ -376,7 +379,7 @@ export default function VoterRegistrySection() {
               <>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem" }}>
                   <div className="detail-modal-section">
-                    <h4>கண்டறியப்பட்ட Excel புலங்கள் ({analyzeResult.headers.length})</h4>
+                    <h4>{t("voters.import.detected_fields", { count: String(analyzeResult.headers.length) })}</h4>
                     <p style={{ fontSize: "0.85rem", color: "var(--ink-soft)", margin: 0 }}>
                       {analyzeResult.headers.join(" · ")}
                     </p>
@@ -396,7 +399,7 @@ export default function VoterRegistrySection() {
                 </div>
 
                 <div className="detail-modal-section">
-                  <h4>Preview — முதல் {Math.min(10, analyzeResult.previewRows.length)} பதிவுகள் (மொத்தம் {analyzeResult.totalRows})</h4>
+                  <h4>{t("voters.import.preview_title", { count: String(Math.min(10, analyzeResult.previewRows.length)), total: String(analyzeResult.totalRows) })}</h4>
                   <div className="tbl-scroll">
                     <table>
                       <thead>
@@ -427,38 +430,38 @@ export default function VoterRegistrySection() {
         <div className="card table-card">
           <div className="tc-head">
             <div>
-              <h3> Import வரலாறு</h3>
+              <h3>{t("voters.history.title")}</h3>
             </div>
           </div>
           <div className="tbl-scroll">
             <table>
               <thead>
                 <tr>
-                  <th>தேதி</th>
-                  <th>கோப்பு</th>
-                  <th style={{ textAlign: "center" }}>மொத்தம்</th>
-                  <th style={{ textAlign: "center" }}>புதிய</th>
-                  <th style={{ textAlign: "center" }}>புதுப்பிப்பு</th>
-                  <th style={{ textAlign: "center" }}>தவிர்</th>
-                  <th>Import செய்தவர்</th>
-                  <th style={{ textAlign: "center" }}>நீக்கு</th>
+                  <th>{t("common.date")}</th>
+                  <th>{t("voters.import.file_lbl")}</th>
+                  <th style={{ textAlign: "center" }}>{t("admin.overview.total")}</th>
+                  <th style={{ textAlign: "center" }}>{t("status.registered")}</th>
+                  <th style={{ textAlign: "center" }}>{t("common.edit")}</th>
+                  <th style={{ textAlign: "center" }}>{t("common.cancel")}</th>
+                  <th>Imported By</th>
+                  <th style={{ textAlign: "center" }}>{t("common.delete")}</th>
                 </tr>
               </thead>
               <tbody>
                 {isHistoryLoading ? (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: "center", padding: "2rem" }}>ஏற்றப்படுகிறது...</td>
+                    <td colSpan={8} style={{ textAlign: "center", padding: "2rem" }}>{t("common.loading")}</td>
                   </tr>
                 ) : history.length === 0 ? (
                   <tr>
                     <td colSpan={8} style={{ textAlign: "center", padding: "2rem", color: "var(--ink-soft)" }}>
-                      Import வரலாறு இல்லை
+                      {t("voters.history.empty")}
                     </td>
                   </tr>
                 ) : (
                   history.map((h) => (
                     <tr key={h._id}>
-                      <td className="t-meta">{h.importedAt ? new Date(h.importedAt).toLocaleString("ta-IN") : "—"}</td>
+                      <td className="t-meta">{h.importedAt ? new Date(h.importedAt).toLocaleString(lang === "ta" ? "ta-IN" : "en-IN") : "—"}</td>
                       <td style={{ fontWeight: 700 }}>{h.fileName}</td>
                       <td style={{ textAlign: "center" }}>{h.totalRows}</td>
                       <td style={{ textAlign: "center", color: "var(--ok)", fontWeight: 700 }}>{h.imported}</td>
@@ -472,9 +475,9 @@ export default function VoterRegistrySection() {
                           style={{ flex: "none", padding: "0.35rem 0.65rem", fontSize: "0.8rem", minWidth: 0 }}
                           disabled={deletingHistoryId === h._id}
                           onClick={() => handleDeleteHistory(h)}
-                          title="இந்த import-ஐ நீக்கு"
+                          title="Delete this import"
                         >
-                          {deletingHistoryId === h._id ? "..." : " நீக்கு"}
+                          {deletingHistoryId === h._id ? "..." : t("common.delete")}
                         </button>
                       </td>
                     </tr>
@@ -489,9 +492,9 @@ export default function VoterRegistrySection() {
         <div className="card table-card">
           <div className="tc-head">
             <div>
-              <h3> வாக்காளர் தேடல்</h3>
+              <h3>{t("voters.search.title")}</h3>
               <span className="sub" style={{ display: "block", marginTop: "0.35rem", color: "var(--ink-soft)", fontSize: "0.88rem" }}>
-                Voter ID · பெயர் · மொபைல் · தொகுதி · வார்டு — {totalVoters} பதிவுகள்
+                {t("voters.search.subtitle", { count: String(totalVoters) })}
               </span>
             </div>
           </div>
@@ -503,7 +506,7 @@ export default function VoterRegistrySection() {
                   <div className="fb-search-input-wrapper">
                     <input
                       type="text"
-                      placeholder="Voter ID / பெயர் / மொபைல் / கதவு எண்..."
+                      placeholder={t("voters.search.placeholder")}
                       value={search}
                       onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                       style={{
@@ -517,23 +520,23 @@ export default function VoterRegistrySection() {
                 </div>
               </div>
               <div className="complaints-filter-item">
-                <span className="fb-label">தொகுதி</span>
+                <span className="fb-label">{t("voters.search.constituency")}</span>
                 <select
                   value={filterConstituency}
                   onChange={(e) => { setFilterConstituency(e.target.value); setPage(1); }}
-                  title="தொகுதி வடிகட்டி"
+                  title="Constituency filter"
                 >
-                  <option value="அனைத்தும்">அனைத்தும்</option>
+                  <option value="அனைத்தும்">{t("status.all")}</option>
                   {constituencyFilterOptions.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>{t(c)}</option>
                   ))}
                 </select>
               </div>
               <div className="complaints-filter-item">
-                <span className="fb-label">வார்டு</span>
+                <span className="fb-label">{t("voters.search.ward")}</span>
                 <input
                   type="text"
-                  placeholder="வார்டு எண்"
+                  placeholder="Ward No"
                   value={filterWard}
                   onChange={(e) => { setFilterWard(e.target.value); setPage(1); }}
                   style={{
@@ -552,30 +555,30 @@ export default function VoterRegistrySection() {
               <thead>
                 <tr>
                   <th>Voter ID</th>
-                  <th>பெயர்</th>
-                  <th>பிறந்த தேதி</th>
-                  <th>கதவு எண்</th>
-                  <th>மொபைல்</th>
-                  <th>பாலினம்</th>
-                  <th>வயது</th>
-                  <th>தொகுதி</th>
-                  <th>வார்டு</th>
-                  <th>வார்டு பெயர்</th>
-                  <th>ஊராட்சி</th>
-                  <th>வட்டம்</th>
-                  <th>மாவட்டம்</th>
-                  <th>முகவரி</th>
+                  <th>{t("home.form.citizen.name")}</th>
+                  <th>{t("home.form.citizen.dob")}</th>
+                  <th>{t("home.form.citizen.door")}</th>
+                  <th>{t("common.mobile")}</th>
+                  <th>{t("home.form.citizen.gender")}</th>
+                  <th>{t("home.form.citizen.age")}</th>
+                  <th>{t("voters.search.constituency")}</th>
+                  <th>{t("voters.search.ward")}</th>
+                  <th>Ward Name</th>
+                  <th>Panchayat</th>
+                  <th>Taluk</th>
+                  <th>District</th>
+                  <th>{t("complaints.modal.address")}</th>
                 </tr>
               </thead>
               <tbody>
                 {isVotersLoading ? (
                   <tr>
-                    <td colSpan={14} style={{ textAlign: "center", padding: "2rem" }}>ஏற்றப்படுகிறது...</td>
+                    <td colSpan={14} style={{ textAlign: "center", padding: "2rem" }}>{t("common.loading")}</td>
                   </tr>
                 ) : voters.length === 0 ? (
                   <tr>
                     <td colSpan={14} style={{ textAlign: "center", padding: "2rem", color: "var(--ink-soft)" }}>
-                      பதிவுகள் இல்லை
+                      {t("voters.search.empty")}
                     </td>
                   </tr>
                 ) : (
@@ -588,7 +591,7 @@ export default function VoterRegistrySection() {
                       <td className="t-meta">{v.mobile || "—"}</td>
                       <td className="t-meta">{v.gender || "—"}</td>
                       <td className="t-meta" style={{ textAlign: "center" }}>{v.age || "—"}</td>
-                      <td className="t-meta">{v.constituency || "—"}</td>
+                      <td className="t-meta">{t(v.constituency) || "—"}</td>
                       <td className="t-meta" style={{ textAlign: "center" }}>{v.wardNo ?? "—"}</td>
                       <td className="t-meta">{v.wardName || "—"}</td>
                       <td className="t-meta">{v.panchayat || "—"}</td>
@@ -605,12 +608,12 @@ export default function VoterRegistrySection() {
           <div className="tbl-foot" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
             <span>
               {totalVoters > 0
-                ? `${pageStart}–${pageEnd} / ${totalVoters} பதிவுகள்`
-                : "0 பதிவுகள்"}
+                ? t("voters.search.records_range", { start: String(pageStart), end: String(pageEnd), total: String(totalVoters) })
+                : t("voters.search.empty")}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
               <label style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.85rem", fontWeight: 700 }}>
-                <span>ஒரு பக்கம்</span>
+                <span>{t("voters.search.page_size")}</span>
                 <select
                   value={pageSize}
                   onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
@@ -621,11 +624,11 @@ export default function VoterRegistrySection() {
                   ))}
                 </select>
               </label>
-              <span style={{ fontWeight: 700 }}>பக்கம் {page} / {totalPages}</span>
-              <button type="button" className="tfilt" disabled={page <= 1} onClick={() => setPage(1)}>« முதல்</button>
-              <button type="button" className="tfilt" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← முந்தைய</button>
-              <button type="button" className="tfilt" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>அடுத்த →</button>
-              <button type="button" className="tfilt" disabled={page >= totalPages} onClick={() => setPage(totalPages)}>கடைசி »</button>
+              <span style={{ fontWeight: 700 }}>Page {page} / {totalPages}</span>
+              <button type="button" className="tfilt" disabled={page <= 1} onClick={() => setPage(1)}>{t("voters.search.first")}</button>
+              <button type="button" className="tfilt" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>{t("voters.search.prev")}</button>
+              <button type="button" className="tfilt" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>{t("voters.search.next")}</button>
+              <button type="button" className="tfilt" disabled={page >= totalPages} onClick={() => setPage(totalPages)}>{t("voters.search.last")}</button>
             </div>
           </div>
         </div>

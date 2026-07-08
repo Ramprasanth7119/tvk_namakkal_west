@@ -1,3 +1,4 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ObjectId } from "mongodb";
@@ -15,10 +16,11 @@ async function verifyAdminOrRepSession() {
 }
 
 export async function GET(request: Request) {
+  const t = await getBackendT();
   try {
     const session = await verifyAdminOrRepSession();
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல்" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized_simple") }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -42,27 +44,28 @@ export async function GET(request: Request) {
     return NextResponse.json(entries.map((e) => ({ ...e, _id: e._id.toString() })));
   } catch (err) {
     console.error("Demo GET error:", err);
-    return NextResponse.json({ error: "சேவையகப் பிழை" }, { status: 500 });
+    return NextResponse.json({ error: t("api.server_error") }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
+  const t = await getBackendT();
   try {
     const session = await verifyAdminOrRepSession();
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல்" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized_simple") }, { status: 401 });
     }
 
     const body = await request.json();
     const { constituency, sector, title, by: byField, date, month, status, resolver } = body;
 
     if (!constituency || !sector || !title) {
-      return NextResponse.json({ error: "தொகுதி, துறை மற்றும் தலைப்பு தேவை" }, { status: 400 });
+      return NextResponse.json({ error: t("api.demo_fields_req") }, { status: 400 });
     }
 
     // REP can only add for their own constituency
     if (session.role === "REPRESENTATIVE" && session.constituency && session.constituency !== constituency) {
-      return NextResponse.json({ error: "உங்கள் தொகுதிக்கு மட்டுமே சேர்க்க முடியும்" }, { status: 403 });
+      return NextResponse.json({ error: t("api.demo_const_error") }, { status: 403 });
     }
 
     const db = await getDb();
@@ -85,22 +88,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, id: result.insertedId.toString() });
   } catch (err) {
     console.error("Demo POST error:", err);
-    return NextResponse.json({ error: "சேவையகப் பிழை" }, { status: 500 });
+    return NextResponse.json({ error: t("api.server_error") }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
+  const t = await getBackendT();
   try {
     const session = await verifyAdminOrRepSession();
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல்" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized_simple") }, { status: 401 });
     }
 
     const body = await request.json();
     const { id, constituency } = body;
 
     if (!id) {
-      return NextResponse.json({ error: "ஐடி தேவை" }, { status: 400 });
+      return NextResponse.json({ error: t("api.id_req") }, { status: 400 });
     }
 
     const db = await getDb();
@@ -115,11 +119,11 @@ export async function DELETE(request: Request) {
 
     const result = await db.collection("demoComplaints").deleteOne(filter);
     if (result.deletedCount === 0) {
-      return NextResponse.json({ error: "பதிவு காணப்படவில்லை அல்லது அனுமதி மறுக்கப்பட்டது" }, { status: 404 });
+      return NextResponse.json({ error: t("api.record_not_found_auth") }, { status: 404 });
     }
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Demo DELETE error:", err);
-    return NextResponse.json({ error: "சேவையகப் பிழை" }, { status: 500 });
+    return NextResponse.json({ error: t("api.server_error") }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { memo, useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import AnimatedNumber from "./AnimatedNumber";
 import { chartTooltipStyle, STATUS_COLORS } from "./chartTheme";
+import { useLanguage } from "@/components/LanguageProvider";
 
 interface StatusSlice {
   key: string;
@@ -20,13 +21,15 @@ interface StatusDoughnutChartProps {
 }
 
 function StatusDoughnutChart({ ok, warn, pend, rate }: StatusDoughnutChartProps) {
+  const { t } = useLanguage();
+
   const data: StatusSlice[] = useMemo(
     () => [
-      { key: "ok", name: "தீர்க்கப்பட்டது", value: ok, color: STATUS_COLORS.ok },
-      { key: "warn", name: "நடவடிக்கையில்", value: warn, color: STATUS_COLORS.warn },
-      { key: "pend", name: "பதிவில்", value: pend, color: STATUS_COLORS.pend },
+      { key: "ok", name: t("status.ok"), value: ok, color: STATUS_COLORS.ok },
+      { key: "warn", name: t("analytics.in_progress"), value: warn, color: STATUS_COLORS.warn },
+      { key: "pend", name: t("analytics.registered"), value: pend, color: STATUS_COLORS.pend },
     ],
-    [ok, pend, warn]
+    [ok, pend, warn, t]
   );
 
   const filtered = data.filter((d) => d.value > 0);
@@ -35,7 +38,7 @@ function StatusDoughnutChart({ ok, warn, pend, rate }: StatusDoughnutChartProps)
   if (total === 0) {
     return (
       <p className="analytics-chart-empty" role="status">
-        நிலை தரவு இல்லை
+        {t("chart.status_empty")}
       </p>
     );
   }
@@ -44,7 +47,7 @@ function StatusDoughnutChart({ ok, warn, pend, rate }: StatusDoughnutChartProps)
     <div
       className="analytics-donut-layout analytics-chart-reveal"
       role="img"
-      aria-label="தீர்வு நிலை doughnut chart"
+      aria-label={t("chart.status_aria")}
     >
       <div className="analytics-donut-chart">
         <ResponsiveContainer width="100%" height={260}>
@@ -85,10 +88,10 @@ function StatusDoughnutChart({ ok, warn, pend, rate }: StatusDoughnutChartProps)
           <b>
             <AnimatedNumber value={rate} suffix="%" />
           </b>
-          <span>தீர்வு விகிதம்</span>
+          <span>{t("analytics.resolution_rate")}</span>
         </div>
       </div>
-      <ul className="analytics-donut-legend" aria-label="நிலை விளக்கம்">
+      <ul className="analytics-donut-legend" aria-label={t("chart.status_legend_aria")}>
         {data.map((item) => (
           <li key={item.key}>
             <i style={{ background: item.color }} aria-hidden="true" />

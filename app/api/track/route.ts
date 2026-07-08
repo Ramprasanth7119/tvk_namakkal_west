@@ -1,9 +1,11 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getClientIp, validateRequestHeaders, checkRateLimit } from "@/lib/security";
 import { getStatusLabel, normalizeStatus } from "@/lib/complaintStatus";
 
 export async function GET(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
 
   try {
@@ -14,18 +16,18 @@ export async function GET(request: Request) {
 
     const rateLimit = await checkRateLimit(ip, "public_track", 30, 60 * 1000);
     if (!rateLimit.success) {
-      return NextResponse.json({ error: "அதிகப்படியான கோரிக்கைகள்" }, { status: 429 });
+      return NextResponse.json({ error: t("api.too_many_requests") }, { status: 429 });
     }
 
     const { searchParams } = new URL(request.url);
     const trackingId = (searchParams.get("trackingId") || "").trim().toUpperCase();
 
     if (!trackingId) {
-      return NextResponse.json({ error: "கண்காணிப்பு எண் தேவை (Tracking ID required)" }, { status: 400 });
+      return NextResponse.json({ error: t("api.tracking_id_needed") }, { status: 400 });
     }
 
     if (!/^ETT-\d{4}-\d{5}$/.test(trackingId)) {
-      return NextResponse.json({ error: "தவறான கண்காணிப்பு எண் வடிவம் (Invalid tracking ID format)" }, { status: 400 });
+      return NextResponse.json({ error: t("api.invalid_tracking_format") }, { status: 400 });
     }
 
     const db = await getDb();
@@ -53,7 +55,7 @@ export async function GET(request: Request) {
     );
 
     if (!complaint) {
-      return NextResponse.json({ error: "மனு கண்டறியப்படவில்லை (Complaint not found)" }, { status: 404 });
+      return NextResponse.json({ error: t("api.complaint_not_found_2") }, { status: 404 });
     }
 
     const status = normalizeStatus(complaint.status);
@@ -72,7 +74,7 @@ export async function GET(request: Request) {
           updatedAt: entry.updatedAt,
           notes: entry.notes || "",
         }))
-      : [{ status: "registered", label: getStatusLabel("registered"), updatedAt: complaint.createdAt, notes: "மனு வெற்றிகரமாக பதிவு செய்யப்பட்டது." }];
+      : [{ status: "registered", label: getStatusLabel("registered"), updatedAt: complaint.createdAt, notes: t("api.complaint_registered") }];
 
     return NextResponse.json({
       trackingId: complaint.trackingId,
@@ -93,6 +95,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Track API error:", error);
-    return NextResponse.json({ error: "மனு நிலையைப் பெறுவதில் பிழை" }, { status: 500 });
+    return NextResponse.json({ error: t("api.status_fetch_fail") }, { status: 500 });
   }
 }

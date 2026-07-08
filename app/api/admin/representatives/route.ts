@@ -1,3 +1,4 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/mongodb";
@@ -19,11 +20,12 @@ async function verifySuperAdminSession() {
 }
 
 export async function GET(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
   try {
     const session = await verifySuperAdminSession();
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized access)" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized_access") }, { status: 401 });
     }
 
     const db = await getDb();
@@ -48,16 +50,17 @@ export async function GET(request: Request) {
     return NextResponse.json(sanitizedReps);
   } catch (error) {
     console.error("Error fetching representatives:", error);
-    return NextResponse.json({ error: "சேவையக பிழை" }, { status: 500 });
+    return NextResponse.json({ error: t("api.server_error") }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
   try {
     const session = await verifySuperAdminSession();
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized access)" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized_access") }, { status: 401 });
     }
 
     const rawBody = await request.json();
@@ -65,11 +68,11 @@ export async function POST(request: Request) {
     const { username, password, name, phone, constituency, active } = body;
 
     if (!username || !password || !constituency) {
-      return NextResponse.json({ error: "அனைத்து கட்டாய புலங்களையும் நிரப்பவும் (Username, password, and constituency are required)" }, { status: 400 });
+      return NextResponse.json({ error: t("api.all_fields_req_const") }, { status: 400 });
     }
 
     if (!isConstituency(constituency)) {
-      return NextResponse.json({ error: "தவறான தொகுதி தேர்வு (Invalid constituency)" }, { status: 400 });
+      return NextResponse.json({ error: t("api.invalid_const") }, { status: 400 });
     }
 
     const cleanUsername = username.trim().toLowerCase();
@@ -78,7 +81,7 @@ export async function POST(request: Request) {
     // Check if user already exists
     const existingUser = await db.collection("users").findOne({ username: cleanUsername });
     if (existingUser) {
-      return NextResponse.json({ error: "இந்த பயனர் பெயர் ஏற்கனவே உள்ளது (Username already exists)" }, { status: 400 });
+      return NextResponse.json({ error: t("api.username_exists") }, { status: 400 });
     }
 
     const isActive = active === true;
@@ -116,19 +119,20 @@ export async function POST(request: Request) {
       metadata: { targetRep: cleanUsername, constituency },
     });
 
-    return NextResponse.json({ success: true, message: "பிரதிநிதி வெற்றிகரமாக உருவாக்கப்பட்டார் (Representative created successfully)" });
+    return NextResponse.json({ success: true, message: t("api.rep_created") });
   } catch (error) {
     console.error("Error creating representative:", error);
-    return NextResponse.json({ error: "பிரதிநிதி உருவாக்குவதில் பிழை ஏற்பட்டது" }, { status: 500 });
+    return NextResponse.json({ error: t("api.rep_create_fail") }, { status: 500 });
   }
 }
 
 export async function PATCH(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
   try {
     const session = await verifySuperAdminSession();
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized access)" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized_access") }, { status: 401 });
     }
 
     const rawBody = await request.json();
@@ -136,11 +140,11 @@ export async function PATCH(request: Request) {
     const { username, name, phone, constituency, active, password } = body;
 
     if (!username) {
-      return NextResponse.json({ error: "பயனர் பெயர் தேவை (Username is required)" }, { status: 400 });
+      return NextResponse.json({ error: t("api.username_req") }, { status: 400 });
     }
 
     if (constituency !== undefined && !isConstituency(constituency)) {
-      return NextResponse.json({ error: "தவறான தொகுதி தேர்வு (Invalid constituency)" }, { status: 400 });
+      return NextResponse.json({ error: t("api.invalid_const") }, { status: 400 });
     }
 
     const cleanUsername = username.trim().toLowerCase();
@@ -148,7 +152,7 @@ export async function PATCH(request: Request) {
 
     const targetUser = await db.collection("users").findOne({ username: cleanUsername });
     if (!targetUser) {
-      return NextResponse.json({ error: "பயனர் கண்டறியப்படவில்லை (User not found)" }, { status: 404 });
+      return NextResponse.json({ error: t("api.user_not_found") }, { status: 404 });
     }
 
     const isActive = active === true;
@@ -193,9 +197,9 @@ export async function PATCH(request: Request) {
       metadata: { targetRep: cleanUsername, constituency: updateFields.constituency, active: isActive },
     });
 
-    return NextResponse.json({ success: true, message: "பிரதிநிதி விவரங்கள் வெற்றிகரமாக புதுப்பிக்கப்பட்டது" });
+    return NextResponse.json({ success: true, message: t("api.rep_updated") });
   } catch (error) {
     console.error("Error updating representative:", error);
-    return NextResponse.json({ error: "பிரதிநிதி விவரங்களை புதுப்பிப்பதில் பிழை ஏற்பட்டது" }, { status: 500 });
+    return NextResponse.json({ error: t("api.rep_update_fail") }, { status: 500 });
   }
 }

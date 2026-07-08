@@ -1,8 +1,10 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getClientIp, validateRequestHeaders, checkRateLimit } from "@/lib/security";
 
 export async function GET(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
 
   try {
@@ -13,7 +15,7 @@ export async function GET(request: Request) {
 
     const rateLimit = await checkRateLimit(ip, "public_resolved", 60, 60 * 1000);
     if (!rateLimit.success) {
-      return NextResponse.json({ error: "அதிகப்படியான கோரிக்கைகள்" }, { status: 429 });
+      return NextResponse.json({ error: t("api.too_many_requests") }, { status: 429 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -64,6 +66,6 @@ export async function GET(request: Request) {
     return NextResponse.json(sanitized);
   } catch (error) {
     console.error("Resolved showcase error:", error);
-    return NextResponse.json({ error: "தீர்க்கப்பட்ட புகார்களைப் பெறுவதில் பிழை" }, { status: 500 });
+    return NextResponse.json({ error: t("api.resolved_fetch_fail") }, { status: 500 });
   }
 }

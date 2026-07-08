@@ -5,6 +5,7 @@ import { TVK_LOGO } from "@/lib/brand";
 import { useRouter } from "next/navigation";
 import WhistleCursor, { useWhistleCursor } from "@/components/WhistleCursor";
 import TvkTopBar from "@/components/TvkTopBar";
+import { useLanguage } from "@/components/LanguageProvider";
 import "../analytics/analytics.css";
 
 export default function LoginPage() {
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { t } = useLanguage();
 
   // Reset any leftover modal locks from previous page sessions
   useEffect(() => {
@@ -36,8 +38,6 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Field officers always land on their own task workspace and may never enter the
-        // representative's constituency view, even if a ?redirect= pointed there.
         const params = new URLSearchParams(window.location.search);
         const requestedRedirect = params.get("redirect");
         const redirectPath =
@@ -47,11 +47,11 @@ export default function LoginPage() {
         router.push(redirectPath);
         router.refresh();
       } else {
-        setError(data.error || "தவறான கடவுச்சொல். மீண்டும் முயற்சிக்கவும்.");
+        setError(data.error || t("login.error_fail"));
       }
     } catch (err) {
       console.error("Login error:", err);
-      setError("இணைப்புப் பிழை. மீண்டும் முயற்சிக்கவும்.");
+      setError(t("login.error_conn"));
     } finally {
       setLoading(false);
     }
@@ -60,12 +60,12 @@ export default function LoginPage() {
   return (
     <div className="analytics-body login-page-shell min-h-screen">
       <TvkTopBar
-        title="பிரதிநிதி உள்நுழைவு"
+        title={t("login.title")}
         brandHref="/"
         links={[
-          { href: "/", label: "முகப்பு" },
-          { href: "/track", label: "மனு நிலை அறிதல்" },
-          { href: "/analytics", label: "பகுப்பாய்வு" },
+          { href: "/", label: t("nav.home") },
+          { href: "/track", label: t("nav.track") },
+          { href: "/analytics", label: t("nav.analytics") },
         ]}
       />
 
@@ -78,10 +78,10 @@ export default function LoginPage() {
             style={{ width: "90px", height: "90px", objectFit: "contain", marginBottom: "1rem", filter: "drop-shadow(0 4px 10px rgba(254,203,2,0.3))" }}
           />
           <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 900, color: "#FECB02", textAlign: "center", letterSpacing: "0.05em" }}>
-            தமிழக வெற்றிக் கழகம்
+            {t("nav.brand")}
           </h1>
           <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.75rem", color: "rgba(255,255,255,0.6)", fontWeight: "bold", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-            Namakkal West · மக்கள் குரல்
+            {t("login.subtitle")}
           </p>
         </div>
 
@@ -102,7 +102,7 @@ export default function LoginPage() {
                 textAlign: "left"
               }}
             >
-              பயனர் பெயர் (Username)
+              {t("login.username")}
             </label>
             <input
               id="username"
@@ -144,7 +144,7 @@ export default function LoginPage() {
                 textAlign: "left"
               }}
             >
-              நுழைவு கடவுச்சொல் (Enter Password)
+              {t("login.password")}
             </label>
             <input
               id="password"
@@ -205,24 +205,24 @@ export default function LoginPage() {
             onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.98)"; }}
             onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1.02)"; }}
           >
-            {loading ? "சரிபார்க்கப்படுகிறது..." : "உள்நுழைய (Login) "}
+            {loading ? t("login.btn_loading") : t("login.btn")}
           </button>
         </form>
 
         <div style={{ marginTop: "1.5rem", padding: "0.85rem 1rem", background: "rgba(254,203,2,0.06)", border: "1px solid rgba(254,203,2,0.18)", borderRadius: "0.6rem", textAlign: "center" }}>
           <p style={{ margin: 0, fontSize: "0.8rem", color: "rgba(255,255,255,0.85)", fontWeight: "bold", lineHeight: 1.5 }}>
-            களப்பணியாளரா? (Field officer?)
+            {t("login.fo_note")}
             <br />
-            உங்கள் பணிகளை இங்கே நிர்வகிக்கவும் —{" "}
+            {t("login.fo_manage")}
             <a href="/my-tasks" style={{ color: "#FECB02", fontWeight: 900, textDecoration: "underline" }}>
-              எனது பணிகள் (My Tasks)
+              {t("login.fo_tasks")}
             </a>
           </p>
         </div>
 
         <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.05)", textAlign: "center" }}>
           <p style={{ margin: 0, fontSize: "0.65rem", color: "rgba(255,255,255,0.4)", fontWeight: "bold", letterSpacing: "0.05em" }}>
-            © 2026 நாமக்கல் மேற்கு — தமிழக வெற்றிக் கழகம்
+            {t("footer.copyright")}
           </p>
         </div>
       </div>
@@ -232,3 +232,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

@@ -1,3 +1,4 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { hashPassword, signSession, UserSession } from "@/lib/session";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/security";
 
 export async function POST(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
 
   try {
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
     const rateLimit = await checkRateLimit(ip, "admin_login", 20, 60 * 1000);
     if (!rateLimit.success) {
       return NextResponse.json(
-        { error: "அதிகப்படியான முயற்சிகள். ஒரு நிமிடம் கழித்து மீண்டும் முயற்சிக்கவும். (Too many login attempts. Please try again in a minute.)" },
+        { error: t("api.rate_limit_login") },
         { status: 429 }
       );
     }
@@ -45,7 +47,7 @@ export async function POST(request: Request) {
         if (user.active !== true) {
           await logSecurityEvent(ip, "ADMIN_LOGIN_DEACTIVATED", { usernameAttempt: cleanUsername });
           return NextResponse.json(
-            { error: "உங்கள் கணக்கு முடக்கப்பட்டுள்ளது. தயவுசெய்து நிர்வாகியைத் தொடர்பு கொள்ளவும். (Your account is deactivated. Please contact the administrator.)" },
+            { error: t("api.account_deactivated") },
             { status: 403 }
           );
         }
@@ -99,14 +101,14 @@ export async function POST(request: Request) {
     await logSecurityEvent(ip, "ADMIN_LOGIN_FAILED", { usernameAttempt: username || "empty", passwordAttempt: password ? "[REDACTED]" : "empty" });
 
     return NextResponse.json(
-      { error: "தவறான பயனர் பெயர் அல்லது கடவுச்சொல் (Incorrect username or password)" },
+      { error: t("api.incorrect_credentials") },
       { status: 401 }
     );
   } catch (error) {
     console.error("Login API Error:", error);
     await logSecurityEvent(ip, "ADMIN_LOGIN_ERROR", { error: String(error) });
     return NextResponse.json(
-      { error: "உள் சேவையகப் பிழை (Internal server error)" },
+      { error: t("api.internal_server_error") },
       { status: 500 }
     );
   }

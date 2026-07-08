@@ -26,7 +26,7 @@ function ResolutionRadialCharts({ metrics }: ResolutionRadialChartsProps) {
     <div
       className="analytics-radial-grid analytics-chart-reveal"
       role="group"
-      aria-label="தீர்வு செயல்திறன் radial charts"
+      aria-label="Resolution performance radial charts"
     >
       {metrics.map((metric) => (
         <div key={metric.key} className="analytics-radial-card">
@@ -76,23 +76,26 @@ function ResolutionRadialCharts({ metrics }: ResolutionRadialChartsProps) {
 
 export default memo(ResolutionRadialCharts);
 
-export function buildRadialMetrics(stats: {
-  total: number;
-  ok: number;
-  warn: number;
-  pend: number;
-  rate: number;
-}): RadialMetric[] {
+export function buildRadialMetrics(
+  stats: {
+    total: number;
+    ok: number;
+    warn: number;
+    pend: number;
+    rate: number;
+  },
+  t: (key: string) => string
+): RadialMetric[] {
   const { total, ok, warn, rate } = stats;
   const responseRate = total ? Math.round(((ok + warn) / total) * 100) : 0;
   const activeHandled = ok + warn > 0 ? Math.round((ok / (ok + warn)) * 100) : 0;
 
   return [
-    { key: "resolution", name: "தீர்வு விகிதம்", value: rate, fill: TVK.ok },
-    { key: "response", name: "பதிலளிப்பு விகிதம்", value: responseRate, fill: TVK.gold },
+    { key: "resolution", name: t("analytics.resolution_rate"), value: rate, fill: TVK.ok },
+    { key: "response", name: t("analytics.response_rate"), value: responseRate, fill: TVK.gold },
     {
       key: "verification",
-      name: "சரிபார்ப்பு விகிதம்",
+      name: t("analytics.verification_rate"),
       value: activeHandled,
       fill: TVK.red,
     },

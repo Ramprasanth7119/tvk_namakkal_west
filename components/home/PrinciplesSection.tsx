@@ -1,43 +1,52 @@
-/**
- * Home "our principles" (நமது கொள்கை விளக்கங்கள்) section. Pure presentational
- * markup extracted verbatim from app/page.tsx; `.rv` classes are animated by
- * DOM-query effects in the parent, so they must stay exactly as written.
- */
+"use client";
+
+import React from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+
 export default function PrinciplesSection() {
+  const { t } = useLanguage();
+
   return (
-    <section className="pr-sec sec-pad" data-cursor="maroon" data-rail="கொள்கை" id="principles">
+    <section className="pr-sec sec-pad" data-cursor="maroon" data-rail={t("principles.title").replace("\n", " ")} id="principles">
       <div className="wrap">
         <div className="sec-head">
-          <span className="sec-eyebrow">Our Principles</span>
-          <h2>நமது கொள்கை<br />விளக்கங்கள்</h2>
+          <span className="sec-eyebrow">{t("principles.eyebrow")}</span>
+          <h2>
+            {t("principles.title").split("\n").map((line, idx) => (
+              <React.Fragment key={idx}>
+                {line}
+                {idx === 0 && <br />}
+              </React.Fragment>
+            ))}
+          </h2>
         </div>
         <div className="pgrid">
           <div className="pcard rv">
             <div className="pemblem">⚖️</div>
             <div>
-              <h3>சமூக நீதி</h3>
-              <p>சாதி, மத பேதமின்றி அனைத்து மக்களுக்கும் சமமான வாய்ப்புகள் மற்றும் உரிமைகளை உறுதி செய்தல்.</p>
+              <h3>{t("principles.social_justice.title")}</h3>
+              <p>{t("principles.social_justice.desc")}</p>
             </div>
           </div>
           <div className="pcard rv rv-d1">
-            <div className="pemblem"></div>
+            <div className="pemblem">🤝</div>
             <div>
-              <h3>சமத்துவம்</h3>
-              <p>"பிறப்பொக்கும் எல்லா உயிர்க்கும்" — பிறப்பின் அடிப்படையில் உயர்வு தாழ்வு இல்லாத சமுதாயம் அமைத்தல்.</p>
+              <h3>{t("principles.equality.title")}</h3>
+              <p>{t("principles.equality.desc")}</p>
             </div>
           </div>
           <div className="pcard rv rv-d2">
             <div className="pemblem">💎</div>
             <div>
-              <h3>ஊழலற்ற நிர்வாகம்</h3>
-              <p>மக்களின் வரிப்பணம் மக்களுக்கே சென்றடைவதை உறுதி செய்யும் நேர்மையான அரசியல் பாதை.</p>
+              <h3>{t("principles.corruption_free.title")}</h3>
+              <p>{t("principles.corruption_free.desc")}</p>
             </div>
           </div>
           <div className="pcard rv rv-d3">
             <div className="pemblem">🌱</div>
             <div>
-              <h3>மனிதநேயம்</h3>
-              <p>அதிகார அரசியலுக்கு மாற்றாக, எளிய மக்களின் துயர் துடைக்கும் மனிதநேய அரசியலை முன்னெடுத்தல்.</p>
+              <h3>{t("principles.humanism.title")}</h3>
+              <p>{t("principles.humanism.desc")}</p>
             </div>
           </div>
         </div>
@@ -45,3 +54,4 @@ export default function PrinciplesSection() {
     </section>
   );
 }
+

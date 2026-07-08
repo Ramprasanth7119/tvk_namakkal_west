@@ -4,6 +4,7 @@ import { memo, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import AnimatedNumber from "./AnimatedNumber";
 import { chartTooltipStyle, SECTOR_COLORS, TVK } from "./chartTheme";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export interface CategoryChartSlice {
   key: string;
@@ -20,6 +21,7 @@ interface CategoryDoughnutChartProps {
 
 function CategoryDoughnutChart({ data, areaLabel }: CategoryDoughnutChartProps) {
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
+  const { t } = useLanguage();
 
   const filtered = useMemo(() => data.filter((d) => d.value > 0), [data]);
   const total = useMemo(() => filtered.reduce((s, d) => s + d.value, 0), [filtered]);
@@ -27,7 +29,7 @@ function CategoryDoughnutChart({ data, areaLabel }: CategoryDoughnutChartProps) 
   if (total === 0) {
     return (
       <p className="analytics-chart-empty" role="status">
-        துறை வாரியான புகார்கள் இல்லை
+        {t("chart.category_empty")}
       </p>
     );
   }
@@ -38,7 +40,7 @@ function CategoryDoughnutChart({ data, areaLabel }: CategoryDoughnutChartProps) 
     <div
       className="analytics-donut-layout analytics-chart-reveal"
       role="img"
-      aria-label="துறை வாரியான புகார் doughnut chart"
+      aria-label={t("chart.category_aria")}
     >
       <div className="analytics-donut-chart">
         <ResponsiveContainer width="100%" height={260}>
@@ -69,9 +71,9 @@ function CategoryDoughnutChart({ data, areaLabel }: CategoryDoughnutChartProps) 
                   <div style={chartTooltipStyle as React.CSSProperties}>
                     <strong>{row.name}</strong>
                     <div>
-                      மொத்தம்: {row.value} ({pct}%)
+                      {t("chart.total")}: {row.value} ({pct}%)
                     </div>
-                    <div>தீர்க்கப்பட்டது: {row.resolved}</div>
+                    <div>{t("chart.resolved")}: {row.resolved}</div>
                   </div>
                 );
               }}
@@ -89,12 +91,12 @@ function CategoryDoughnutChart({ data, areaLabel }: CategoryDoughnutChartProps) 
               <b>
                 <AnimatedNumber value={total} />
               </b>
-              <span>மொத்த புகார்கள்</span>
+              <span>{t("analytics.total_complaints")}</span>
             </>
           )}
         </div>
       </div>
-      <ul className="analytics-donut-legend" aria-label="துறை விளக்கம்">
+      <ul className="analytics-donut-legend" aria-label={t("chart.category_legend_aria")}>
         {filtered.map((item) => {
           const pct = Math.round((item.value / total) * 100);
           return (

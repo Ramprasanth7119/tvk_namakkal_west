@@ -1,3 +1,4 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getClientIp, validateRequestHeaders, checkRateLimit } from "@/lib/security";
@@ -5,6 +6,7 @@ import { CONSTITUENCIES, isConstituency } from "@/lib/constituencies";
 import { categoryToSector, mapComplaintToPublicRecord } from "@/lib/analyticsDisplay";
 
 export async function GET(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
 
   try {
@@ -15,7 +17,7 @@ export async function GET(request: Request) {
 
     const rateLimit = await checkRateLimit(ip, "public_analytics", 60, 60 * 1000);
     if (!rateLimit.success) {
-      return NextResponse.json({ error: "அதிகப்படியான கோரிக்கைகள்" }, { status: 429 });
+      return NextResponse.json({ error: t("api.too_many_requests") }, { status: 429 });
     }
 
     const { searchParams } = new URL(request.url);

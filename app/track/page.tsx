@@ -8,12 +8,7 @@ import TvkAppFooter from "@/components/TvkAppFooter";
 import TvkTopBar from "@/components/TvkTopBar";
 import { normalizeStatus } from "@/lib/complaintStatus";
 import WhistleCursor, { useWhistleCursor } from "@/components/WhistleCursor";
-
-const STATUS_STEPS = [
-  { code: "pend", label: "பதிவில்", icon: "" },
-  { code: "warn", label: "நடவடிக்கையில்", icon: "" },
-  { code: "ok", label: "தீர்க்கப்பட்டது", icon: "✓" },
-];
+import { useLanguage } from "@/components/LanguageProvider";
 
 function TrackPageContent() {
   const searchParams = useSearchParams();
@@ -21,6 +16,7 @@ function TrackPageContent() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { lang, t } = useLanguage();
 
   // Enable whistle cursor
   useWhistleCursor({ theme: "gold" });
@@ -36,10 +32,10 @@ function TrackPageContent() {
       if (res.ok) {
         setResult(data);
       } else {
-        setError(data.error || "மனு கண்டறியப்படவில்லை");
+        setError(data.error || t("track.not_found"));
       }
     } catch (err) {
-      setError("இணைப்புப் பிழை. மீண்டும் முயற்சிக்கவும்.");
+      setError(t("track.conn_error"));
     } finally {
       setLoading(false);
     }
@@ -58,27 +54,25 @@ function TrackPageContent() {
     await lookupTracking(trackingId);
   };
 
-  const getStepIndex = (code: string) => STATUS_STEPS.findIndex((s) => s.code === code);
-
   return (
     <div className="analytics-body min-h-screen">
       <WhistleCursor />
       <TvkTopBar
-        title="மனு நிலை அறிதல்"
+        title={t("track.title")}
         brandHref="/"
         links={[
-          { href: "/analytics", label: "பகுப்பாய்வு" },
-          { href: "/", label: "முகப்பு" },
+          { href: "/analytics", label: t("nav.analytics") },
+          { href: "/", label: t("nav.home") },
         ]}
       />
 
       <section className="phero" style={{ paddingBottom: "2rem" }}>
         <img className="ph-medal-whistle" src={TVK_LOGO} alt="" aria-hidden="true" />
         <div className="wrap flex flex-col items-start gap-4">
-          <span className="ph-eyebrow">பொது வெளிப்படைத்தன்மை · Public Transparency</span>
-          <h1>மனு நிலை அறிதல்</h1>
+          <span className="ph-eyebrow">{t("track.eyebrow")}</span>
+          <h1>{t("track.title")}</h1>
           <p style={{ maxWidth: "700px", margin: 0, color: "rgba(255,255,255,0.8)" }}>
-            உங்கள் குறைதீர் மனுவின் கண்காணிப்பு எண்ணை உள்ளிட்டு, அதன் தற்போதைய நிலை மற்றும் தீர்வு போக்கை அறிந்து கொள்ளுங்கள்.
+            {t("track.desc")}
           </p>
         </div>
       </section>
@@ -87,13 +81,13 @@ function TrackPageContent() {
         <div className="card" style={{ maxWidth: "720px", margin: "0 auto", padding: "2rem" }}>
           <form onSubmit={handleTrack} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <label htmlFor="trackingId" style={{ fontWeight: 800, color: "var(--m-800)" }}>
-              கண்காணிப்பு எண் (Tracking ID)
+              {t("track.label")}
             </label>
             <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
               <input
                 id="trackingId"
                 type="text"
-                placeholder="ETT-2026-00001"
+                placeholder={t("track.placeholder")}
                 value={trackingId}
                 onChange={(e) => setTrackingId(e.target.value)}
                 required
@@ -112,11 +106,11 @@ function TrackPageContent() {
                 className="verify-btn"
                 style={{ padding: "0.85rem 1.5rem", fontSize: "1rem", whiteSpace: "nowrap" }}
               >
-                {loading ? "தேடுகிறது..." : "நிலையை அறி "}
+                {loading ? t("track.btn_loading") : t("track.btn")}
               </button>
             </div>
             <p style={{ fontSize: "0.85rem", color: "var(--ink-soft)", margin: 1 }}>
-              எ.கா. ETT-2026-00001 — மனு சமர்ப்பித்த பின் வழங்கப்பட்ட கண்காணிப்பு எண்ணை உள்ளிடவும்.
+              {t("track.hint")}
             </p>
           </form>
 
@@ -130,35 +124,35 @@ function TrackPageContent() {
             <div style={{ marginTop: "2rem", borderTop: "1px solid var(--line)", paddingTop: "1.5rem" }}>
               <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", textAlign: "center" }}>
                 <div>
-                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>கண்காணிப்பு எண்</small>
+                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>{t("track.meta.id")}</small>
                   <p style={{ margin: "0.25rem 0 0", fontWeight: 900, color: "var(--m-800)", letterSpacing: "0.02em" }}>{result.trackingId}</p>
                 </div>
                 <div>
-                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>வகை</small>
-                  <p style={{ margin: "0.25rem 0 0", fontWeight: 700 }}>{result.category}{result.subcategory ? ` · ${result.subcategory}` : ""}</p>
+                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>{t("track.meta.category")}</small>
+                  <p style={{ margin: "0.25rem 0 0", fontWeight: 700 }}>{t(result.category)}{result.subcategory ? ` · ${t(result.subcategory)}` : ""}</p>
                 </div>
                 <div>
-                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>தொகுதி</small>
-                  <p style={{ margin: "0.25rem 0 0", fontWeight: 700 }}> {result.constituency}</p>
+                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>{t("track.meta.constituency")}</small>
+                  <p style={{ margin: "0.25rem 0 0", fontWeight: 700 }}>{t(result.constituency)}</p>
                 </div>
                 <div>
-                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>தற்போதைய நிலை</small>
+                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>{t("track.meta.status")}</small>
                   <p style={{ margin: "0.25rem 0 0" }}>
                     <span className={`badge ${result.status === "resolved" ? "ok" : result.status === "registered" ? "pend" : "warn"}`} style={{ display: "inline-flex" }}>
-                      <i></i>{result.statusLabel}
+                      <i></i>{t(`status.${result.status}`)}
                     </span>
                   </p>
                 </div>
                 <div>
-                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>பதிவு தேதி</small>
+                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>{t("track.meta.created")}</small>
                   <p style={{ margin: "0.25rem 0 0", fontWeight: 600 }}>
-                    {result.createdAt ? new Date(result.createdAt).toLocaleDateString("ta-IN") : "-"}
+                    {result.createdAt ? new Date(result.createdAt).toLocaleDateString(lang === "ta" ? "ta-IN" : "en-IN") : "-"}
                   </p>
                 </div>
                 <div>
-                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>கடைசி புதுப்பிப்பு</small>
+                  <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>{t("track.meta.updated")}</small>
                   <p style={{ margin: "0.25rem 0 0", fontWeight: 600 }}>
-                    {result.updatedAt ? new Date(result.updatedAt).toLocaleDateString("ta-IN") : "-"}
+                    {result.updatedAt ? new Date(result.updatedAt).toLocaleDateString(lang === "ta" ? "ta-IN" : "en-IN") : "-"}
                   </p>
                 </div>
               </div>
@@ -167,28 +161,28 @@ function TrackPageContent() {
               {(result.solvedBy || result.verifiedBy || result.approvedBy) && (
                 <div style={{ marginTop: "2rem", background: "rgba(254, 203, 2, 0.05)", border: "1px dashed var(--gold)", padding: "1.25rem", borderRadius: "0.75rem" }}>
                   <h3 style={{ fontSize: "1rem", fontWeight: 900, color: "var(--m-800)", marginBottom: "0.75rem" }}>
-                     குறைதீர் பொறுப்பாளர்கள் விவரம்
+                    {t("track.officers.title")}
                   </h3>
                   <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
                     {result.solvedBy && (
                       <div>
-                        <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block" }}>தீர்வு செய்தவர்:</small>
+                        <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block" }}>{t("track.officers.solver")}</small>
                         <b style={{ color: "var(--ink)", fontSize: "0.95rem" }}>{result.solvedBy}</b>
-                        <span style={{ display: "block", fontSize: "0.75rem", opacity: 0.7 }}>களப்பணியாளர் (Field Officer)</span>
+                        <span style={{ display: "block", fontSize: "0.75rem", opacity: 0.7 }}>{t("common.field_officer")}</span>
                       </div>
                     )}
                     {result.verifiedBy && (
                       <div>
-                        <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block" }}>சரிபார்த்தவர்:</small>
+                        <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block" }}>{t("track.officers.verifier")}</small>
                         <b style={{ color: "var(--ink)", fontSize: "0.95rem" }}>{result.verifiedBy}</b>
-                        <span style={{ display: "block", fontSize: "0.75rem", opacity: 0.7 }}>தொகுதிப் பிரதிநிதி (Representative)</span>
+                        <span style={{ display: "block", fontSize: "0.75rem", opacity: 0.7 }}>{t("common.representative")}</span>
                       </div>
                     )}
                     {result.approvedBy && (
                       <div>
-                        <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block" }}>ஒப்புதல் வழங்கியவர்:</small>
+                        <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block" }}>{t("track.officers.approver")}</small>
                         <b style={{ color: "var(--ink)", fontSize: "0.95rem" }}>{result.approvedBy}</b>
-                        <span style={{ display: "block", fontSize: "0.75rem", opacity: 0.7 }}>கட்சித் தலைமை (Super Admin)</span>
+                        <span style={{ display: "block", fontSize: "0.75rem", opacity: 0.7 }}>{t("common.super_admin")}</span>
                       </div>
                     )}
                   </div>
@@ -199,11 +193,11 @@ function TrackPageContent() {
               {((result.afterImages?.length || 0) > 0 || (result.beforeImages?.length || 0) > 0) && (
                 <div style={{ marginTop: "2rem", background: "rgba(94, 140, 58, 0.06)", border: "1px solid rgba(94, 140, 58, 0.25)", padding: "1.25rem", borderRadius: "0.75rem" }}>
                   <h3 style={{ fontSize: "1rem", fontWeight: 900, color: "var(--m-800)", marginBottom: "0.85rem" }}>
-                    முடிக்கப்பட்ட பணி – புகைப்படங்கள் (Completed Work Photos)
+                    {t("track.evidence.title")}
                   </h3>
                   <div style={{ display: "grid", gap: "1.25rem", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
                     <div>
-                      <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block", marginBottom: "0.5rem" }}>பணிக்கு முன் (Before)</small>
+                      <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block", marginBottom: "0.5rem" }}>{t("track.evidence.before")}</small>
                       {(result.beforeImages?.length || 0) > 0 ? (
                         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                           {result.beforeImages.map((img: string, idx: number) => (
@@ -213,11 +207,11 @@ function TrackPageContent() {
                           ))}
                         </div>
                       ) : (
-                        <span style={{ fontSize: "0.8rem", color: "var(--ink-soft)", fontStyle: "italic" }}>புகைப்படம் இல்லை</span>
+                        <span style={{ fontSize: "0.8rem", color: "var(--ink-soft)", fontStyle: "italic" }}>{t("track.evidence.none")}</span>
                       )}
                     </div>
                     <div>
-                      <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block", marginBottom: "0.5rem" }}>பணிக்கு பின் (After)</small>
+                      <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block", marginBottom: "0.5rem" }}>{t("track.evidence.after")}</small>
                       {(result.afterImages?.length || 0) > 0 ? (
                         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                           {result.afterImages.map((img: string, idx: number) => (
@@ -227,13 +221,13 @@ function TrackPageContent() {
                           ))}
                         </div>
                       ) : (
-                        <span style={{ fontSize: "0.8rem", color: "var(--ink-soft)", fontStyle: "italic" }}>புகைப்படம் இல்லை</span>
+                        <span style={{ fontSize: "0.8rem", color: "var(--ink-soft)", fontStyle: "italic" }}>{t("track.evidence.none")}</span>
                       )}
                     </div>
                   </div>
                   {result.workNotes && (
                     <p style={{ margin: "0.85rem 0 0 0", fontSize: "0.85rem", color: "var(--ink)", lineHeight: 1.5 }}>
-                      <b style={{ color: "var(--m-800)" }}>பணி குறிப்பு:</b> {result.workNotes}
+                      <b style={{ color: "var(--m-800)" }}>{t("track.evidence.notes")}</b> {result.workNotes}
                     </p>
                   )}
                 </div>
@@ -242,7 +236,7 @@ function TrackPageContent() {
               {/* TIMELINE */}
               <div style={{ marginTop: "2rem" }}>
                 <h3 style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--m-800)", marginBottom: "1rem" }}>
-                   மனு நிலை போக்கு (Timeline)
+                  {t("track.timeline.title")}
                 </h3>
                 <div className="activity-timeline" style={{ padding: '0.5rem 0' }}>
                   {(result.timeline || []).map((step: any, idx: number) => {
@@ -270,13 +264,13 @@ function TrackPageContent() {
                         </div>
                         <div style={{ flex: 1, background: '#F9FAFB', padding: '0.75rem 1rem', borderRadius: '0.5rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                            <b style={{ fontSize: '0.9rem', color: '#111' }}>{step.label}</b>
+                            <b style={{ fontSize: '0.9rem', color: '#111' }}>{step.label || t(`status.${norm}`)}</b>
                             <span style={{ fontSize: '0.75rem', color: '#666' }}>
-                              {step.updatedAt ? new Date(step.updatedAt).toLocaleString("ta-IN") : ""}
+                              {step.updatedAt ? new Date(step.updatedAt).toLocaleString(lang === "ta" ? "ta-IN" : "en-IN") : ""}
                             </span>
                           </div>
                           <p style={{ margin: 0, fontSize: '0.82rem', color: '#555', lineHeight: '1.4' }}>
-                            {step.notes || `மனுவின் நிலை "${step.label}" என புதுப்பிக்கப்பட்டது.`}
+                            {step.notes || t("track.timeline.default_note", { label: t(`status.${norm}`) })}
                           </p>
                         </div>
                       </div>
@@ -289,7 +283,7 @@ function TrackPageContent() {
         </div>
       </div>
 
-      <TvkAppFooter tagline="மனு நிலை அறிதல் · பொது வெளிப்படைத்தன்மை" />
+      <TvkAppFooter tagline={`${t("track.title")} · ${t("track.eyebrow")}`} />
     </div>
   );
 }
@@ -298,7 +292,7 @@ export default function TrackPage() {
   return (
     <Suspense fallback={
       <div className="analytics-body min-h-screen flex items-center justify-center">
-        <p style={{ fontWeight: 700 }}>ஏற்றப்படுகிறது...</p>
+        <p style={{ fontWeight: 700 }}>Loading...</p>
       </div>
     }>
       <TrackPageContent />

@@ -1,3 +1,4 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/mongodb";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/security";
 
 export async function GET(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
 
   try {
@@ -31,7 +33,7 @@ export async function GET(request: Request) {
     if (!rateLimit.success) {
       return NextResponse.json(
         {
-          error: "அதிகப்படியான கோரிக்கைகள். ஒரு நிமிடம் கழித்து மீண்டும் முயற்சிக்கவும். (Too many requests. Please try again in a minute.)",
+          error: t("api.rate_limit_minute"),
         },
         { status: 429 }
       );
@@ -46,7 +48,7 @@ export async function GET(request: Request) {
       const session = verifySession(authCookie.value);
       if (!session) {
         return NextResponse.json(
-          { error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized access)" },
+          { error: t("api.unauthorized_access") },
           { status: 401 }
         );
       }
@@ -63,7 +65,7 @@ export async function GET(request: Request) {
       }
     } else {
       return NextResponse.json(
-        { error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized access)" },
+        { error: t("api.unauthorized_access") },
         { status: 401 }
       );
     }
@@ -90,13 +92,14 @@ export async function GET(request: Request) {
     console.error("Error fetching complaints:", error);
     await logSecurityEvent(ip, "ANALYTICS_API_ERROR", { error: String(error) });
     return NextResponse.json(
-      { error: "புகார்களைப் பெறுவதில் பிழை ஏற்பட்டது" },
+      { error: t("api.complaint_fetch_fail") },
       { status: 500 }
     );
   }
 }
 
 export async function POST(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
 
   try {
@@ -111,7 +114,7 @@ export async function POST(request: Request) {
     if (!rateLimit.success) {
       return NextResponse.json(
         {
-          error: "அதிகப்படியான புகார்கள். ஒரு மணி நேரம் கழித்து மீண்டும் முயற்சிக்கவும். (Too many complaint submissions. Please try again in an hour.)",
+          error: t("api.rate_limit_complaints"),
         },
         { status: 429 }
       );
@@ -146,7 +149,7 @@ export async function POST(request: Request) {
     if (email_honeypot || website_honeypot) {
       await logSecurityEvent(ip, "BOT_SUBMISSION_BLOCKED", { email_honeypot, website_honeypot });
       return NextResponse.json(
-        { error: "தானியங்கி சமர்ப்பிப்பு தடுக்கப்பட்டது (Automated submission blocked)" },
+        { error: t("api.bot_blocked") },
         { status: 400 }
       );
     }
@@ -154,14 +157,14 @@ export async function POST(request: Request) {
     // 5. Schema and payload validation
     if (!voterVerified || !voterId) {
       return NextResponse.json(
-        { error: "வாக்காளர் அடையாளம் சரிபார்க்கப்பட வேண்டும்" },
+        { error: t("api.voter_id_required") },
         { status: 400 }
       );
     }
 
     if (!complaintDetails?.description || complaintDetails.description.trim() === "") {
       return NextResponse.json(
-        { error: "புகார் விளக்கம் தேவை (Complaint description is required)" },
+        { error: t("api.desc_required") },
         { status: 400 }
       );
     }
@@ -188,7 +191,7 @@ export async function POST(request: Request) {
       if (!uploadLimit.success) {
         return NextResponse.json(
           {
-            error: "அதிகப்படியான கோப்பு பதிவேற்றங்கள். ஒரு மணி நேரம் கழித்து மீண்டும் முயற்சிக்கவும். (Too many file uploads. Please try again in an hour.)",
+            error: t("api.rate_limit_uploads"),
           },
           { status: 429 }
         );
@@ -260,7 +263,7 @@ export async function POST(request: Request) {
     if (totalUploadsInPayload > 0) {
       if (!isCloudinaryConfigured()) {
         return NextResponse.json(
-          { error: "மீடியா பதிவேற்றம் தற்போது கிடைக்கவில்லை. Cloudinary கட்டமைக்கப்படவில்லை." },
+          { error: t("api.cloudinary_error") },
           { status: 503 }
         );
       }
@@ -274,7 +277,7 @@ export async function POST(request: Request) {
         }
       } catch (uploadErr) {
         console.error("Cloudinary upload error:", uploadErr);
-        return NextResponse.json({ error: "மீடியா பதிவேற்றத்தில் பிழை ஏற்பட்டது" }, { status: 500 });
+        return NextResponse.json({ error: t("api.media_upload_error") }, { status: 500 });
       }
     }
 
@@ -317,19 +320,20 @@ export async function POST(request: Request) {
       trackingId,
       photoUrls,
       videoUrls,
-      message: "புகார் வெற்றிகரமாகப் பதிவு செய்யப்பட்டது",
+      message: t("api.complaint_success"),
     });
   } catch (error) {
     console.error("Error saving complaint:", error);
     await logSecurityEvent(ip, "COMPLAINT_SUBMISSION_ERROR", { error: String(error) });
     return NextResponse.json(
-      { error: "புகாரைப் பதிவு செய்வதில் பிழை ஏற்பட்டது" },
+      { error: t("api.complaint_fail") },
       { status: 500 }
     );
   }
 }
 
 export async function PATCH(request: Request) {
+  const t = await getBackendT();
   const ip = getClientIp(request);
   try {
     const rawBody = await request.json();
@@ -337,31 +341,31 @@ export async function PATCH(request: Request) {
     const { trackingId, action, status } = body;
 
     if (!trackingId) {
-      return NextResponse.json({ error: "தேவையான அளவுருக்கள் இல்லை (Tracking ID is required)" }, { status: 400 });
+      return NextResponse.json({ error: t("api.tracking_id_req") }, { status: 400 });
     }
 
     const cookieStore = await cookies();
     const authCookie = cookieStore.get("site_auth");
     if (!authCookie) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized)" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized") }, { status: 401 });
     }
     const session = verifySession(authCookie.value);
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல் (Unauthorized)" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized") }, { status: 401 });
     }
 
     const db = await getDb();
     const complaint = await db.collection("citizenComplaints").findOne({ trackingId });
     if (!complaint) {
-      return NextResponse.json({ error: "புகார் கண்டறியப்படவில்லை (Complaint not found)" }, { status: 404 });
+      return NextResponse.json({ error: t("api.complaint_not_found") }, { status: 404 });
     }
 
     // Role-based constituency access check
     if (session.role === "REPRESENTATIVE" && complaint.constituency !== session.constituency) {
-      return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது (Access Forbidden)" }, { status: 403 });
+      return NextResponse.json({ error: t("api.forbidden_access") }, { status: 403 });
     }
     if (session.role === "FIELD_OFFICER" && complaint.assignedTo !== session.username) {
-      return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது (Access Forbidden)" }, { status: 403 });
+      return NextResponse.json({ error: t("api.forbidden_access") }, { status: 403 });
     }
 
     const now = new Date();
@@ -373,16 +377,16 @@ export async function PATCH(request: Request) {
     if (action === "assign") {
       // Representative assigns to Field Officer
       if (session.role !== "REPRESENTATIVE" && session.role !== "SUPER_ADMIN") {
-        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+        return NextResponse.json({ error: t("api.forbidden") }, { status: 403 });
       }
       const { assignedTo } = body;
       if (!assignedTo) {
-        return NextResponse.json({ error: "களப்பணியாளர் தேர்ந்தெடுக்கப்பட வேண்டும்" }, { status: 400 });
+        return NextResponse.json({ error: t("api.fo_required") }, { status: 400 });
       }
       
       const officer = await db.collection("users").findOne({ username: assignedTo, role: "FIELD_OFFICER" });
       if (!officer) {
-        return NextResponse.json({ error: "களப்பணியாளர் கண்டறியப்படவில்லை" }, { status: 404 });
+        return NextResponse.json({ error: t("api.fo_not_found") }, { status: 404 });
       }
 
       nextStatus = "assigned";
@@ -396,7 +400,7 @@ export async function PATCH(request: Request) {
     } else if (action === "start_work") {
       // Field Officer claims work
       if (session.role !== "FIELD_OFFICER") {
-        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+        return NextResponse.json({ error: t("api.forbidden") }, { status: 403 });
       }
       nextStatus = "work_in_progress";
       updateFields.status = "work_in_progress";
@@ -405,7 +409,7 @@ export async function PATCH(request: Request) {
     } else if (action === "submit_solution") {
       // Field Officer uploads evidence and finishes task
       if (session.role !== "FIELD_OFFICER") {
-        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+        return NextResponse.json({ error: t("api.forbidden") }, { status: 403 });
       }
       const { beforeImages, afterImages, videos, workNotes } = body;
 
@@ -426,7 +430,7 @@ export async function PATCH(request: Request) {
           }
         } catch (uploadErr) {
           console.error("Cloudinary upload error inside submit_solution:", uploadErr);
-          return NextResponse.json({ error: "சான்றுகளைப் பதிவேற்றுவதில் பிழை ஏற்பட்டது" }, { status: 500 });
+          return NextResponse.json({ error: t("api.evidence_upload_error") }, { status: 500 });
         }
       }
 
@@ -442,7 +446,7 @@ export async function PATCH(request: Request) {
     } else if (action === "rep_approve") {
       // Representative approves field work
       if (session.role !== "REPRESENTATIVE" && session.role !== "SUPER_ADMIN") {
-        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+        return NextResponse.json({ error: t("api.forbidden") }, { status: 403 });
       }
       nextStatus = "pending_admin_approval";
       updateFields.status = "pending_admin_approval";
@@ -454,11 +458,11 @@ export async function PATCH(request: Request) {
     } else if (action === "rep_reject") {
       // Representative rejects field work, sends back
       if (session.role !== "REPRESENTATIVE" && session.role !== "SUPER_ADMIN") {
-        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+        return NextResponse.json({ error: t("api.forbidden") }, { status: 403 });
       }
       const { rejectionReason } = body;
       if (!rejectionReason) {
-        return NextResponse.json({ error: "நிராகரிப்பதற்கான காரணம் தேவை" }, { status: 400 });
+        return NextResponse.json({ error: t("api.reject_reason_req") }, { status: 400 });
       }
       nextStatus = "work_in_progress";
       updateFields.status = "work_in_progress";
@@ -469,31 +473,31 @@ export async function PATCH(request: Request) {
     } else if (action === "admin_approve") {
       // Super Admin resolves finally
       if (session.role !== "SUPER_ADMIN") {
-        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+        return NextResponse.json({ error: t("api.forbidden") }, { status: 403 });
       }
       nextStatus = "resolved";
       updateFields.status = "resolved";
       updateFields.adminApproval = "APPROVED";
       updateFields.adminApprovedAt = now;
       updateFields.approvedBy = "SUPER_ADMIN";
-      timelineNote = "நிர்வாகி இறுதி ஒப்புதல் அளித்தார் - மனு தீர்க்கப்பட்டது";
+      timelineNote = t("api.admin_approved");
 
     } else if (action === "admin_reject") {
       // Super Admin rejects and sends back to work_in_progress
       if (session.role !== "SUPER_ADMIN") {
-        return NextResponse.json({ error: "அனுமதி மறுக்கப்பட்டது" }, { status: 403 });
+        return NextResponse.json({ error: t("api.forbidden") }, { status: 403 });
       }
       const { rejectionReason } = body;
       nextStatus = "work_in_progress";
       updateFields.status = "work_in_progress";
       updateFields.adminApproval = "REJECTED";
-      updateFields.adminRejectionReason = rejectionReason || "நிர்வாகி திருப்தி அடையவில்லை";
+      updateFields.adminRejectionReason = rejectionReason || t("api.admin_dissatisfied");
       timelineNote = `நிர்வாகி தீர்வினை மீண்டும் அனுப்பினார்: ${rejectionReason || "மதிப்பாய்வுக்காக"}`;
 
     } else {
       // Fallback to legacy single status updates
       if (!status) {
-        return NextResponse.json({ error: "தவறான நடவடிக்கை" }, { status: 400 });
+        return NextResponse.json({ error: t("api.invalid_action") }, { status: 400 });
       }
       nextStatus = normalizeStatus(status);
       updateFields.status = nextStatus;
@@ -525,9 +529,9 @@ export async function PATCH(request: Request) {
       metadata: { status: nextStatus, notes: timelineNote },
     });
 
-    return NextResponse.json({ success: true, message: "மனுவின் விவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது" });
+    return NextResponse.json({ success: true, message: t("api.update_success") });
   } catch (error) {
     console.error("Error updating complaint status:", error);
-    return NextResponse.json({ error: "நிலை புதுப்பிப்பதில் பிழை ஏற்பட்டது" }, { status: 500 });
+    return NextResponse.json({ error: t("api.update_fail") }, { status: 500 });
   }
 }

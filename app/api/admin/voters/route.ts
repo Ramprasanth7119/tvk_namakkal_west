@@ -1,13 +1,15 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { verifySuperAdminSession } from "@/lib/adminSession";
 import { readWardNo, formatVoterDob } from "@/lib/voterRegistry";
 
 export async function GET(request: Request) {
+  const t = await getBackendT();
   try {
     const session = await verifySuperAdminSession();
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல்" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized_simple") }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -83,6 +85,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Voter list error:", error);
-    return NextResponse.json({ error: "சேவையக பிழை" }, { status: 500 });
+    return NextResponse.json({ error: t("api.server_error") }, { status: 500 });
   }
 }

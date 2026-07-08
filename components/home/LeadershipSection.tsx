@@ -1,52 +1,52 @@
-/**
- * Home "leadership / org" (இயக்கத்தின் ஆளுமைகள்) section. Pure presentational
- * markup extracted verbatim from app/page.tsx; `.rv`/`.spot` classes are animated
- * by DOM-query effects in the parent, so they must stay exactly as written.
- */
+"use client";
+
+import { useLanguage } from "@/components/LanguageProvider";
+
 export default function LeadershipSection() {
+  const { t } = useLanguage();
+
   return (
-    <section className="sec-pad" data-cursor="maroon" data-rail="தலைமை" id="org">
+    <section className="sec-pad" data-cursor="maroon" data-rail={t("leadership.role.head")} id="org">
       <div className="wrap">
         <div className="sec-head center">
-          <span className="sec-eyebrow">Leadership</span>
-          <h2>இயக்கத்தின் ஆளுமைகள்</h2>
-          <p>மாநிலத் தலைமை முதல் மாவட்ட நிர்வாகம் வரை — ஒரே அணி, ஒரே இலக்கு.</p>
+          <span className="sec-eyebrow">{t("leadership.eyebrow")}</span>
+          <h2>{t("leadership.title")}</h2>
+          <p>{t("leadership.subtitle")}</p>
         </div>
         <div className="org-grid">
           <div className="ocard spot rv">
-            <div className="ophoto"><span className="obadge">தலைமை</span>
-              <img src="/vijaycm.jpg" alt="ஜோசப் விஜய் சந்திரசேகர்" data-fb="வி" width="100%" />
+            <div className="ophoto">
+              <span className="obadge">{t("leadership.role.head")}</span>
+              <img src="/vijaycm.jpg" alt={t("leadership.name.president")} data-fb="வி" width="100%" />
             </div>
             <div className="obody">
-              <h3>சி. ஜோசப் விஜய்</h3><span>தலைவர், தமிழக வெற்றிக் கழகம் · தமிழ்நாடு முதலமைச்சர்</span>
+              <h3>{t("leadership.name.president")}</h3>
+              <span>{t("leadership.role.president")}</span>
             </div>
           </div>
           <div className="ocard spot rv rv-d1">
-            <div className="ophoto"><span className="obadge">மாநிலம்</span>
-              <img src="https://www.tvknamakkaleast.com/assets/images/anand.png" alt="புஸ்ஸி என். ஆனந்த்" data-fb="ஆ" />
+            <div className="ophoto">
+              <span className="obadge">{t("leadership.role.state")}</span>
+              <img src="https://www.tvknamakkaleast.com/assets/images/anand.png" alt={t("leadership.name.gen_sec")} data-fb="ஆ" />
             </div>
             <div className="obody">
-              <h3>புஸ்ஸி என். ஆனந்த்</h3><span>பொதுச் செயலாளர், தமிழக வெற்றிக் கழகம்</span>
+              <h3>{t("leadership.name.gen_sec")}</h3>
+              <span>{t("leadership.role.gen_sec")}</span>
             </div>
           </div>
           <div className="ocard spot rv rv-d2">
-            <div className="ophoto"><span className="obadge">மாவட்டம்</span>
-              <img src="/sathish.jpeg" alt="நாமக்கல் மேற்கு மாவட்டத் தலைமை" data-fb="ந" />
+            <div className="ophoto">
+              <span className="obadge">{t("leadership.role.district")}</span>
+              <img src="/sathish.jpeg" alt={t("leadership.name.dist_sec")} data-fb="ந" />
             </div>
             <div className="obody">
-              <h3>என். சதீஷ்</h3><span>மாவட்டச் செயலாளர், நாமக்கல் மேற்கு</span>
+              <h3>{t("leadership.name.dist_sec")}</h3>
+              <span>{t("leadership.role.dist_sec")}</span>
             </div>
           </div>
-          {/* <div className="ocard spot rv rv-d3">
-          <div className="ophoto"><span className="obadge">மாவட்டம்</span>
-            <img src={undefined} alt="மாவட்ட துணைச் செயலாளர்" data-fb="ந" />
-          </div>
-          <div className="obody">
-            <h3>[பெயர் சேர்க்கவும்]</h3><span>மாவட்ட துணைச் செயலாளர், நாமக்கல் மேற்கு</span>
-          </div>
-        </div> */}
         </div>
       </div>
     </section>
   );
 }
+

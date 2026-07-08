@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { TVK_LOGO } from "@/lib/brand";
 import { useMobileNav } from "@/components/useMobileNav";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type TvkHomeNavProps = {
   onOpenComplaint: () => void;
@@ -13,6 +14,7 @@ type TvkHomeNavProps = {
 export default function TvkHomeNav({ onOpenComplaint }: TvkHomeNavProps) {
   const [navOpen, setNavOpen] = useState(false);
   const { close, toggle } = useMobileNav(navOpen, setNavOpen, "nav-menu-open", 1480);
+  const { lang, setLang, t } = useLanguage();
 
   return (
     <nav className="nav" id="nav">
@@ -25,8 +27,8 @@ export default function TvkHomeNav({ onOpenComplaint }: TvkHomeNavProps) {
           <Link className="brand" href="#top" onClick={close}>
             <Image src={TVK_LOGO} alt="TVK" width={36} height={36} style={{ objectFit: "contain" }} />
             <span className="brand-text">
-              <small>TVK · Namakkal West</small>
-              <b>தமிழக வெற்றிக் கழகம்</b>
+              <small>{t("nav.subtitle")}</small>
+              <b>{t("nav.brand")}</b>
             </span>
           </Link>
 
@@ -34,7 +36,7 @@ export default function TvkHomeNav({ onOpenComplaint }: TvkHomeNavProps) {
             type="button"
             className="nav-toggle"
             id="navToggle"
-            aria-label={navOpen ? "மெனுவை மூடு" : "வழிசெலுத்தல் மெனு"}
+            aria-label={navOpen ? t("nav.menu_close") : t("nav.menu_toggle")}
             aria-expanded={navOpen ? "true" : "false"}
             aria-controls="navLinks"
             onClick={toggle}
@@ -44,16 +46,16 @@ export default function TvkHomeNav({ onOpenComplaint }: TvkHomeNavProps) {
 
           <div className={`nav-links ${navOpen ? "open" : ""}`} id="navLinks">
             <a href="#ideology" onClick={close}>
-              கொடி &amp; கொள்கை
+              {t("nav.ideology")}
             </a>
             <a href="#leaders" onClick={close}>
-              தலைவர்கள்
+              {t("nav.leaders")}
             </a>
             <a href="#plan" onClick={close}>
-              என் தெரு, என் திட்டம்
+              {t("nav.plan")}
             </a>
             <a href="#events" onClick={close}>
-              நிகழ்வுகள்
+              {t("nav.events")}
             </a>
             <a
               href="#complaint"
@@ -63,19 +65,50 @@ export default function TvkHomeNav({ onOpenComplaint }: TvkHomeNavProps) {
                 onOpenComplaint();
               }}
             >
-              குறைதீர் மனு
+              {t("nav.complaint")}
             </a>
             <Link href="/track" onClick={close}>
-              மனு நிலை அறிதல்
+              {t("nav.track")}
             </Link>
             <a href="#contact" onClick={close}>
-              தொடர்பு
+              {t("nav.contact")}
             </a>
+            
+            {/* Language Switcher */}
+            <button
+              type="button"
+              onClick={() => {
+                setLang(lang === "ta" ? "en" : "ta");
+                close();
+              }}
+              className="lang-toggle-btn"
+              aria-label={lang === "ta" ? "Switch to English" : "தமிழுக்கு மாற்று"}
+              style={{
+                color: "var(--gold)",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                background: "transparent",
+                border: "none",
+                padding: 0
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              </svg>
+              {lang === "ta" ? "English" : "தமிழ்"}
+            </button>
+
             <a href="#join" className="cta" onClick={close}>
-              இணையுங்கள்
+              {t("nav.join")}
             </a>
           </div>
       </div>
     </nav>
   );
 }
+

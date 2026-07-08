@@ -1,13 +1,15 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { verifySuperAdminSession } from "@/lib/adminSession";
 
 export async function GET(request: Request) {
+  const t = await getBackendT();
   try {
     const session = await verifySuperAdminSession();
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல்" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized_simple") }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -37,28 +39,29 @@ export async function GET(request: Request) {
     );
   } catch (error) {
     console.error("Import history error:", error);
-    return NextResponse.json({ error: "சேவையக பிழை" }, { status: 500 });
+    return NextResponse.json({ error: t("api.server_error") }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
+  const t = await getBackendT();
   try {
     const session = await verifySuperAdminSession();
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல்" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized_simple") }, { status: 401 });
     }
 
     const body = await request.json().catch(() => ({}));
     const id = String(body.id || "").trim();
     if (!id) {
-      return NextResponse.json({ error: "Import ID தேவை" }, { status: 400 });
+      return NextResponse.json({ error: t("api.import_id_req") }, { status: 400 });
     }
 
     let oid: ObjectId;
     try {
       oid = new ObjectId(id);
     } catch {
-      return NextResponse.json({ error: "தவறான Import ID" }, { status: 400 });
+      return NextResponse.json({ error: t("api.invalid_import_id") }, { status: 400 });
     }
 
     const db = await getDb();
@@ -67,7 +70,7 @@ export async function DELETE(request: Request) {
 
     const history = await historyCol.findOne({ _id: oid });
     if (!history) {
-      return NextResponse.json({ error: "Import பதிவு கண்டறியப்படவில்லை" }, { status: 404 });
+      return NextResponse.json({ error: t("api.import_not_found") }, { status: 404 });
     }
 
     const batchId = oid.toString();
@@ -86,6 +89,6 @@ export async function DELETE(request: Request) {
     });
   } catch (error) {
     console.error("Import history delete error:", error);
-    return NextResponse.json({ error: "சேவையக பிழை" }, { status: 500 });
+    return NextResponse.json({ error: t("api.server_error") }, { status: 500 });
   }
 }

@@ -1,19 +1,26 @@
-/**
- * Home "join" (இணையுங்கள்) section. Pure presentational markup extracted
- * verbatim from app/page.tsx; `.rv` classes are animated by DOM-query effects in
- * the parent, so they must stay exactly as written.
- */
+"use client";
+
 import { WHISTLE_CURSOR_GOLD } from '@/lib/whistleCursorAssets';
+import { useLanguage } from "@/components/LanguageProvider";
+import React from "react";
 
 export default function JoinSection() {
+  const { t } = useLanguage();
+
   return (
-    <section className="dark sec-pad" data-cursor="gold" data-rail="இணைய" id="join">
+    <section className="dark sec-pad" data-cursor="gold" data-rail={t("join.eyebrow")} id="join">
       <div className="wrap join-grid">
         <div className="rv">
-          <span className="sec-eyebrow">இணையுங்கள் </span>
-          <h2>மாற்றத்தின் <em>விசில்</em>,<br />உங்கள் கையில்.</h2>
-          <p>நாமக்கல் மேற்கு மாவட்டக் கிளையில் உறுப்பினராகுங்கள். உங்கள் வார்டில், உங்கள் தெருவில் — மக்களாட்சியை நீங்களே
-            கட்டமைக்கலாம். விவரங்களைப் பதிவு செய்தால் ஒன்றிய ஒருங்கிணைப்பாளர் உங்களைத் தொடர்பு கொள்வார்.</p>
+          <span className="sec-eyebrow">{t("join.eyebrow")}</span>
+          <h2>
+            {t("join.title").split("\n").map((line, idx) => (
+              <React.Fragment key={idx}>
+                {idx === 1 ? <em>{line}</em> : line}
+                {idx === 0 && <br />}
+              </React.Fragment>
+            ))}
+          </h2>
+          <p>{t("join.desc")}</p>
         </div>
         <div className="join-card rv rv-d1" id="joinCard">
           <div className="join-ok" id="joinOk" style={{ display: 'block' }}>
@@ -24,7 +31,7 @@ export default function JoinSection() {
               rel="noopener noreferrer"
               className="btn btn-gold magnetic"
             >
-              உறுப்பினர் ஆக
+              {t("join.btn")}
             </a>
           </div>
         </div>
@@ -32,3 +39,4 @@ export default function JoinSection() {
     </section>
   );
 }
+

@@ -1,3 +1,4 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session";

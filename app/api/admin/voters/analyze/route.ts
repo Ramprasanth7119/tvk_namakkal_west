@@ -1,3 +1,4 @@
+import { getBackendT } from "@/lib/backendI18n";
 import { NextResponse } from "next/server";
 import { verifySuperAdminSession } from "@/lib/adminSession";
 import { analyzeVoterFile } from "@/lib/voterImport";
@@ -5,10 +6,11 @@ import { ColumnMapping } from "@/lib/voterColumnMap";
 import { getFieldLabel } from "@/lib/voterColumnMap";
 
 export async function POST(request: Request) {
+  const t = await getBackendT();
   try {
     const session = await verifySuperAdminSession();
     if (!session) {
-      return NextResponse.json({ error: "அங்கீகரிக்கப்படாத அணுகல்" }, { status: 401 });
+      return NextResponse.json({ error: t("api.unauthorized_simple") }, { status: 401 });
     }
 
     const formData = await request.formData();
@@ -17,7 +19,7 @@ export async function POST(request: Request) {
     const mappingRaw = String(formData.get("mapping") || "").trim();
 
     if (!file || !(file instanceof File)) {
-      return NextResponse.json({ error: "கோப்பு தேவை" }, { status: 400 });
+      return NextResponse.json({ error: t("api.file_req") }, { status: 400 });
     }
 
     let overrideMapping: ColumnMapping | undefined;
@@ -25,7 +27,7 @@ export async function POST(request: Request) {
       try {
         overrideMapping = JSON.parse(mappingRaw) as ColumnMapping;
       } catch {
-        return NextResponse.json({ error: "தவறான mapping JSON" }, { status: 400 });
+        return NextResponse.json({ error: t("api.invalid_mapping") }, { status: 400 });
       }
     }
 
@@ -43,7 +45,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Voter analyze error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "கோப்பு பகுப்பாய்வு தோல்வி" },
+      { error: error instanceof Error ? error.message : t("api.file_parse_fail") },
       { status: 400 }
     );
   }

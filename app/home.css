@@ -541,7 +541,8 @@
       min-width: 0;
     }
 
-    .nav-links a {
+    .nav-links a,
+    .nav-links button {
       color: var(--gold-3);
       font-weight: 600;
       font-size: .78rem;
@@ -557,7 +558,8 @@
       line-height: 1;
     }
 
-    .nav-links a::after {
+    .nav-links a::after,
+    .nav-links button::after {
       content: "";
       position: absolute;
       left: 50%;
@@ -570,11 +572,13 @@
       border-radius: 2px
     }
 
-    .nav-links a:hover {
+    .nav-links a:hover,
+    .nav-links button:hover {
       color: var(--gold)
     }
 
-    .nav-links a:hover::after {
+    .nav-links a:hover::after,
+    .nav-links button:hover::after {
       width: 46%
     }
 
@@ -597,6 +601,34 @@
     .nav-links a.cta:hover {
       background: var(--gold-2);
       color: var(--m-900)
+    }
+
+    /* English Layout Overrides (longer words) */
+    html[lang="en"] .nav-inner {
+      gap: 0.1rem;
+      padding: 0 0.5rem 0 0.8rem;
+    }
+    
+    html[lang="en"] .nav.scrolled .nav-inner {
+      margin-left: 0.4rem;
+      margin-right: 0.4rem;
+    }
+    
+    @media(min-width:1240px) {
+      html[lang="en"] .nav.scrolled .nav-inner {
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+
+    html[lang="en"] .nav-links a {
+      font-size: .84rem;
+      padding: 0 .3rem;
+    }
+
+    html[lang="en"] .nav-links a.cta {
+      padding: 0 .6rem;
+      margin-left: .2rem;
     }
 
     .nav-toggle {
@@ -2206,7 +2238,8 @@
         display: flex
       }
 
-      .nav-links a {
+      .nav-links a,
+      .nav-links button {
         height: 48px;
         padding: 0 1.1rem;
         justify-content: flex-start;

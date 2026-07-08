@@ -14,6 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import { chartAxisStyle, chartTooltipStyle, TVK } from "./chartTheme";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export interface TrendChartPoint {
   label: string;
@@ -27,11 +28,12 @@ interface MonthlyTrendChartProps {
 
 function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
   const hasData = useMemo(() => data.some((d) => d.registered > 0 || d.resolved > 0), [data]);
+  const { t } = useLanguage();
 
   if (!hasData) {
     return (
       <p className="analytics-chart-empty" role="status">
-        மாதவாரி போக்கு தரவு இல்லை
+        {t("chart.trend_empty")}
       </p>
     );
   }
@@ -40,14 +42,14 @@ function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
     <div
       className="analytics-chart-host analytics-chart-reveal"
       role="img"
-      aria-label="மாதவாரி புகார் போக்கு area chart"
+      aria-label={t("chart.trend_aria")}
     >
       <div className="analytics-trend-legend">
         <span>
-          <i style={{ background: TVK.red }} aria-hidden="true" /> பதிவானவை
+          <i style={{ background: TVK.red }} aria-hidden="true" /> {t("analytics.registered")}
         </span>
         <span>
-          <i style={{ background: TVK.ok }} aria-hidden="true" /> தீர்க்கப்பட்டவை
+          <i style={{ background: TVK.ok }} aria-hidden="true" /> {t("analytics.resolved_items")}
         </span>
       </div>
       <ResponsiveContainer width="100%" height={280}>
@@ -91,7 +93,7 @@ function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
           <Area
             type="monotone"
             dataKey="registered"
-            name="பதிவானவை"
+            name={t("analytics.registered")}
             stroke={TVK.red}
             fill="url(#tvkAreaRegistered)"
             strokeWidth={2.5}
@@ -102,7 +104,7 @@ function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
           <Line
             type="monotone"
             dataKey="resolved"
-            name="தீர்க்கப்பட்டவை"
+            name={t("analytics.resolved_items")}
             stroke={TVK.ok}
             strokeWidth={2.5}
             animationDuration={1100}
