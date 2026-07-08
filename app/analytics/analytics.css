@@ -255,6 +255,27 @@
       line-height: 1;
     }
 
+    /* Always-visible language toggle in the navbar header row.
+       Hidden on desktop (the in-drawer switcher is used there); shown on
+       mobile so the language can be changed without opening the menu. */
+    .topbar-lang-btn {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+      color: var(--gold);
+      font-weight: 700;
+      font-size: .8rem;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(254, 203, 2, .35);
+      border-radius: 999px;
+      padding: 0 .8rem;
+      min-height: 40px;
+      cursor: pointer;
+      flex: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     .topbar-backdrop {
       display: none;
       position: fixed;
@@ -2289,6 +2310,15 @@ body.chover .wcur {
 
   .topbar-menu-toggle {
     display: inline-flex;
+  }
+
+  .topbar-lang-btn {
+    display: inline-flex;
+  }
+
+  /* On mobile the header-row switcher is used; hide the in-drawer one */
+  .tb-actions .lang-toggle-btn {
+    display: none;
   }
 
   .topbar-in {
