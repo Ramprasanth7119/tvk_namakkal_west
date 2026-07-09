@@ -893,6 +893,12 @@ export default function Home() {
         eleRight.classList.remove('ele-intro');
         bandEl?.classList.remove('band-ele-intro');
         eleIntroUntil = 0;
+        if (window.scrollY < 8) {
+          eleLeft.style.opacity = '1';
+          eleLeft.style.transform = 'translateY(0)';
+          eleRight.style.opacity = '1';
+          eleRight.style.transform = 'scaleX(-1) translateY(0)';
+        }
       }, 1950);
     }
 
@@ -1097,39 +1103,24 @@ export default function Home() {
       const flagIn = heroP <= 0.06
         ? 1
         : easeOutVal(clampVal((heroP - 0.06) / 0.4, 0, 1));
-      const ty = (1 - rise) * 96;
       const pAmt = 1 - settle;
       const pxr = (mx / window.innerWidth - .5) * pAmt, pyr = (my / window.innerHeight - .5) * pAmt;
       const eleIntroActive = eleIntroUntil > 0 && performance.now() < eleIntroUntil;
 
       if (!eleIntroActive) {
         if (eleL) {
-          eleL.style.transform = `translateY(${ty}%) translate(${pxr * -12}px,${pyr * -6}px)`;
-          eleL.style.opacity = rise.toString();
+          eleL.style.transform = 'translateY(0)';
+          eleL.style.opacity = '1';
         }
         if (eleR) {
-          eleR.style.transform = `scaleX(-1) translateY(${ty}%) translate(${pxr * 12}px,${pyr * -6}px)`;
-          eleR.style.opacity = rise.toString();
+          eleR.style.transform = 'scaleX(-1) translateY(0)';
+          eleR.style.opacity = '1';
         }
-      }
-
-      if (medWrap && band) {
-        const bandHeight = band.offsetHeight || 360;
-        // Calculate the exact scale to fit the logo inside the yellow banner
-        // On scroll down (settle = 1), we want the logo to be exactly 88% of the yellow banner height
-        // On scroll up (settle = 0), we want it to be larger and majestic (1.15 times the banner height)
-        // This ensures perfect alignment and sizing on all screens (mobile, tablet, desktop)
-        const logoMaxHeight = 300 * 1.34; // 300px is the max-width of med-wrap, 1.34 is textring size
-        const targetScaleAtSettle1 = (bandHeight * 0.88) / logoMaxHeight;
-        const targetScaleAtSettle0 = (bandHeight * 1.15) / logoMaxHeight;
-        const medScale = (targetScaleAtSettle0 + (targetScaleAtSettle1 - targetScaleAtSettle0) * settle) * (1 + hold * 0.03);
-
-        medWrap.style.transform = `translate(-50%,-50%) translate(${pxr * 16}px,${pyr * 10}px) scale(${medScale}) rotate(${(1 - settle) * -14}deg)`;
       }
 
       if (band) {
         band.style.opacity = flagIn.toString();
-        band.style.transform = `translateY(${(1 - flagIn) * 14}%) scaleY(${(0.86 + 0.14 * rise)})`;
+        band.style.transform = `translateY(${(1 - flagIn) * 14}%)`;
       }
 
       const pHide = easeOutVal(clampVal((heroP - 0.12) / 0.45, 0, 1));
