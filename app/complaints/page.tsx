@@ -7,10 +7,11 @@ import { CONSTITUENCIES } from "@/lib/constituencies";
 import { TVK_LOGO } from "@/lib/brand";
 import TvkAppFooter from "@/components/TvkAppFooter";
 import TvkTopBar, { type TopBarLink } from "@/components/TvkTopBar";
-import { getComplaintPhotos, getComplaintVideo } from "@/lib/complaintMedia";
+import { CitizenMediaPanel, SolutionEvidencePanel } from "@/components/ComplaintMediaPanels";
 import { getGoogleMapsEmbedUrl, getGoogleMapsOpenUrl } from "@/lib/maps";
 import { normalizeStatus } from "@/lib/complaintStatus";
 import { useLanguage } from "@/components/LanguageProvider";
+import { labelComplaintCategory } from "@/lib/complaintCategories";
 
 const CATEGORIES: Record<string, string[]> = {
   "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
@@ -79,14 +80,6 @@ export default function ComplaintsManagementPage() {
   const [editOffSuccess, setEditOffSuccess] = useState("");
   const [isEditOffSubmitting, setIsEditOffSubmitting] = useState(false);
 
-  const selectedPhotos = useMemo(
-    () => (selectedComplaint ? getComplaintPhotos(selectedComplaint) : []),
-    [selectedComplaint]
-  );
-  const selectedVideo = useMemo(
-    () => (selectedComplaint ? getComplaintVideo(selectedComplaint) : null),
-    [selectedComplaint]
-  );
   const selectedCoords = selectedComplaint?.geolocation?.latitude != null
     ? {
         lat: Number(selectedComplaint.geolocation.latitude),
@@ -678,8 +671,8 @@ export default function ComplaintsManagementPage() {
                                 height: '8px',
                                 borderRadius: '50%'
                               }}></i>
-                              <b>{t(c.complaintDetails?.category) || t("home.receipt.none")}</b>
-                              {c.complaintDetails?.subcategory && <span style={{ opacity: 0.6, fontSize: '0.85em' }}> - {t(c.complaintDetails.subcategory)}</span>}
+                              <b>{labelComplaintCategory(c.complaintDetails?.category, t) || t("home.receipt.none")}</b>
+                              {c.complaintDetails?.subcategory && <span style={{ opacity: 0.6, fontSize: '0.85em' }}> - {labelComplaintCategory(c.complaintDetails.subcategory, t)}</span>}
                             </span>
                           </td>
                           <td>
@@ -926,9 +919,9 @@ export default function ComplaintsManagementPage() {
                 <div className="detail-modal-section">
                   <h4>{t("complaints.modal.desc_title")}</h4>
                   <div className="detail-modal-stack">
-                    <div><span style={{ opacity: 0.6, fontWeight: 600 }}>{t("complaints.modal.desc_category")}</span> <b style={{ color: '#111' }}>{t(selectedComplaint.complaintDetails?.category)}</b></div>
+                    <div><span style={{ opacity: 0.6, fontWeight: 600 }}>{t("complaints.modal.desc_category")}</span> <b style={{ color: '#111' }}>{labelComplaintCategory(selectedComplaint.complaintDetails?.category, t)}</b></div>
                     {selectedComplaint.complaintDetails?.subcategory && (
-                      <div><span style={{ opacity: 0.6, fontWeight: 600 }}>{t("complaints.modal.desc_sub")}</span> <b>{t(selectedComplaint.complaintDetails?.subcategory)}</b></div>
+                      <div><span style={{ opacity: 0.6, fontWeight: 600 }}>{t("complaints.modal.desc_sub")}</span> <b>{labelComplaintCategory(selectedComplaint.complaintDetails?.subcategory, t)}</b></div>
                     )}
                     <div><span style={{ opacity: 0.6, fontWeight: 600 }}>{t("complaints.modal.desc_urgency")}</span> <span style={{
                       background: selectedComplaint.complaintDetails?.urgency === "அதி அவசரம்" || selectedComplaint.complaintDetails?.urgency === "urgent" ? "#FEE2E2" : "#FFF7ED",
@@ -987,105 +980,16 @@ export default function ComplaintsManagementPage() {
                 </p>
               </div>
 
-              {/* MEDIA SECTION */}
-              <div style={{ background: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '0.75rem', padding: '1.2rem', marginBottom: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                <h4 style={{ color: '#4A080E', fontSize: '1rem', borderBottom: '2px solid #FECB02', paddingBottom: '0.4rem', marginBottom: '0.8rem', fontWeight: 800 }}>{t("complaints.modal.photos_sec")}</h4>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }} className="mobile-one-col">
-                  
-                  {/* Photos */}
-                  <div>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', display: 'block', marginBottom: '0.5rem' }}>{t("tasks.modal.submit_before")}:</span>
-                    {selectedPhotos.length > 0 ? (
-                      <div className="complaint-media-grid">
-                        {selectedPhotos.map((photo: string, idx: number) => (
-                          <a href={photo} target="_blank" rel="noopener noreferrer" key={idx} className="complaint-media-thumb">
-                            <img 
-                              src={photo} 
-                              alt={`Complaint photo ${idx + 1}`} 
-                              loading="lazy"
-                            />
-                          </a>
-                        ))}
-                      </div>
-                    ) : (
-                      <p style={{ fontSize: '0.85rem', color: '#999', fontStyle: 'italic' }}>{t("complaints.modal.photos_none")}</p>
-                    )}
-                  </div>
+              {selectedComplaint && <CitizenMediaPanel complaint={selectedComplaint} />}
 
-                  {/* Video */}
-                  <div>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', display: 'block', marginBottom: '0.5rem' }}>{t("tasks.modal.submit_video")}:</span>
-                    {selectedVideo ? (
-                      <video 
-                        src={selectedVideo} 
-                        controls 
-                        playsInline
-                        className="complaint-media-video"
-                      />
-                    ) : (
-                      <p style={{ fontSize: '0.85rem', color: '#999', fontStyle: 'italic' }}>{t("complaints.modal.video_none")}</p>
-                    )}
-                  </div>
-
-                </div>
-              </div>
-
-              {/* FIELD WORK EVIDENCE SECTION */}
-              {(selectedComplaint.beforeImages?.length > 0 || selectedComplaint.afterImages?.length > 0 || selectedComplaint.workNotes) && (
-                <div style={{ background: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '0.75rem', padding: '1.2rem', marginBottom: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                  <h4 style={{ color: '#4A080E', fontSize: '1rem', borderBottom: '2px solid #FECB02', paddingBottom: '0.4rem', marginBottom: '0.8rem', fontWeight: 800 }}>{t("tasks.modal.submit_sec_title")}</h4>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1rem' }} className="mobile-one-col">
-                    <div>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', display: 'block', marginBottom: '0.5rem' }}>{t("tasks.modal.submitted_before")}</span>
-                      {selectedComplaint.beforeImages?.length > 0 ? (
-                        <div className="complaint-media-grid">
-                          {selectedComplaint.beforeImages.map((photo: string, idx: number) => (
-                            <a href={photo} target="_blank" rel="noopener noreferrer" key={idx} className="complaint-media-thumb">
-                              <img src={photo} alt={`Before ${idx + 1}`} loading="lazy" />
-                            </a>
-                          ))}
-                        </div>
-                      ) : (
-                        <p style={{ fontSize: '0.85rem', color: '#999', fontStyle: 'italic' }}>{t("complaints.modal.photos_none")}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', display: 'block', marginBottom: '0.5rem' }}>{t("tasks.modal.submitted_after")}</span>
-                      {selectedComplaint.afterImages?.length > 0 ? (
-                        <div className="complaint-media-grid">
-                          {selectedComplaint.afterImages.map((photo: string, idx: number) => (
-                            <a href={photo} target="_blank" rel="noopener noreferrer" key={idx} className="complaint-media-thumb">
-                              <img src={photo} alt={`After ${idx + 1}`} loading="lazy" />
-                            </a>
-                          ))}
-                        </div>
-                      ) : (
-                        <p style={{ fontSize: '0.85rem', color: '#999', fontStyle: 'italic' }}>{t("complaints.modal.photos_none")}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {selectedComplaint.videos?.length > 0 && (
-                    <div style={{ marginBottom: '1rem' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', display: 'block', marginBottom: '0.5rem' }}>{t("tasks.modal.submitted_video")}</span>
-                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                        {selectedComplaint.videos.map((vid: string, idx: number) => (
-                          <video key={idx} src={vid} controls playsInline className="complaint-media-video" style={{ maxWidth: '320px', height: 'auto' }} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedComplaint.workNotes && (
-                    <div style={{ background: '#F9FAFB', padding: '1rem', borderRadius: '0.5rem', borderLeft: '4px solid #5E8C3A' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#333', display: 'block', marginBottom: '0.35rem' }}>{t("tasks.modal.submitted_notes")}</span>
-                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#111', lineHeight: '1.5', whiteSpace: 'pre-wrap', fontWeight: 600 }}>{selectedComplaint.workNotes}</p>
-                    </div>
-                  )}
-                </div>
+              {selectedComplaint && (
+                <SolutionEvidencePanel
+                  beforeImages={selectedComplaint.beforeImages}
+                  afterImages={selectedComplaint.afterImages}
+                  videos={selectedComplaint.videos}
+                  audios={selectedComplaint.audios}
+                  workNotes={selectedComplaint.workNotes}
+                />
               )}
 
               {/* TIMELINE SECTION */}

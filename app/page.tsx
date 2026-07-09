@@ -17,23 +17,15 @@ import PrinciplesSection from '@/components/home/PrinciplesSection';
 import UnionExplorerSection from '@/components/home/UnionExplorerSection';
 import JoinSection from '@/components/home/JoinSection';
 import FooterSection from '@/components/home/FooterSection';
-
-const CATEGORIES = {
-  "மின்சாரம்": ["மின்கம்பம் பழுது", "அடிக்கடி மின்தடை", "தொங்கும் மின் கம்பிகள்", "பிற"],
-  "சாலை": ["சாலை சேதம்", "புதிய சாலை தேவை", "வேகத்தடை தேவை", "பிற"],
-  "குடிநீர்": ["குடிநீர் குழாய் உடைப்பு", "குடிநீர் வராமை", "அசுத்தமான குடிநீர்", "பிற"],
-  "கழிவுநீர்": ["சாக்கடை அடைப்பு", "கழிவுநீர் தேக்கம்", "பிற"],
-  "சுகாதாரம்": ["குப்பை அள்ளப்படவில்லை", "கொசு மருந்து தெளிக்க வேண்டும்", "பிற"],
-  "போக்குவரத்து": ["பேருந்து வசதி குறைபாடு", "போக்குவரத்து நெரிசல்", "பிற"],
-  "தெருவிளக்கு": ["தெருவிளக்கு எரியவில்லை", "புதிய தெருவிளக்கு கம்பம் தேவை", "பிற"],
-  "கல்வி": ["பள்ளி கட்டிட பழுது", "பள்ளி கழிப்பறை வசதி", "பிற"],
-  "மருத்துவம்": ["ஆரம்ப சுகாதார நிலையம்", "மருந்து தட்டுப்பாடு", "பிற"],
-  "அரசு நலத்திட்டம்": ["முதியோர் உதவித்தொகை", "ரேஷன் கடை குறைபாடு", "பிற"],
-  "வருவாய் துறை": ["பட்டா மாறுதல்", "சான்றிதழ் கோரிக்கை", "பிற"],
-  "காவல்துறை": ["பாதுகாப்பு குறைபாடு", "புகார் மனு மீது நடவடிக்கை", "பிற"],
-  "சுற்றுச்சூழல்": ["நீர்நிலை மாசுபடுதல்", "காற்று மாசுபடுதல்", "பிற"],
-  "பிற": ["பிற குறைபாடுகள்"]
-};
+import MarqueeTrack from '@/components/MarqueeTrack';
+import {
+  COMPLAINT_CATEGORY_TREE,
+  COMPLAINT_CATEGORY_KEYS,
+  DEFAULT_COMPLAINT_CATEGORY,
+  getSubcategoryKeys,
+  normalizeCategoryKey,
+  normalizeSubcategoryKey,
+} from '@/lib/complaintCategories';
 
 export default function Home() {
   const { lang, setLang, t } = useLanguage();
@@ -66,8 +58,10 @@ export default function Home() {
   const [constituency, setConstituency] = useState<string>(CONSTITUENCIES[0]);
   const [ward, setWard] = useState('');
   const [areaStreet, setAreaStreet] = useState('');
-  const [category, setCategory] = useState(Object.keys(CATEGORIES)[0]);
-  const [subcategory, setSubcategory] = useState(CATEGORIES[Object.keys(CATEGORIES)[0]][0]);
+  const [category, setCategory] = useState(DEFAULT_COMPLAINT_CATEGORY);
+  const [subcategory, setSubcategory] = useState(
+    COMPLAINT_CATEGORY_TREE[DEFAULT_COMPLAINT_CATEGORY][0]
+  );
   const [description, setDescription] = useState('');
   const [emailHoneypot, setEmailHoneypot] = useState('');
   const [urgency, setUrgency] = useState('சாதாரண');
@@ -78,6 +72,8 @@ export default function Home() {
   // Media state - Support multiple photos!
   const [photos, setPhotos] = useState<string[]>([]);
   const [video, setVideo] = useState<string | null>(null);
+  const [audio, setAudio] = useState<string | null>(null);
+  const [isAudioRecording, setIsAudioRecording] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
 
   // Geolocation state
@@ -103,11 +99,17 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioStreamRef = useRef<MediaStream | null>(null);
 
-  // Update subcategory list when category changes
   useEffect(() => {
-    setSubcategory(CATEGORIES[category][0]);
-  }, [category]);
+    const subs = getSubcategoryKeys(category);
+    if (!subs.includes(subcategory)) {
+      setSubcategory(subs[0]);
+    }
+  }, [category, subcategory]);
 
   const [isFormLoaded, setIsFormLoaded] = useState(false);
 
@@ -135,8 +137,12 @@ export default function Home() {
         if (data.constituency !== undefined) setConstituency(data.constituency);
         if (data.ward !== undefined) setWard(data.ward);
         if (data.areaStreet !== undefined) setAreaStreet(data.areaStreet);
-        if (data.category !== undefined) setCategory(data.category);
-        if (data.subcategory !== undefined) setSubcategory(data.subcategory);
+        if (data.category !== undefined) {
+          setCategory(normalizeCategoryKey(data.category));
+        }
+        if (data.subcategory !== undefined) {
+          setSubcategory(normalizeSubcategoryKey(data.subcategory));
+        }
         if (data.description !== undefined) setDescription(data.description);
         if (data.urgency !== undefined) setUrgency(data.urgency);
         if (data.panchayat !== undefined) setPanchayat(data.panchayat);
@@ -144,6 +150,7 @@ export default function Home() {
         if (data.district !== undefined) setDistrict(data.district);
         if (data.photos !== undefined) setPhotos(data.photos);
         if (data.video !== undefined) setVideo(data.video);
+        if (data.audio !== undefined) setAudio(data.audio);
         if (data.latitude !== undefined) setLatitude(data.latitude);
         if (data.longitude !== undefined) setLongitude(data.longitude);
         if (data.locationAttempts !== undefined) setLocationAttempts(data.locationAttempts);
@@ -190,6 +197,7 @@ export default function Home() {
         district,
         photos,
         video,
+        audio,
         latitude,
         longitude,
         locationAttempts,
@@ -206,7 +214,7 @@ export default function Home() {
     isFormLoaded,
     voterId, voterVerified, verificationMethod, fbName, fbDoorNo, fbDob, fbWard,
     name, doorNo, mobile, aadhaar, gender, age, dob, address, constituency, ward, areaStreet,
-    category, subcategory, description, urgency, panchayat, taluk, district, photos, video,
+    category, subcategory, description, urgency, panchayat, taluk, district, photos, video, audio,
     latitude, longitude, locationAttempts, successLocationCount, gpsMessage, gpsAddress, locationTimestamp
   ]);
 
@@ -218,6 +226,12 @@ export default function Home() {
     }
     return () => document.body.classList.remove('modal-open', 'chover');
   }, [isComplaintOpen]);
+
+  useEffect(() => {
+    if (!isComplaintOpen && isAudioRecording) {
+      stopAudioRecording();
+    }
+  }, [isComplaintOpen, isAudioRecording]);
 
   // Geolocation will be fetched manually via GPS click
 
@@ -525,6 +539,49 @@ export default function Home() {
     setIsCameraActive(false);
   };
 
+  const startAudioRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+      audioChunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      audioRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const mimeType = recorder.mimeType || "audio/webm";
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAudio(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+        audioChunksRef.current = [];
+      };
+
+      recorder.start();
+      setIsAudioRecording(true);
+    } catch (err) {
+      console.error("Audio recording error:", err);
+      alert(lang === "ta" ? "மைக்ரோஃபோன் அனுமதி தேவை." : "Microphone permission is required.");
+    }
+  };
+
+  const stopAudioRecording = () => {
+    const recorder = audioRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach((track) => track.stop());
+      audioStreamRef.current = null;
+    }
+    setIsAudioRecording(false);
+  };
+
   // File uploads
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -553,6 +610,32 @@ export default function Home() {
       reader.readAsDataURL(file);
     }
   };
+
+  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 15 * 1024 * 1024) {
+        alert(t("home.form.media.audio_alert"));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAudio(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (audioRecorderRef.current && audioRecorderRef.current.state !== "inactive") {
+        audioRecorderRef.current.stop();
+      }
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
 
   // Submit form
   const handleSubmitComplaint = async (e: React.FormEvent) => {
@@ -631,6 +714,7 @@ export default function Home() {
       mediaUrls: {
         photos: photos.length > 0 ? photos : undefined,
         video: video || undefined,
+        audio: audio || undefined,
       },
       geolocation: latitude && longitude ? { latitude, longitude } : undefined,
       email_honeypot: emailHoneypot,
@@ -656,6 +740,7 @@ export default function Home() {
           latitude, longitude,
           photoUrls: data.photoUrls || [],
           videoUrls: data.videoUrls || [],
+          audioUrls: data.audioUrls || [],
         });
         sessionStorage.removeItem('tvk_complaint_form_data');
       } else {
@@ -741,6 +826,8 @@ export default function Home() {
   <ul>${mediaItems(c.photoUrls, 'படம் / Photo')}</ul>
   <h2>பதிவேற்றிய வீடியோ (Uploaded Video)</h2>
   <ul>${mediaItems(c.videoUrls, 'வீடியோ / Video')}</ul>
+  <h2>பதிவேற்றிய ஆடியோ (Uploaded Audio)</h2>
+  <ul>${mediaItems(c.audioUrls, 'ஆடியோ / Audio')}</ul>
   <div class="foot">சமர்ப்பிக்கப்பட்ட நேரம் (Submitted): ${esc(new Date(c.submittedAt).toLocaleString('ta-IN'))}</div>
   <script>window.onload=function(){setTimeout(function(){window.print();},350);};</script>
 </body></html>`;
@@ -788,6 +875,26 @@ export default function Home() {
 
     /* ================= TITLE ================= */
     let titleStarted = false;
+    let eleIntroUntil = 0;
+
+    function startEleIntro() {
+      if (reduced) return;
+      const eleLeft = document.getElementById('eleL');
+      const eleRight = document.getElementById('eleR');
+      const bandEl = document.getElementById('band');
+      if (!eleLeft || !eleRight) return;
+      eleIntroUntil = performance.now() + 1900;
+      eleLeft.classList.add('ele-intro');
+      eleRight.classList.add('ele-intro');
+      bandEl?.classList.add('band-ele-intro');
+      window.setTimeout(() => {
+        eleLeft.classList.remove('ele-intro');
+        eleRight.classList.remove('ele-intro');
+        bandEl?.classList.remove('band-ele-intro');
+        eleIntroUntil = 0;
+      }, 1950);
+    }
+
     function startTitle() {
       if (titleStarted) return;
       titleStarted = true;
@@ -798,6 +905,7 @@ export default function Home() {
           c.style.transform = 'translateY(0)';
         });
       });
+      window.setTimeout(startEleIntro, 280);
     }
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -819,11 +927,19 @@ export default function Home() {
     };
 
     const handleMouseOver = (e) => {
+      if (document.body.classList.contains('nav-menu-open')) {
+        document.body.classList.remove('chover');
+        return;
+      }
+      if (e.target.closest('.nav, .topbar, .wcur')) {
+        document.body.classList.remove('chover');
+        return;
+      }
       const hoverSel = 'a,button,input,select,.fchip,.uchip,.hot,.spot';
-      const t = e.target.closest(hoverSel);
-      document.body.classList.toggle('chover', !!t);
-      if (t) {
-        clabel.textContent = t.dataset.clabel || t.closest('[data-clabel]')?.dataset.clabel || 'தொடு';
+      const el = e.target.closest(hoverSel);
+      document.body.classList.toggle('chover', !!el);
+      if (el && clabel) {
+        clabel.textContent = el.dataset.clabel || el.closest('[data-clabel]')?.dataset.clabel || t('analytics.touch');
       }
     };
 
@@ -977,18 +1093,23 @@ export default function Home() {
       const rise = easeOutVal(clampVal(heroP / 0.5, 0, 1));
       const settle = easeOutVal(clampVal((heroP - 0.35) / 0.35, 0, 1));
       const hold = clampVal((heroP - 0.7) / 0.3, 0, 1);
-      const flagIn = easeOutVal(clampVal((heroP - 0.08) / 0.42, 0, 1));
+      const flagIn = heroP <= 0.06
+        ? 1
+        : easeOutVal(clampVal((heroP - 0.06) / 0.4, 0, 1));
       const ty = (1 - rise) * 96;
       const pAmt = 1 - settle;
       const pxr = (mx / window.innerWidth - .5) * pAmt, pyr = (my / window.innerHeight - .5) * pAmt;
+      const eleIntroActive = eleIntroUntil > 0 && performance.now() < eleIntroUntil;
 
-      if (eleL) {
-        eleL.style.transform = `translateY(${ty}%) translate(${pxr * -12}px,${pyr * -6}px)`;
-        eleL.style.opacity = rise.toString();
-      }
-      if (eleR) {
-        eleR.style.transform = `scaleX(-1) translateY(${ty}%) translate(${pxr * 12}px,${pyr * -6}px)`;
-        eleR.style.opacity = rise.toString();
+      if (!eleIntroActive) {
+        if (eleL) {
+          eleL.style.transform = `translateY(${ty}%) translate(${pxr * -12}px,${pyr * -6}px)`;
+          eleL.style.opacity = rise.toString();
+        }
+        if (eleR) {
+          eleR.style.transform = `scaleX(-1) translateY(${ty}%) translate(${pxr * 12}px,${pyr * -6}px)`;
+          eleR.style.opacity = rise.toString();
+        }
       }
 
       if (medWrap && band) {
@@ -1037,23 +1158,6 @@ export default function Home() {
       if (nav) nav.classList.toggle('scrolled', window.scrollY > 40);
     }
 
-    /* ================= MARQUEES ================= */
-    const mqTracks = document.querySelectorAll('.mq-track');
-    mqTracks.forEach(t => {
-      t.innerHTML += t.innerHTML + t.innerHTML;
-    });
-    let mqx = [0, 0];
-    function mqTick() {
-      mqTracks.forEach((t, i) => {
-        const sp = parseFloat(t.dataset.speed || '1');
-        mqx[i] -= sp * 0.6;
-        const w = t.scrollWidth / 3;
-        if (mqx[i] <= -w) mqx[i] += w;
-        if (mqx[i] > 0) mqx[i] -= w;
-        t.style.transform = `translateX(${mqx[i]}px)`;
-      });
-    }
-
     /* ================= MASTER LOOP ================= */
     let lastTheme = 0;
     function loop(time) {
@@ -1066,7 +1170,6 @@ export default function Home() {
       }
       if (!reduced) {
         heroTick();
-        mqTick();
         pollenTick(time);
       }
       if (time - lastTheme > 140) {
@@ -1313,6 +1416,7 @@ export default function Home() {
             <div className="hp-scrim"></div>
           </div>
           <div className="hero-grain"></div>
+          <div className="hero-stack">
           <span className="h-eyebrow" id="hEyebrow">{t('home.hero.eyebrow')}</span>
           <h1 className="h-title" id="hTitle">
             <span className="row"><span className="ch">{t('home.hero.title1')}</span></span>
@@ -1332,8 +1436,7 @@ export default function Home() {
                   <path id="cpath" d="M100,100 m-86,0 a86,86 0 1,1 172,0 a86,86 0 1,1 -172,0" />
                 </defs>
                 <text>
-                  <textPath href="#cpath" textLength="528" lengthAdjust="spacing">தமிழக வெற்றிக் கழகம் ✦ பிறப்பொக்கும் எல்லா
-                    உயிர்க்கும் ✦ TVK ✦</textPath>
+                  <textPath href="#cpath" textLength="528" lengthAdjust="spacing">{t('home.hero.ring_text')}</textPath>
                 </text>
               </svg>
               <img className="med"
@@ -1351,15 +1454,16 @@ export default function Home() {
             <a className="btn btn-ghost magnetic" href="#join">{t('home.hero.cta_join')}</a>
           </div>
           <div className="h-cue" id="hCue">{t('home.hero.scroll')}</div>
+          </div>
         </div>
       </header>
 
       {/* MARQUEE */}
       <div className="marquee" aria-hidden="true">
-        <div className="mq-track" data-speed="1">
-          <span>{t('home.marquee.movement')} <i className="star">✦</i> {t('home.marquee.whistle')} <i className="star">✦</i> {t('home.marquee.mandate')}
-            <i className="star">✦</i> {t('home.marquee.district')} <i className="star">✦</i></span>
-        </div>
+        <MarqueeTrack speed={1}>
+          {t('home.marquee.movement')} <i className="star">✦</i> {t('home.marquee.whistle')} <i className="star">✦</i> {t('home.marquee.mandate')}
+          <i className="star">✦</i> {t('home.marquee.district')} <i className="star">✦</i>
+        </MarqueeTrack>
       </div>
 
       {/* STATS */}
@@ -1505,10 +1609,10 @@ export default function Home() {
 
       {/* MARQUEE ALT */}
       <div className="marquee alt" aria-hidden="true">
-        <div className="mq-track" data-speed="-1">
-          <span>{t('principles.social_justice.title')} <i className="star">✦</i> {t('principles.equality.title')} <i className="star">✦</i> {t('principles.corruption_free.title')} <i className="star">✦</i>
-            {t('principles.humanism.title')} <i className="star">✦</i></span>
-        </div>
+        <MarqueeTrack speed={-1}>
+          {t('principles.social_justice.title')} <i className="star">✦</i> {t('principles.equality.title')} <i className="star">✦</i> {t('principles.corruption_free.title')} <i className="star">✦</i>
+          {t('principles.humanism.title')} <i className="star">✦</i>
+        </MarqueeTrack>
       </div>
 
       {/* IDEOLOGICAL LEADERS */}
@@ -1651,6 +1755,8 @@ export default function Home() {
                       setDescription('');
                       setPhotos([]);
                       setVideo(null);
+                      setAudio(null);
+                      stopAudioRecording();
                       setLatitude(null);
                       setLongitude(null);
                       setFbName('');
@@ -2091,8 +2197,8 @@ export default function Home() {
                             onChange={(e) => setCategory(e.target.value)}
                             required
                           >
-                            {Object.keys(CATEGORIES).map((cat, i) => (
-                              <option key={i} value={cat}>{t(cat)}</option>
+                            {COMPLAINT_CATEGORY_KEYS.map((catKey) => (
+                              <option key={catKey} value={catKey}>{t(catKey)}</option>
                             ))}
                           </select>
                         </div>
@@ -2104,8 +2210,8 @@ export default function Home() {
                             onChange={(e) => setSubcategory(e.target.value)}
                             required
                           >
-                            {CATEGORIES[category].map((sub, i) => (
-                              <option key={i} value={sub}>{t(sub)}</option>
+                            {getSubcategoryKeys(category).map((subKey) => (
+                              <option key={subKey} value={subKey}>{t(subKey)}</option>
                             ))}
                           </select>
                         </div>
@@ -2239,6 +2345,44 @@ export default function Home() {
                               />
                             </div>
                           )}
+                        </div>
+
+                        {/* Audio Section */}
+                        <div className="media-box">
+                          <label style={{ marginBottom: '1rem' }}>{t("home.form.media.audio").split("-")[0].trim() || "ஆடியோ"}</label>
+                          <div>
+                            {audio && <audio src={audio} controls style={{ width: "100%", maxWidth: "360px", marginBottom: "0.8rem" }} />}
+                            <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '1rem' }}>
+                              {t("home.form.media.audio").includes("Max") ? "Upload or record audio (Max 15MB)" : "ஆடியோவை பதிவேற்றவும் அல்லது பதிவு செய்யவும் (அதிகபட்சம் 15MB)"}
+                            </p>
+                            <div className="media-actions">
+                              <button type="button" className="media-btn" onClick={() => audioInputRef.current?.click()}>
+                                {lang === 'ta' ? "ஆடியோ பதிவேற்று" : "Upload Audio"}
+                              </button>
+                              {!isAudioRecording ? (
+                                <button type="button" className="media-btn" onClick={startAudioRecording}>
+                                  {lang === 'ta' ? "ஆடியோ பதிவு செய்" : "Record Audio"}
+                                </button>
+                              ) : (
+                                <button type="button" className="media-btn" style={{ background: "var(--red)", color: "#fff" }} onClick={stopAudioRecording}>
+                                  {lang === 'ta' ? "பதிவை நிறுத்து" : "Stop Recording"}
+                                </button>
+                              )}
+                              {audio && (
+                                <button type="button" className="media-btn" onClick={() => setAudio(null)}>
+                                  {t("common.delete") || (lang === 'ta' ? "நீக்கு" : "Delete")}
+                                </button>
+                              )}
+                            </div>
+                            <input
+                              type="file"
+                              ref={audioInputRef}
+                              accept="audio/*"
+                              style={{ display: 'none' }}
+                              onChange={handleAudioUpload}
+                              title="ஆடியோ பதிவேற்று"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>

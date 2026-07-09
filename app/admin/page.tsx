@@ -11,6 +11,8 @@ import WhistleCursor, { useWhistleCursor } from "@/components/WhistleCursor";
 import { getGoogleMapsEmbedUrl, getGoogleMapsOpenUrl } from "@/lib/maps";
 import { normalizeStatus } from "@/lib/complaintStatus";
 import { useLanguage } from "@/components/LanguageProvider";
+import { labelComplaintCategory } from "@/lib/complaintCategories";
+import { SolutionEvidencePanel } from "@/components/ComplaintMediaPanels";
 import "../analytics/analytics.css";
 
 export default function AdminPage() {
@@ -169,7 +171,7 @@ export default function AdminPage() {
   const fetchReps = async () => {
     setIsRepsLoading(true);
     try {
-      const res = await fetch("/api/admin/reps");
+      const res = await fetch("/api/admin/representatives");
       if (res.ok) {
         const data = await res.json();
         setRepresentatives(data);
@@ -185,7 +187,7 @@ export default function AdminPage() {
   const fetchOfficers = async () => {
     setIsOfficersLoading(true);
     try {
-      const res = await fetch("/api/admin/officers");
+      const res = await fetch("/api/representative/officers");
       if (res.ok) {
         const data = await res.json();
         setOfficers(data);
@@ -201,10 +203,13 @@ export default function AdminPage() {
   const fetchApprovals = async () => {
     setIsPendingApprovalsLoading(true);
     try {
-      const res = await fetch("/api/admin/approvals");
+      const res = await fetch("/api/complaints");
       if (res.ok) {
         const data = await res.json();
-        setPendingApprovals(data);
+        const queue = Array.isArray(data)
+          ? data.filter((item: any) => normalizeStatus(item.status) === "pending_admin_approval")
+          : [];
+        setPendingApprovals(queue);
       }
     } catch (err) {
       console.error("Error fetching hq approvals:", err);
@@ -218,7 +223,7 @@ export default function AdminPage() {
     setIsDemoLoading(true);
     try {
       const query = constituencyFilter ? `?constituency=${encodeURIComponent(constituencyFilter)}` : "";
-      const res = await fetch(`/api/admin/demo-data${query}`);
+      const res = await fetch(`/api/admin/demo${query}`);
       if (res.ok) {
         const data = await res.json();
         setDemoEntries(data);
@@ -248,7 +253,7 @@ export default function AdminPage() {
     setIsFormSubmitting(true);
 
     try {
-      const res = await fetch("/api/admin/reps", {
+      const res = await fetch("/api/admin/representatives", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -294,7 +299,7 @@ export default function AdminPage() {
     setIsEditFormSubmitting(true);
 
     try {
-      const res = await fetch("/api/admin/reps", {
+      const res = await fetch("/api/admin/representatives", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -336,7 +341,7 @@ export default function AdminPage() {
     setIsOffSubmitting(true);
 
     try {
-      const res = await fetch("/api/admin/officers", {
+      const res = await fetch("/api/representative/officers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -381,7 +386,7 @@ export default function AdminPage() {
     setIsEditOffSubmitting(true);
 
     try {
-      const res = await fetch("/api/admin/officers", {
+      const res = await fetch("/api/representative/officers", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -419,8 +424,8 @@ export default function AdminPage() {
     setIsApproving(true);
     setStatusUpdateMessage("");
     try {
-      const action = approve ? "hq_approve" : "hq_reject";
-      const res = await fetch("/api/admin/approvals", {
+      const action = approve ? "admin_approve" : "admin_reject";
+      const res = await fetch("/api/complaints", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -454,7 +459,7 @@ export default function AdminPage() {
     setIsDemoSubmitting(true);
 
     try {
-      const res = await fetch("/api/admin/demo-data", {
+      const res = await fetch("/api/admin/demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(demoForm),
@@ -486,7 +491,7 @@ export default function AdminPage() {
     setIsDemoLoading(true);
     try {
       const query = demoFilterConst ? `?constituency=${encodeURIComponent(demoFilterConst)}` : "";
-      const res = await fetch(`/api/admin/demo-data${query}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/demo${query}`, { method: "DELETE" });
       const data = await res.json();
 
       if (res.ok) {
@@ -643,13 +648,13 @@ export default function AdminPage() {
                     constituencyOverview.map((item) => (
                       <tr key={item.constituency}>
                         <td style={{ fontWeight: 800 }}>{t(item.constituency)}</td>
-                        <td>{item.repName ? `${item.repName} (@${item.repUsername})` : <i style={{ color: "var(--red)" }}>{t("admin.overview.none")}</i>}</td>
+                        <td>{item.representative ? item.representative : <i style={{ color: "var(--red)" }}>{t("admin.overview.none")}</i>}</td>
                         <td style={{ textAlign: "center", fontWeight: 700 }}>{item.total}</td>
                         <td style={{ textAlign: "center", color: "var(--red)", fontWeight: 700 }}>{item.pending}</td>
                         <td style={{ textAlign: "center", color: "var(--ok)", fontWeight: 700 }}>{item.resolved}</td>
                         <td style={{ textAlign: "center" }}>
                           <span className="badge ok" style={{ fontWeight: "bold" }}>
-                            {item.resolvedRate}%
+                            {item.total > 0 ? Math.round((item.resolved / item.total) * 100) : 0}%
                           </span>
                         </td>
                       </tr>
@@ -697,7 +702,7 @@ export default function AdminPage() {
                       <tr key={app.trackingId}>
                         <td style={{ fontWeight: 800, color: "var(--red)" }}>{app.trackingId}</td>
                         <td>{t(app.constituency)}</td>
-                        <td>{t(app.complaintDetails?.category)}</td>
+                        <td>{labelComplaintCategory(app.complaintDetails?.category, t)}</td>
                         <td>{app.assignedToName || app.assignedTo}</td>
                         <td>{new Date(app.updatedAt || Date.now()).toLocaleDateString(lang === "ta" ? "ta-IN" : "en-IN")}</td>
                         <td style={{ textAlign: "center" }}>
@@ -1146,45 +1151,20 @@ export default function AdminPage() {
                   <h4>{t("complaints.modal.desc_title")}</h4>
                   <div className="detail-modal-stack">
                     <div><span style={{ opacity: 0.6 }}>{t("common.constituency")}</span> <b>{t(selectedApproval.constituency)}</b></div>
-                    <div><span style={{ opacity: 0.6 }}>{t("complaints.modal.desc_category")}</span> <b>{t(selectedApproval.complaintDetails?.category)}</b></div>
-                    <div><span style={{ opacity: 0.6 }}>{t("complaints.modal.desc_sub")}</span> <b>{t(selectedApproval.complaintDetails?.subcategory) || t("home.receipt.none")}</b></div>
+                    <div><span style={{ opacity: 0.6 }}>{t("complaints.modal.desc_category")}</span> <b>{labelComplaintCategory(selectedApproval.complaintDetails?.category, t)}</b></div>
+                    <div><span style={{ opacity: 0.6 }}>{t("complaints.modal.desc_sub")}</span> <b>{labelComplaintCategory(selectedApproval.complaintDetails?.subcategory, t) || t("home.receipt.none")}</b></div>
                   </div>
                 </div>
               </div>
 
-              {/* BEFORE/AFTER IMAGES EVIDENCE */}
-              <div style={{ background: "white", border: "1px solid rgba(0,0,0,0.06)", borderRadius: "0.75rem", padding: "1.2rem", marginBottom: "1.5rem" }}>
-                <h4 style={{ color: "var(--m-900)", borderBottom: "2px solid var(--gold)", paddingBottom: "0.35rem", marginBottom: "0.75rem", fontWeight: 800 }}>{t("tasks.modal.submit_sec_title")}</h4>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }} className="mobile-one-col">
-                  <div>
-                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#666", display: "block", marginBottom: "0.5rem" }}>{t("tasks.modal.submitted_before")}</span>
-                    <div className="complaint-media-grid">
-                      {(selectedApproval.beforeImages || []).map((img: string, idx: number) => (
-                        <a href={img} target="_blank" rel="noopener noreferrer" key={idx} className="complaint-media-thumb">
-                          <img src={img} alt={`Before ${idx + 1}`} loading="lazy" />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#666", display: "block", marginBottom: "0.5rem" }}>{t("tasks.modal.submitted_after")}</span>
-                    <div className="complaint-media-grid">
-                      {(selectedApproval.afterImages || []).map((img: string, idx: number) => (
-                        <a href={img} target="_blank" rel="noopener noreferrer" key={idx} className="complaint-media-thumb">
-                          <img src={img} alt={`After ${idx + 1}`} loading="lazy" />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {selectedApproval.workNotes && (
-                  <div style={{ background: "#F9FAFB", padding: "1rem", borderRadius: "0.5rem", borderLeft: "4px solid #5E8C3A", marginTop: "1rem" }}>
-                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#666", display: "block", marginBottom: "0.35rem" }}>{t("tasks.modal.submitted_notes")}</span>
-                    <p style={{ margin: 0, fontSize: "0.9rem", color: "#111", lineHeight: "1.5", whiteSpace: "pre-wrap", fontWeight: 600 }}>{selectedApproval.workNotes}</p>
-                  </div>
-                )}
-              </div>
+              <SolutionEvidencePanel
+                beforeImages={selectedApproval.beforeImages}
+                afterImages={selectedApproval.afterImages}
+                videos={selectedApproval.videos}
+                audios={selectedApproval.audios}
+                workNotes={selectedApproval.workNotes}
+                title={t("tasks.modal.submit_sec_title")}
+              />
 
               {/* HQ ACTIONS */}
               <div style={{ background: "rgba(94, 140, 58, 0.08)", border: "1px dashed #5E8C3A", borderRadius: "0.75rem", padding: "1.2rem", marginBottom: "1.5rem" }}>

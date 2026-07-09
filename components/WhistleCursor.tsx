@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { WHISTLE_CURSOR_GOLD, WHISTLE_CURSOR_MAROON } from "@/lib/whistleCursorAssets";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type WhistleCursorOptions = {
   theme?: "maroon" | "gold";
@@ -10,6 +11,7 @@ type WhistleCursorOptions = {
 
 export function useWhistleCursor(options: WhistleCursorOptions = {}) {
   const { theme = "maroon", enabled = true } = options;
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!enabled) return;
@@ -35,14 +37,24 @@ export function useWhistleCursor(options: WhistleCursorOptions = {}) {
     };
 
     const handleMouseOver = (e: MouseEvent) => {
+      if (document.body.classList.contains("topbar-menu-open") || document.body.classList.contains("nav-menu-open")) {
+        document.body.classList.remove("chover");
+        return;
+      }
+      if ((e.target as HTMLElement).closest(".nav, .topbar, .wcur")) {
+        document.body.classList.remove("chover");
+        return;
+      }
       const hoverSel =
         "a,button,input,select,textarea,.fchip,.uchip,.hot,.spot,.kpi,.insight-card,.const-stat-card,.timeline-item,.tfilt,td,tr,.card";
-      const t = (e.target as HTMLElement).closest(hoverSel) as HTMLElement | null;
-      document.body.classList.toggle("chover", !!t);
+      const hoverEl = (e.target as HTMLElement).closest(hoverSel) as HTMLElement | null;
+      document.body.classList.toggle("chover", !!hoverEl);
       const clabel = document.getElementById("clabel");
-      if (t && clabel) {
+      if (hoverEl && clabel) {
         clabel.textContent =
-          t.dataset.clabel || t.closest("[data-clabel]")?.getAttribute("data-clabel") || "தொடு";
+          hoverEl.dataset.clabel ||
+          hoverEl.closest("[data-clabel]")?.getAttribute("data-clabel") ||
+          t("cursor.touch");
       }
     };
 
@@ -81,10 +93,12 @@ export function useWhistleCursor(options: WhistleCursorOptions = {}) {
       document.removeEventListener("mouseover", handleMouseOver);
       cancelAnimationFrame(rafId);
     };
-  }, [theme, enabled]);
+  }, [theme, enabled, t]);
 }
 
 export default function WhistleCursor() {
+  const { t } = useLanguage();
+
   return (
     <div className="wcur" id="wcur" aria-hidden="true">
       <img className="wg" src={WHISTLE_CURSOR_GOLD} alt="" />
@@ -95,7 +109,7 @@ export default function WhistleCursor() {
         <span />
       </span>
       <span className="clabel" id="clabel">
-        தொடு
+        {t("cursor.touch")}
       </span>
     </div>
   );

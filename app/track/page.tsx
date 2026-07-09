@@ -9,6 +9,22 @@ import TvkTopBar from "@/components/TvkTopBar";
 import { normalizeStatus } from "@/lib/complaintStatus";
 import WhistleCursor, { useWhistleCursor } from "@/components/WhistleCursor";
 import { useLanguage } from "@/components/LanguageProvider";
+import { labelComplaintCategory } from "@/lib/complaintCategories";
+import { SolutionEvidencePanel } from "@/components/ComplaintMediaPanels";
+
+function timelineNote(
+  status: string,
+  rawNotes: string | undefined,
+  t: (key: string, vars?: Record<string, string>) => string,
+  lang: string
+): string {
+  const norm = normalizeStatus(status);
+  const key = `track.timeline.note.${norm}`;
+  const translated = t(key);
+  if (translated !== key) return translated;
+  if (lang === "ta" && rawNotes) return rawNotes;
+  return t("track.timeline.default_note", { label: t(`status.${norm}`) });
+}
 
 function TrackPageContent() {
   const searchParams = useSearchParams();
@@ -129,7 +145,7 @@ function TrackPageContent() {
                 </div>
                 <div>
                   <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>{t("track.meta.category")}</small>
-                  <p style={{ margin: "0.25rem 0 0", fontWeight: 700 }}>{t(result.category)}{result.subcategory ? ` · ${t(result.subcategory)}` : ""}</p>
+                  <p style={{ margin: "0.25rem 0 0", fontWeight: 700 }}>{labelComplaintCategory(result.category, t)}{result.subcategory ? ` · ${labelComplaintCategory(result.subcategory, t)}` : ""}</p>
                 </div>
                 <div>
                   <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>{t("track.meta.constituency")}</small>
@@ -138,8 +154,8 @@ function TrackPageContent() {
                 <div>
                   <small style={{ color: "var(--ink-soft)", fontWeight: 700 }}>{t("track.meta.status")}</small>
                   <p style={{ margin: "0.25rem 0 0" }}>
-                    <span className={`badge ${result.status === "resolved" ? "ok" : result.status === "registered" ? "pend" : "warn"}`} style={{ display: "inline-flex" }}>
-                      <i></i>{t(`status.${result.status}`)}
+                    <span className={`badge ${normalizeStatus(result.status) === "resolved" ? "ok" : normalizeStatus(result.status) === "registered" ? "pend" : "warn"}`} style={{ display: "inline-flex" }}>
+                      <i></i>{t(`status.${normalizeStatus(result.status)}`)}
                     </span>
                   </p>
                 </div>
@@ -189,49 +205,18 @@ function TrackPageContent() {
                 </div>
               )}
 
-              {/* COMPLETED WORK PHOTOS */}
-              {((result.afterImages?.length || 0) > 0 || (result.beforeImages?.length || 0) > 0) && (
-                <div style={{ marginTop: "2rem", background: "rgba(94, 140, 58, 0.06)", border: "1px solid rgba(94, 140, 58, 0.25)", padding: "1.25rem", borderRadius: "0.75rem" }}>
-                  <h3 style={{ fontSize: "1rem", fontWeight: 900, color: "var(--m-800)", marginBottom: "0.85rem" }}>
-                    {t("track.evidence.title")}
-                  </h3>
-                  <div style={{ display: "grid", gap: "1.25rem", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-                    <div>
-                      <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block", marginBottom: "0.5rem" }}>{t("track.evidence.before")}</small>
-                      {(result.beforeImages?.length || 0) > 0 ? (
-                        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                          {result.beforeImages.map((img: string, idx: number) => (
-                            <a href={img} target="_blank" rel="noopener noreferrer" key={idx} style={{ display: "block", width: "92px", height: "92px", borderRadius: "0.5rem", overflow: "hidden", border: "1px solid rgba(0,0,0,0.1)" }}>
-                              <img src={img} alt={`Before ${idx + 1}`} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            </a>
-                          ))}
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: "0.8rem", color: "var(--ink-soft)", fontStyle: "italic" }}>{t("track.evidence.none")}</span>
-                      )}
-                    </div>
-                    <div>
-                      <small style={{ color: "var(--ink-soft)", fontWeight: 700, display: "block", marginBottom: "0.5rem" }}>{t("track.evidence.after")}</small>
-                      {(result.afterImages?.length || 0) > 0 ? (
-                        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                          {result.afterImages.map((img: string, idx: number) => (
-                            <a href={img} target="_blank" rel="noopener noreferrer" key={idx} style={{ display: "block", width: "92px", height: "92px", borderRadius: "0.5rem", overflow: "hidden", border: "1px solid rgba(0,0,0,0.1)" }}>
-                              <img src={img} alt={`After ${idx + 1}`} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            </a>
-                          ))}
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: "0.8rem", color: "var(--ink-soft)", fontStyle: "italic" }}>{t("track.evidence.none")}</span>
-                      )}
-                    </div>
-                  </div>
-                  {result.workNotes && (
-                    <p style={{ margin: "0.85rem 0 0 0", fontSize: "0.85rem", color: "var(--ink)", lineHeight: 1.5 }}>
-                      <b style={{ color: "var(--m-800)" }}>{t("track.evidence.notes")}</b> {result.workNotes}
-                    </p>
-                  )}
+              {(result.beforeImages?.length || result.afterImages?.length || result.videos?.length || result.audios?.length || result.workNotes) ? (
+                <div style={{ marginTop: "2rem" }}>
+                  <SolutionEvidencePanel
+                    beforeImages={result.beforeImages}
+                    afterImages={result.afterImages}
+                    videos={result.videos}
+                    audios={result.audios}
+                    workNotes={result.workNotes}
+                    title={t("track.evidence.title")}
+                  />
                 </div>
-              )}
+              ) : null}
 
               {/* TIMELINE */}
               <div style={{ marginTop: "2rem" }}>
@@ -264,13 +249,13 @@ function TrackPageContent() {
                         </div>
                         <div style={{ flex: 1, background: '#F9FAFB', padding: '0.75rem 1rem', borderRadius: '0.5rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                            <b style={{ fontSize: '0.9rem', color: '#111' }}>{step.label || t(`status.${norm}`)}</b>
+                            <b style={{ fontSize: '0.9rem', color: '#111' }}>{t(`status.${norm}`)}</b>
                             <span style={{ fontSize: '0.75rem', color: '#666' }}>
                               {step.updatedAt ? new Date(step.updatedAt).toLocaleString(lang === "ta" ? "ta-IN" : "en-IN") : ""}
                             </span>
                           </div>
                           <p style={{ margin: 0, fontSize: '0.82rem', color: '#555', lineHeight: '1.4' }}>
-                            {step.notes || t("track.timeline.default_note", { label: t(`status.${norm}`) })}
+                            {timelineNote(step.status, step.notes, t, lang)}
                           </p>
                         </div>
                       </div>

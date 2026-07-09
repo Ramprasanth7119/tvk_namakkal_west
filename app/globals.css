@@ -25,3 +25,18 @@ body {
   max-width: 100%;
   min-height: 100%;
 }
+
+/* Tamil-first font stack — reliable rendering on macOS, iOS, and Windows */
+.tvk-font-root,
+.tvk-font-root body {
+  font-family: var(--font-hind-madurai), var(--font-noto-tamil), "Hind Madurai", "Noto Sans Tamil",
+    "Tamil MN", "InaiMathi", "Lohit Tamil", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+:lang(ta) {
+  font-family: var(--font-noto-tamil), var(--font-hind-madurai), "Noto Sans Tamil", "Hind Madurai",
+    "Tamil MN", "InaiMathi", "Lohit Tamil", system-ui, sans-serif;
+}

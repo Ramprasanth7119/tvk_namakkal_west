@@ -44,9 +44,11 @@ export interface Complaint {
   complaintDetails: ComplaintDetails;
   photoUrls?: string[];
   videoUrls?: string[];
+  audioUrls?: string[];
   mediaUrls?: {
     photos: string[];
     video?: string;
+    audio?: string;
   };
   geolocation?: GeolocationDetails;
   status: string;
@@ -66,6 +68,7 @@ export interface Complaint {
   beforeImages?: string[];
   afterImages?: string[];
   videos?: string[];
+  audios?: string[];
   workNotes?: string;
   representativeApproval?: "APPROVED" | "REJECTED";
   representativeApprovedAt?: string | Date;

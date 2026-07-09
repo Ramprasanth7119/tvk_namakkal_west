@@ -1,4 +1,7 @@
 import { normalizeStatus, type ComplaintStatusCode } from "@/lib/complaintStatus";
+import {
+  normalizeCategoryKey,
+} from "@/lib/complaintCategories";
 
 export type AnalyticsDisplayStatus = "ok" | "warn" | "pend";
 
@@ -19,18 +22,19 @@ export function toAnalyticsDisplayStatus(status?: string | null): AnalyticsDispl
 }
 
 export function categoryToSector(category?: string): string {
-  if (category === "மின்சாரம்") return "power";
-  if (category === "சாலை" || category === "போக்குவரத்து") return "road";
-  if (category === "குடிநீர்") return "water";
-  if (category === "கழிவுநீர்" || category === "சுகாதாரம்") return "drain";
-  if (category === "தெருவிளக்கு") return "light";
-  if (category === "கல்வி") return "edu";
-  if (category === "மருத்துவம்" || category === "சுற்றுச்சூழல்") return "health";
+  const key = normalizeCategoryKey(category);
+  if (key === "cat.electricity") return "power";
+  if (key === "cat.road" || key === "cat.transport") return "road";
+  if (key === "cat.water") return "water";
+  if (key === "cat.drainage" || key === "cat.sanitation") return "drain";
+  if (key === "cat.streetlight") return "light";
+  if (key === "cat.education") return "edu";
+  if (key === "cat.health" || key === "cat.environment") return "health";
   return "civic";
 }
 
 export function anonymizedIssueTitle(category?: string, subcategory?: string): string {
-  return subcategory || category || "பொது புகார்";
+  return subcategory || category || "cat.other";
 }
 
 export interface PublicAnalyticsRecord {

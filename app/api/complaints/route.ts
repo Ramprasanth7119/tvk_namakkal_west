@@ -83,6 +83,7 @@ export async function GET(request: Request) {
         ...complaint,
         photoUrls: media.photos,
         videoUrls: media.video ? [media.video] : [],
+        audioUrls: media.audio ? [media.audio] : [],
         mediaUrls: media.mediaUrls,
       };
     });
@@ -183,7 +184,8 @@ export async function POST(request: Request) {
     // 7. File Upload Security & Rate Limiting (Max 10 uploads per hour per IP)
     const photosList = mediaUrls?.photos || [];
     const videoFile = mediaUrls?.video;
-    const totalUploadsInPayload = photosList.length + (videoFile ? 1 : 0);
+    const audioFile = mediaUrls?.audio;
+    const totalUploadsInPayload = photosList.length + (videoFile ? 1 : 0) + (audioFile ? 1 : 0);
 
     if (totalUploadsInPayload > 0) {
       // Check file upload rate limit
@@ -208,6 +210,14 @@ export async function POST(request: Request) {
       // Validate video
       if (videoFile) {
         const fileCheck = validateBase64File(videoFile);
+        if (!fileCheck.valid) {
+          return NextResponse.json({ error: fileCheck.error }, { status: 400 });
+        }
+      }
+
+      // Validate audio
+      if (audioFile) {
+        const fileCheck = validateBase64File(audioFile);
         if (!fileCheck.valid) {
           return NextResponse.json({ error: fileCheck.error }, { status: 400 });
         }
@@ -259,6 +269,7 @@ export async function POST(request: Request) {
     // Upload media to Cloudinary (do not store base64 in MongoDB)
     let photoUrls: string[] = [];
     let videoUrls: string[] = [];
+    let audioUrls: string[] = [];
 
     if (totalUploadsInPayload > 0) {
       if (!isCloudinaryConfigured()) {
@@ -274,6 +285,9 @@ export async function POST(request: Request) {
         }
         if (videoFile) {
           videoUrls = await uploadMediaListToCloudinary([videoFile], "complaints/videos", "video");
+        }
+        if (audioFile) {
+          audioUrls = await uploadMediaListToCloudinary([audioFile], "complaints/audio", "video");
         }
       } catch (uploadErr) {
         console.error("Cloudinary upload error:", uploadErr);
@@ -299,9 +313,11 @@ export async function POST(request: Request) {
       complaintDetails: sanitizeInput(complaintDetails),
       photoUrls,
       videoUrls,
+      audioUrls,
       mediaUrls: {
         photos: photoUrls,
         video: videoUrls[0] || undefined,
+        audio: audioUrls[0] || undefined,
       },
       geolocation: sanitizeInput(geolocation),
       status: "pend",
@@ -320,6 +336,7 @@ export async function POST(request: Request) {
       trackingId,
       photoUrls,
       videoUrls,
+      audioUrls,
       message: t("api.complaint_success"),
     });
   } catch (error) {
@@ -411,22 +428,50 @@ export async function PATCH(request: Request) {
       if (session.role !== "FIELD_OFFICER") {
         return NextResponse.json({ error: t("api.forbidden") }, { status: 403 });
       }
-      const { beforeImages, afterImages, videos, workNotes } = body;
+      const { beforeImages, afterImages, videos, audios, workNotes } = body;
 
       let uploadedBefore: string[] = [];
       let uploadedAfter: string[] = [];
       let uploadedVideos: string[] = [];
+      let uploadedAudios: string[] = [];
 
       if (isCloudinaryConfigured()) {
         try {
           if (Array.isArray(beforeImages) && beforeImages.length > 0) {
+            for (const img of beforeImages) {
+              const check = validateBase64File(img);
+              if (!check.valid) {
+                return NextResponse.json({ error: check.error }, { status: 400 });
+              }
+            }
             uploadedBefore = await uploadMediaListToCloudinary(beforeImages, "evidence/before", "image");
           }
           if (Array.isArray(afterImages) && afterImages.length > 0) {
+            for (const img of afterImages) {
+              const check = validateBase64File(img);
+              if (!check.valid) {
+                return NextResponse.json({ error: check.error }, { status: 400 });
+              }
+            }
             uploadedAfter = await uploadMediaListToCloudinary(afterImages, "evidence/after", "image");
           }
           if (Array.isArray(videos) && videos.length > 0) {
+            for (const vid of videos) {
+              const check = validateBase64File(vid);
+              if (!check.valid) {
+                return NextResponse.json({ error: check.error }, { status: 400 });
+              }
+            }
             uploadedVideos = await uploadMediaListToCloudinary(videos, "evidence/videos", "video");
+          }
+          if (Array.isArray(audios) && audios.length > 0) {
+            for (const aud of audios) {
+              const check = validateBase64File(aud);
+              if (!check.valid) {
+                return NextResponse.json({ error: check.error }, { status: 400 });
+              }
+            }
+            uploadedAudios = await uploadMediaListToCloudinary(audios, "evidence/audio", "video");
           }
         } catch (uploadErr) {
           console.error("Cloudinary upload error inside submit_solution:", uploadErr);
@@ -439,6 +484,7 @@ export async function PATCH(request: Request) {
       updateFields.beforeImages = uploadedBefore;
       updateFields.afterImages = uploadedAfter;
       updateFields.videos = uploadedVideos;
+      updateFields.audios = uploadedAudios;
       updateFields.workNotes = workNotes || "";
       updateFields.solvedBy = session.username;
       timelineNote = `களப்பணியாளர் ${session.username} தீர்வு சமர்ப்பித்தார்`;

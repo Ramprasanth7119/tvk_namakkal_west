@@ -9,6 +9,8 @@ import WhistleCursor, { useWhistleCursor } from "@/components/WhistleCursor";
 import { getGoogleMapsEmbedUrl, getGoogleMapsOpenUrl } from "@/lib/maps";
 import { normalizeStatus } from "@/lib/complaintStatus";
 import { useLanguage } from "@/components/LanguageProvider";
+import { labelComplaintCategory } from "@/lib/complaintCategories";
+import { SolutionEvidencePanel } from "@/components/ComplaintMediaPanels";
 import "../analytics/analytics.css";
 
 export default function MyTasksPage() {
@@ -26,6 +28,8 @@ export default function MyTasksPage() {
   const [beforeImages, setBeforeImages] = useState<string[]>([]);
   const [afterImages, setAfterImages] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
+  const [audios, setAudios] = useState<string[]>([]);
+  const [isAudioRecording, setIsAudioRecording] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
 
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
@@ -42,11 +46,13 @@ export default function MyTasksPage() {
           setBeforeImages(data.beforeImages !== undefined ? data.beforeImages : (selectedTask.beforeImages || []));
           setAfterImages(data.afterImages !== undefined ? data.afterImages : (selectedTask.afterImages || []));
           setVideos(data.videos !== undefined ? data.videos : (selectedTask.videos || []));
+          setAudios(data.audios !== undefined ? data.audios : (selectedTask.audios || []));
         } else {
           setWorkNotes(selectedTask.workNotes || "");
           setBeforeImages(selectedTask.beforeImages || []);
           setAfterImages(selectedTask.afterImages || []);
           setVideos(selectedTask.videos || []);
+          setAudios(selectedTask.audios || []);
         }
       } catch (e) {
         console.error("Error loading draft from sessionStorage:", e);
@@ -58,6 +64,7 @@ export default function MyTasksPage() {
       setBeforeImages([]);
       setAfterImages([]);
       setVideos([]);
+      setAudios([]);
       setIsDraftLoaded(false);
     }
   }, [selectedTask]);
@@ -66,12 +73,12 @@ export default function MyTasksPage() {
   useEffect(() => {
     if (!selectedTask || !isDraftLoaded) return;
     try {
-      const data = { workNotes, beforeImages, afterImages, videos };
+      const data = { workNotes, beforeImages, afterImages, videos, audios };
       sessionStorage.setItem(`tvk_field_work_draft_${selectedTask.trackingId}`, JSON.stringify(data));
     } catch (e) {
       console.warn("Error saving draft to sessionStorage:", e);
     }
-  }, [selectedTask, isDraftLoaded, workNotes, beforeImages, afterImages, videos]);
+  }, [selectedTask, isDraftLoaded, workNotes, beforeImages, afterImages, videos, audios]);
 
   // Camera capture states
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -80,6 +87,10 @@ export default function MyTasksPage() {
   const beforeInputRef = useRef<HTMLInputElement | null>(null);
   const afterInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const audioInputRef = useRef<HTMLInputElement | null>(null);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioStreamRef = useRef<MediaStream | null>(null);
 
   // Manage modal-open body class for cursor overrides
   useEffect(() => {
@@ -166,7 +177,7 @@ export default function MyTasksPage() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: "before" | "after" | "video") => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: "before" | "after" | "video" | "audio") => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -180,6 +191,8 @@ export default function MyTasksPage() {
           setAfterImages(prev => [...prev, base64]);
         } else if (type === "video") {
           setVideos(prev => [...prev, base64]);
+        } else if (type === "audio") {
+          setAudios(prev => [...prev, base64]);
         }
       };
       reader.readAsDataURL(file);
@@ -204,6 +217,7 @@ export default function MyTasksPage() {
           beforeImages,
           afterImages,
           videos,
+          audios,
           workNotes,
         }),
       });
@@ -216,10 +230,12 @@ export default function MyTasksPage() {
           console.error("Error clearing draft from sessionStorage:", e);
         }
         setTimeout(() => {
+          stopAudioRecording();
           setSelectedComplaint(null);
           setBeforeImages([]);
           setAfterImages([]);
           setVideos([]);
+          setAudios([]);
           setWorkNotes("");
           setSubmitMessage("");
           fetchTasks();
@@ -275,6 +291,60 @@ export default function MyTasksPage() {
     setIsCameraActive(false);
     setCameraTarget(null);
   };
+
+  const startAudioRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+      audioChunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      audioRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const mimeType = recorder.mimeType || "audio/webm";
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAudios((prev) => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(blob);
+        audioChunksRef.current = [];
+      };
+
+      recorder.start();
+      setIsAudioRecording(true);
+    } catch (err) {
+      console.error("Audio recording error:", err);
+      alert(lang === "ta" ? "மைக்ரோஃபோன் அனுமதி தேவை." : "Microphone permission is required.");
+    }
+  };
+
+  const stopAudioRecording = () => {
+    const recorder = audioRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach((track) => track.stop());
+      audioStreamRef.current = null;
+    }
+    setIsAudioRecording(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (audioRecorderRef.current && audioRecorderRef.current.state !== "inactive") {
+        audioRecorderRef.current.stop();
+      }
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
 
   if (isSessionLoading) {
     return (
@@ -368,7 +438,7 @@ export default function MyTasksPage() {
                       </div>
 
                       <h3 style={{ fontSize: "1rem", fontWeight: 800, color: "var(--ink)", marginBottom: "0.5rem", minHeight: "2.4rem", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                        {t(task.complaintDetails?.category)} - {t(task.complaintDetails?.subcategory) || t("home.receipt.none")}
+                        {labelComplaintCategory(task.complaintDetails?.category, t)} - {labelComplaintCategory(task.complaintDetails?.subcategory, t) || t("home.receipt.none")}
                       </h3>
 
                       <div style={{ display: "grid", gap: "0.5rem", fontSize: "0.82rem", color: "var(--ink-soft)", borderTop: "1px solid var(--line)", paddingTop: "0.75rem" }}>
@@ -401,7 +471,7 @@ export default function MyTasksPage() {
                 <span style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.85, fontWeight: 700, color: "#FFF1BE" }}>{t("tasks.modal.title")}</span>
                 <h3 style={{ color: "white" }}>{t("tasks.modal.id", { id: selectedTask.trackingId })}</h3>
               </div>
-              <button type="button" className="detail-modal-close" onClick={() => setSelectedComplaint(null)} aria-label={t("common.close")}>✕</button>
+              <button type="button" className="detail-modal-close" onClick={() => { stopAudioRecording(); setSelectedComplaint(null); }} aria-label={t("common.close")}>✕</button>
             </div>
 
             <div className="detail-modal-body">
@@ -412,7 +482,7 @@ export default function MyTasksPage() {
                     <div><span style={{ opacity: 0.6 }}>{t("tasks.modal.citizen_name")}</span> <b>{selectedTask.citizenDetails?.name || t("home.receipt.none")}</b></div>
                     <div><span style={{ opacity: 0.6 }}>{t("tasks.modal.citizen_phone")}</span> <b>{selectedTask.citizenDetails?.mobile || t("home.receipt.none")}</b></div>
                     <div><span style={{ opacity: 0.6 }}>{t("tasks.modal.citizen_address")}</span> <b>{selectedTask.citizenDetails?.address || t("home.receipt.none")}</b></div>
-                    <div><span style={{ opacity: 0.6 }}>{t("tasks.modal.citizen_category")}</span> <b>{t(selectedTask.complaintDetails?.category)}</b></div>
+                    <div><span style={{ opacity: 0.6 }}>{t("tasks.modal.citizen_category")}</span> <b>{labelComplaintCategory(selectedTask.complaintDetails?.category, t)}</b></div>
                     <div><span style={{ opacity: 0.6 }}>{t("tasks.modal.citizen_urgency")}</span> <b style={{ color: "var(--red)" }}>{t(`home.form.grievance.urgency.${selectedTask.complaintDetails?.urgency || "normal"}`)}</b></div>
                   </div>
                 </div>
@@ -562,6 +632,33 @@ export default function MyTasksPage() {
                     <input type="file" accept="video/*" ref={videoInputRef} onChange={(e) => handleFileChange(e, "video")} style={{ display: "none" }} title={t("tasks.modal.submit_video")} />
                   </div>
 
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#333", display: "block", marginBottom: "0.5rem" }}>{t("tasks.modal.submit_audio")}</span>
+                    {audios.length > 0 && (
+                      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+                        {audios.map((aud, idx) => (
+                          <div key={idx} style={{ position: "relative", minWidth: "220px" }}>
+                            <audio src={aud} controls style={{ width: "100%" }} />
+                            <button type="button" onClick={() => setAudios(prev => prev.filter((_, i) => i !== idx))} style={{ position: "absolute", top: 2, right: 2, background: "rgba(160,0,0,0.85)", color: "white", border: "none", width: 18, height: 18, borderRadius: "50%", cursor: "pointer", fontSize: "0.6rem", zIndex: 5 }}>✕</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                      <button type="button" onClick={() => audioInputRef.current?.click()} style={{ padding: "0.5rem 1rem", fontSize: "0.8rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>{t("tasks.modal.audio_btn")}</button>
+                      {!isAudioRecording ? (
+                        <button type="button" onClick={startAudioRecording} style={{ padding: "0.5rem 1rem", fontSize: "0.8rem", border: "1px solid #CCC", borderRadius: "0.4rem", background: "#FFF", fontWeight: "bold", cursor: "pointer" }}>
+                          {lang === "ta" ? "ஆடியோ பதிவு செய்" : "Record Audio"}
+                        </button>
+                      ) : (
+                        <button type="button" onClick={stopAudioRecording} style={{ padding: "0.5rem 1rem", fontSize: "0.8rem", border: "1px solid #A00000", borderRadius: "0.4rem", background: "#A00000", color: "#fff", fontWeight: "bold", cursor: "pointer" }}>
+                          {lang === "ta" ? "பதிவை நிறுத்து" : "Stop Recording"}
+                        </button>
+                      )}
+                    </div>
+                    <input type="file" accept="audio/*" ref={audioInputRef} onChange={(e) => handleFileChange(e, "audio")} style={{ display: "none" }} title={t("tasks.modal.submit_audio")} />
+                  </div>
+
                   {/* Work Notes */}
                   <div style={{ marginBottom: "1.5rem" }}>
                     <label htmlFor="work-notes" style={{ fontSize: "0.88rem", fontWeight: 700, color: "#333", display: "block", marginBottom: "0.5rem" }}>{t("tasks.modal.submit_notes_lbl")}</label>
@@ -600,49 +697,14 @@ export default function MyTasksPage() {
                     </div>
                   </div>
 
-                  <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--m-900)", marginBottom: "1rem" }}>{t("tasks.modal.submitted_evidence")}</h4>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "1.5rem" }} className="mobile-one-col">
-                    <div>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#666", display: "block", marginBottom: "0.5rem" }}>{t("tasks.modal.submitted_before")}</span>
-                      <div className="complaint-media-grid">
-                        {selectedTask.beforeImages && selectedTask.beforeImages.map((img: string, idx: number) => (
-                          <a href={img} target="_blank" rel="noopener noreferrer" key={idx} className="complaint-media-thumb">
-                            <img src={img} alt={`Before ${idx + 1}`} loading="lazy" />
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#666", display: "block", marginBottom: "0.5rem" }}>{t("tasks.modal.submitted_after")}</span>
-                      <div className="complaint-media-grid">
-                        {selectedTask.afterImages && selectedTask.afterImages.map((img: string, idx: number) => (
-                          <a href={img} target="_blank" rel="noopener noreferrer" key={idx} className="complaint-media-thumb">
-                            <img src={img} alt={`After ${idx + 1}`} loading="lazy" />
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {selectedTask.videos && selectedTask.videos.length > 0 && (
-                    <div style={{ marginBottom: "1.5rem" }}>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#666", display: "block", marginBottom: "0.5rem" }}>{t("tasks.modal.submitted_video")}</span>
-                      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                        {selectedTask.videos.map((vid: string, idx: number) => (
-                          <video key={idx} src={vid} controls playsInline style={{ maxWidth: "280px", height: "auto", borderRadius: "0.4rem" }} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedTask.workNotes && (
-                    <div style={{ background: "white", padding: "1rem", borderRadius: "0.5rem", borderLeft: "4px solid #4ade80", border: "1px solid #E5E7EB" }}>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#666", display: "block", marginBottom: "0.35rem" }}>{t("tasks.modal.submitted_notes")}</span>
-                      <p style={{ margin: 0, fontSize: "0.88rem", color: "#111", lineHeight: "1.5", whiteSpace: "pre-wrap", fontWeight: 600 }}>{selectedTask.workNotes}</p>
-                    </div>
-                  )}
+                  <SolutionEvidencePanel
+                    beforeImages={selectedTask.beforeImages}
+                    afterImages={selectedTask.afterImages}
+                    videos={selectedTask.videos}
+                    audios={selectedTask.audios}
+                    workNotes={selectedTask.workNotes}
+                    title={t("tasks.modal.submitted_evidence")}
+                  />
                 </div>
               )}
 
@@ -664,7 +726,7 @@ export default function MyTasksPage() {
             </div>
 
             <div className="detail-modal-footer">
-              <button type="button" className="admin-modal-cancel" onClick={() => setSelectedComplaint(null)}>{t("common.close")}</button>
+              <button type="button" className="admin-modal-cancel" onClick={() => { stopAudioRecording(); setSelectedComplaint(null); }}>{t("common.close")}</button>
             </div>
           </div>
         </div>

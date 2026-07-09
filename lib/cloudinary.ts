@@ -23,14 +23,37 @@ function configureCloudinary() {
 export async function uploadBase64ToCloudinary(
   base64Data: string,
   folder: string,
-  resourceType: "image" | "video" = "image"
+  resourceType: "image" | "video" | "auto" = "image"
 ): Promise<string> {
   configureCloudinary();
 
-  const result = await cloudinary.uploader.upload(base64Data, {
-    folder: `tvk-west/${folder}`,
-    resource_type: resourceType,
-  });
+  let result: { secure_url: string };
+  const dataUrlMatch = base64Data.match(/^data:([^;,]+)(?:;[^,]*)?;base64,(.*)$/);
+
+  if (dataUrlMatch) {
+    const buffer = Buffer.from(dataUrlMatch[2], "base64");
+    result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: `tvk-west/${folder}`,
+          resource_type: resourceType,
+        },
+        (error, uploadResult) => {
+          if (error || !uploadResult) {
+            reject(error || new Error("Cloudinary upload failed"));
+            return;
+          }
+          resolve(uploadResult as { secure_url: string });
+        }
+      );
+      stream.end(buffer);
+    });
+  } else {
+    result = (await cloudinary.uploader.upload(base64Data, {
+      folder: `tvk-west/${folder}`,
+      resource_type: resourceType,
+    })) as { secure_url: string };
+  }
 
   return result.secure_url;
 }
@@ -38,7 +61,7 @@ export async function uploadBase64ToCloudinary(
 export async function uploadMediaListToCloudinary(
   items: string[],
   folder: string,
-  resourceType: "image" | "video" = "image"
+  resourceType: "image" | "video" | "auto" = "image"
 ): Promise<string[]> {
   const urls: string[] = [];
   for (const item of items) {

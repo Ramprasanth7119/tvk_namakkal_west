@@ -25,9 +25,9 @@
       --r-lg: 22px;
       --r-md: 14px;
       --r-sm: 10px;
-      --f-disp: 'Anek Tamil', sans-serif;
-      --f-head: 'Catamaran', sans-serif;
-      --f-body: 'Hind Madurai', sans-serif;
+      --f-disp: var(--font-noto-tamil), 'Noto Sans Tamil', 'Tamil MN', 'InaiMathi', 'Lohit Tamil', sans-serif;
+      --f-head: var(--font-catamaran), 'Catamaran', sans-serif;
+      --f-body: var(--font-hind-madurai), var(--font-noto-tamil), 'Hind Madurai', 'Noto Sans Tamil', 'Tamil MN', 'InaiMathi', sans-serif;
       --maxw: 1280px;
       --ease: cubic-bezier(.22, 1, .36, 1);
       --shadow: 0 24px 60px -34px rgba(74, 8, 14, .42);
@@ -228,6 +228,10 @@
       background: transparent;
     }
 
+    a.tb-back {
+      cursor: pointer;
+    }
+
     .topbar-menu-toggle {
       display: none;
       align-items: center;
@@ -255,25 +259,38 @@
       line-height: 1;
     }
 
-    /* Always-visible language toggle in the navbar header row.
-       Hidden on desktop (the in-drawer switcher is used there); shown on
-       mobile so the language can be changed without opening the menu. */
+    /* Language toggle — single control in topbar actions */
     .topbar-lang-btn {
-      display: none;
+      display: inline-flex;
       align-items: center;
-      gap: 4px;
-      margin-left: auto;
+      gap: 6px;
       color: var(--gold);
       font-weight: 700;
       font-size: .8rem;
       background: rgba(255, 255, 255, .06);
       border: 1px solid rgba(254, 203, 2, .35);
       border-radius: 999px;
-      padding: 0 .8rem;
-      min-height: 40px;
+      padding: 0 .75rem;
+      min-height: 38px;
       cursor: pointer;
       flex: none;
+      line-height: 1;
+      white-space: nowrap;
       -webkit-tap-highlight-color: transparent;
+      transition: background .2s ease, border-color .2s ease, color .2s ease;
+    }
+
+    .topbar-lang-btn:hover {
+      background: rgba(255, 255, 255, .1);
+      border-color: rgba(254, 203, 2, .55);
+      color: var(--gold-2);
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex: none;
     }
 
     .topbar-backdrop {
@@ -292,9 +309,14 @@
       opacity: 1;
     }
 
-    body.topbar-menu-open {
-      overflow: hidden;
-    }
+  body.topbar-menu-open {
+    overflow: hidden;
+  }
+
+  body.topbar-menu-open .wcur {
+    display: none !important;
+    pointer-events: none !important;
+  }
 
     /* ===== PAGE HERO ===== */
     .phero {
@@ -1344,10 +1366,87 @@ body.modal-open .wcur {
 
 .complaint-media-video {
   width: 100%;
-  max-height: 220px;
+  max-width: 320px;
+  height: auto;
   border-radius: 0.5rem;
   border: 1px solid rgba(0, 0, 0, 0.1);
   background: #000;
+  display: block;
+}
+
+.complaint-media-audio {
+  width: 100%;
+  max-width: 320px;
+  display: block;
+}
+
+.complaint-media-panel {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 0.75rem;
+  padding: 1.2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.complaint-media-panel-title {
+  color: #4a080e;
+  font-size: 1rem;
+  border-bottom: 2px solid #fecb02;
+  padding-bottom: 0.4rem;
+  margin: 0 0 0.8rem;
+  font-weight: 800;
+}
+
+.complaint-media-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.complaint-media-row--two {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.complaint-media-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.complaint-media-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #666;
+  display: block;
+}
+
+.complaint-media-playback-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.complaint-media-notes {
+  margin-top: 1rem;
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border-left: 4px solid #5e8c3a;
+}
+
+.complaint-media-notes p {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: #111;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  font-weight: 600;
 }
 
 .complaint-modal-body {
@@ -1903,6 +2002,37 @@ body.cursor-on:not(.modal-open) * {
   cursor: none !important;
 }
 
+body.cursor-on:not(.modal-open) .topbar a,
+body.cursor-on:not(.modal-open) .topbar button,
+body.cursor-on:not(.modal-open) .topbar .tb-brand,
+body.cursor-on:not(.modal-open) .topbar-lang-btn,
+body.cursor-on:not(.modal-open) .topbar-menu-toggle,
+body.cursor-on:not(.modal-open) a,
+body.cursor-on:not(.modal-open) button,
+body.cursor-on:not(.modal-open) input,
+body.cursor-on:not(.modal-open) select,
+body.cursor-on:not(.modal-open) textarea,
+body.cursor-on:not(.modal-open) .fchip,
+body.cursor-on:not(.modal-open) .uchip,
+body.cursor-on:not(.modal-open) .hot,
+body.cursor-on:not(.modal-open) .spot,
+body.cursor-on:not(.modal-open) .kpi,
+body.cursor-on:not(.modal-open) .insight-card,
+body.cursor-on:not(.modal-open) .const-stat-card,
+body.cursor-on:not(.modal-open) .timeline-item,
+body.cursor-on:not(.modal-open) .tfilt,
+body.cursor-on:not(.modal-open) .tb-back,
+body.topbar-menu-open a,
+body.topbar-menu-open button {
+  cursor: pointer !important;
+}
+
+@media (max-width: 992px), (pointer: coarse) {
+  .wcur .clabel {
+    display: none !important;
+  }
+}
+
 body.cursor-on .wcur {
   display: block;
 }
@@ -2296,6 +2426,44 @@ body.chover .wcur {
   min-width: 0;
 }
 
+@media (min-width: 993px) {
+  .topbar-in {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.65rem;
+    max-width: min(calc(100vw - 1.25rem), 1720px);
+    width: 100%;
+  }
+
+  .tb-brand {
+    grid-column: 1;
+    justify-self: start;
+    flex: unset;
+  }
+
+  .tb-actions {
+    grid-column: 2;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 0.55rem;
+  }
+
+  .topbar-actions {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .tb-back {
+    font-size: clamp(0.78rem, 0.85vw, 0.9rem);
+    padding: 0.48rem 0.95rem;
+  }
+
+  html[lang="en"] .tb-back {
+    font-size: clamp(0.82rem, 0.88vw, 0.92rem);
+  }
+}
+
 @media (max-width: 992px) {
   /* The mobile nav drawer (.tb-actions) is position:fixed. An ancestor with
      backdrop-filter becomes the containing block for fixed descendants, which
@@ -2313,12 +2481,9 @@ body.chover .wcur {
   }
 
   .topbar-lang-btn {
-    display: inline-flex;
-  }
-
-  /* On mobile the header-row switcher is used; hide the in-drawer one */
-  .tb-actions .lang-toggle-btn {
-    display: none;
+    min-height: 36px;
+    padding: 0 0.65rem;
+    font-size: 0.76rem;
   }
 
   .topbar-in {

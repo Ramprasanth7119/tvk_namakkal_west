@@ -1,9 +1,11 @@
 type ComplaintMediaSource = {
   photoUrls?: string[];
   videoUrls?: string[];
+  audioUrls?: string[];
   mediaUrls?: {
     photos?: string[];
     video?: string;
+    audio?: string;
   };
 };
 
@@ -39,13 +41,32 @@ export function getComplaintVideo(complaint: ComplaintMediaSource | null | undef
   return isDisplayableUrl(legacy) ? legacy : null;
 }
 
+/** Resolve audio URL from Cloudinary fields or legacy mediaUrls. */
+export function getComplaintAudio(complaint: ComplaintMediaSource | null | undefined): string | null {
+  if (!complaint) return null;
+
+  if (complaint.audioUrls?.length) {
+    const url = complaint.audioUrls[0];
+    return isDisplayableUrl(url) ? url : null;
+  }
+
+  const legacy = complaint.mediaUrls?.audio;
+  return isDisplayableUrl(legacy) ? legacy : null;
+}
+
 /** Normalized media shape for API responses and UI. */
 export function normalizeComplaintMedia(complaint: ComplaintMediaSource) {
   const photos = getComplaintPhotos(complaint);
   const video = getComplaintVideo(complaint);
+  const audio = getComplaintAudio(complaint);
   return {
     photos,
     video,
-    mediaUrls: { photos, video: video || undefined },
+    audio,
+    mediaUrls: {
+      photos,
+      video: video || undefined,
+      audio: audio || undefined,
+    },
   };
 }

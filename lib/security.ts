@@ -167,7 +167,7 @@ export function validateBase64File(dataUrl: string): {
     return { valid: false, error: "செல்லாத கோப்பு வடிவம் (Invalid file format)" };
   }
 
-  const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/);
+  const match = dataUrl.match(/^data:([^;,]+)(?:;[^,]*)?;base64,(.*)$/);
   if (!match) {
     return { valid: false, error: "செல்லாத கோப்பு வடிவம் (Invalid base64 format)" };
   }
@@ -181,20 +181,34 @@ export function validateBase64File(dataUrl: string): {
   // Allowed mime types
   const allowedImages = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
   const allowedVideos = ["video/mp4", "video/quicktime", "video/3gpp", "video/webm"];
+  const allowedAudio = [
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/mp4",
+    "audio/webm",
+    "audio/ogg",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/aac",
+    "audio/x-m4a",
+  ];
 
   const isImage = allowedImages.includes(mimeType);
   const isVideo = allowedVideos.includes(mimeType);
+  const isAudio = allowedAudio.includes(mimeType);
 
-  if (!isImage && !isVideo) {
+  if (!isImage && !isVideo && !isAudio) {
     return {
       valid: false,
-      error: "அனுமதிக்கப்படாத கோப்பு வகை. படங்கள் (JPG, PNG, WebP) மற்றும் வீடியோக்கள் (MP4, WebM) மட்டுமே அனுமதிக்கப்படும்.",
+      error:
+        "அனுமதிக்கப்படாத கோப்பு வகை. படங்கள், வீடியோக்கள் மற்றும் ஆடியோ கோப்புகள் மட்டுமே அனுமதிக்கப்படும். (Unsupported file type — images, videos, and audio only.)",
     };
   }
 
   // Size limits
   const maxImageSize = 10 * 1024 * 1024; // 10MB
   const maxVideoSize = 50 * 1024 * 1024; // 50MB
+  const maxAudioSize = 15 * 1024 * 1024; // 15MB
 
   if (isImage && sizeBytes > maxImageSize) {
     return { valid: false, error: "படம் 10MB-க்கு மிகாமல் இருக்க வேண்டும் (Image must be under 10MB)" };
@@ -202,6 +216,10 @@ export function validateBase64File(dataUrl: string): {
 
   if (isVideo && sizeBytes > maxVideoSize) {
     return { valid: false, error: "வீடியோ 50MB-க்கு மிகாமல் இருக்க வேண்டும் (Video must be under 50MB)" };
+  }
+
+  if (isAudio && sizeBytes > maxAudioSize) {
+    return { valid: false, error: "ஆடியோ 15MB-க்கு மிகாமல் இருக்க வேண்டும் (Audio must be under 15MB)" };
   }
 
   return {
