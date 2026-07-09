@@ -1,0 +1,689 @@
+/* =====================================================================
+   /upcoming-services — page-scoped styles.
+   Reuses design tokens + reset from ../analytics/analytics.css
+   (:root vars, .wrap, .ph-eyebrow, .analytics-body, TvkTopBar/.topbar).
+   Section layout (.sec-pad, .sec-head) lives in home.css — duplicated here
+   because this page does not import home.css.
+   ===================================================================== */
+
+/* ---- Section layout (from home.css, required on this route) ---- */
+.upcoming-body .sec-pad {
+  padding: clamp(3.5rem, 7vw, 7rem) 0;
+}
+
+.upcoming-body .sec-head {
+  max-width: 720px;
+  margin-bottom: clamp(2rem, 4vw, 3.4rem);
+}
+
+.upcoming-body .sec-head.center {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.upcoming-body .sec-eyebrow {
+  font-family: var(--f-head);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .4em;
+  text-transform: uppercase;
+  color: var(--red);
+  display: inline-flex;
+  align-items: center;
+  gap: .7rem;
+}
+
+.upcoming-body .sec-eyebrow::before {
+  content: "";
+  width: 30px;
+  height: 2px;
+  background: var(--gold);
+}
+
+.upcoming-body .center .sec-eyebrow::after {
+  content: "";
+  width: 30px;
+  height: 2px;
+  background: var(--gold);
+}
+
+.upcoming-body .sec-head h2 {
+  font-size: clamp(2rem, 5vw, 3.3rem);
+  font-weight: 800;
+  color: var(--m-900);
+  margin: .7rem 0 .8rem;
+  letter-spacing: -.01em;
+}
+
+.upcoming-body .sec-head p {
+  color: var(--ink-soft);
+  font-size: 1.02rem;
+  line-height: 1.7;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.upcoming-body {
+  background: var(--cream);
+}
+
+/* ---- Buttons (mirrors app/home.css .btn / .btn-gold / .btn-ghost) ---- */
+.upcoming-body .btn {
+  font-family: var(--f-head);
+  font-weight: 800;
+  font-size: .95rem;
+  letter-spacing: .03em;
+  padding: 1rem 2.2rem;
+  border-radius: 999px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+  transition: transform .3s var(--ease), box-shadow .3s, background .3s;
+  cursor: pointer;
+}
+
+.upcoming-body .btn-gold {
+  background: var(--gold);
+  color: var(--m-900);
+  box-shadow: 0 16px 40px -14px rgba(254, 203, 2, .55);
+}
+
+.upcoming-body .btn-gold:hover {
+  transform: translateY(-3px);
+  background: var(--gold-2);
+}
+
+.upcoming-body .btn-ghost {
+  background: transparent;
+  color: var(--m-900);
+  border: 1.5px solid rgba(74, 8, 14, .3);
+}
+
+.upcoming-body .btn-ghost:hover {
+  background: rgba(74, 8, 14, .08);
+  transform: translateY(-3px);
+}
+
+/* ---- HERO ---- */
+.uf-hero {
+  position: relative;
+  background:
+    radial-gradient(1000px 480px at 50% -10%, rgba(160, 0, 0, .5), transparent 60%),
+    var(--night);
+  /* Clearance for sticky topbar + badge visibility on first paint */
+  padding: clamp(5.5rem, 12vh, 7.5rem) 0 clamp(2.5rem, 5vh, 4rem);
+  overflow: hidden;
+  text-align: center;
+  scroll-margin-top: 5rem;
+}
+
+.uf-hero-whistle {
+  position: absolute;
+  right: clamp(.75rem, 4vw, 1.25rem);
+  top: clamp(5.5rem, 12vh, 7rem);
+  width: clamp(52px, 8vw, 72px);
+  height: clamp(52px, 8vw, 72px);
+  opacity: .18;
+  z-index: 1;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 16px rgba(254, 203, 2, .35));
+}
+
+.uf-hero .wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .9rem;
+  position: relative;
+  z-index: 2;
+}
+
+.uf-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  background: rgba(254, 203, 2, .12);
+  border: 1px solid rgba(254, 203, 2, .4);
+  color: var(--gold);
+  font-family: var(--f-head);
+  font-weight: 800;
+  font-size: .68rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  padding: .45rem 1rem;
+  border-radius: 999px;
+}
+
+.uf-hero-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 4px rgba(254, 203, 2, .25);
+  animation: uf-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes uf-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+
+.uf-hero h1 {
+  color: #fff;
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size: clamp(1.9rem, 4.6vw, 3.1rem);
+  line-height: 1.18;
+  max-width: 880px;
+  margin: .3rem 0 0;
+}
+
+.uf-hero-subtitle {
+  max-width: 680px;
+  color: rgba(255, 241, 190, .78);
+  font-size: clamp(.92rem, 1.6vw, 1.05rem);
+  line-height: 1.75;
+  margin: .2rem 0 .4rem;
+}
+
+.uf-hero-stats {
+  display: flex;
+  gap: clamp(1.5rem, 6vw, 3.5rem);
+  margin-top: .6rem;
+}
+
+.uf-hero-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .2rem;
+}
+
+.uf-hero-stat b {
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  color: var(--gold);
+  line-height: 1;
+}
+
+.uf-hero-stat span {
+  font-size: .74rem;
+  color: rgba(255, 241, 190, .6);
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-align: center;
+}
+
+.uf-hero-illustration {
+  margin-top: clamp(.6rem, 2vh, 1.2rem);
+  width: min(200px, 52vw);
+  opacity: .92;
+}
+
+.uf-hero-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.uf-hero-ring {
+  fill: none;
+  stroke: rgba(254, 203, 2, .35);
+  stroke-width: 2;
+}
+
+.uf-hero-ring-2 {
+  stroke: rgba(254, 203, 2, .6);
+  stroke-dasharray: 6 8;
+  animation: uf-spin 22s linear infinite;
+  transform-origin: 100px 70px;
+}
+
+@keyframes uf-spin {
+  to { transform: rotate(360deg); }
+}
+
+.uf-hero-check {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---- FEATURE GRID ---- */
+.uf-grid-sec {
+  background: var(--cream);
+  padding-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.uf-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.35rem;
+  align-items: start;
+  margin-bottom: .5rem;
+}
+
+/* Center lone last card in desktop 3-col grid */
+.uf-grid > .uf-card:last-child:nth-child(3n + 1) {
+  grid-column: 2 / 3;
+}
+
+.uf-expand-all {
+  margin-top: 1rem;
+  border: 1px solid rgba(160, 0, 0, .25);
+  background: #fff;
+  color: var(--m-800);
+  border-radius: 999px;
+  padding: .58rem 1rem;
+  font-family: var(--f-head);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: background .25s var(--ease), border-color .25s var(--ease), transform .25s var(--ease);
+}
+
+.uf-expand-all:hover {
+  border-color: rgba(160, 0, 0, .45);
+  background: rgba(160, 0, 0, .06);
+  transform: translateY(-1px);
+}
+
+.uf-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 1.6rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 18px 40px -26px rgba(74, 8, 14, .25);
+  transition: transform .4s var(--ease), box-shadow .4s var(--ease), border-color .3s;
+  height: auto;
+  animation: uf-card-in .55s var(--ease) both;
+  isolation: isolate;
+}
+
+.uf-card:nth-child(2n) {
+  animation-delay: .04s;
+}
+
+.uf-card:nth-child(3n) {
+  animation-delay: .08s;
+}
+
+@keyframes uf-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.uf-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 30px 60px -28px rgba(74, 8, 14, .35);
+  border-color: rgba(254, 203, 2, .4);
+}
+
+.uf-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.uf-ic {
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(140deg, var(--red), var(--m-800));
+  box-shadow: 0 14px 26px -12px rgba(160, 0, 0, .55);
+  flex: none;
+}
+
+.uf-ic svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: var(--gold-2);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.uf-badge {
+  font-family: var(--f-head);
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--m-800);
+  background: rgba(254, 203, 2, .22);
+  padding: .3rem .65rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.uf-card h3 {
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--m-900);
+  margin-bottom: .4rem;
+  line-height: 1.35;
+}
+
+.uf-tagline {
+  font-size: .87rem;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  margin-bottom: .85rem;
+}
+
+/* Always-visible summary — citizens see value without expanding */
+.uf-preview {
+  display: grid;
+  gap: .75rem;
+  margin-bottom: .9rem;
+  padding: .85rem .9rem;
+  background: rgba(250, 241, 220, .55);
+  border: 1px solid rgba(160, 0, 0, .08);
+  border-radius: var(--r-md);
+}
+
+.uf-preview-block h4 {
+  font-family: var(--f-head);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: .3rem;
+}
+
+.uf-preview-block p {
+  font-size: .84rem;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.uf-toggle {
+  align-self: flex-start;
+  margin-top: .15rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--f-head);
+  font-weight: 800;
+  font-size: .82rem;
+  letter-spacing: .04em;
+  color: var(--red);
+  cursor: pointer;
+}
+
+.uf-chevron {
+  display: inline-block;
+  font-style: normal;
+  transition: transform .3s var(--ease);
+}
+
+.uf-chevron.up {
+  transform: rotate(180deg);
+}
+
+/* grid-template-rows 0fr/1fr trick — smooth height animation with no JS measuring */
+.uf-detail {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows .45s var(--ease), opacity .35s var(--ease);
+}
+
+.uf-card.open .uf-detail {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 1.1rem;
+}
+
+.uf-detail-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.uf-detail-block {
+  padding-top: 1rem;
+  border-top: 1px dashed var(--line);
+}
+
+.uf-detail-block:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.uf-detail-block h4 {
+  font-family: var(--f-head);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: .45rem;
+}
+
+.uf-detail-block p {
+  font-size: .87rem;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+/* Workflow mini-diagram */
+.uf-workflow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.uf-workflow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.uf-workflow-row {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+
+.uf-workflow-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--m-900);
+  font-family: var(--f-head);
+  font-weight: 800;
+  font-size: .7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.uf-workflow-label {
+  font-size: .83rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.uf-workflow-arrow {
+  color: rgba(160, 0, 0, .35);
+  font-size: .85rem;
+  margin-left: 10px;
+  line-height: 1.7;
+}
+
+/* ---- CTA ---- */
+.upcoming-body .uf-cta {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(180deg, var(--cream), var(--cream-2));
+  padding: clamp(2.5rem, 5vw, 4rem) 0 clamp(3.5rem, 7vw, 7rem);
+  margin-top: 0;
+  clear: both;
+}
+
+.uf-cta-box {
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  padding: clamp(2rem, 5vw, 3.2rem);
+  box-shadow: 0 30px 70px -34px rgba(74, 8, 14, .3);
+  position: relative;
+}
+
+.uf-cta-box h2 {
+  font-size: clamp(1.4rem, 3.4vw, 2rem);
+  font-weight: 800;
+  color: var(--m-900);
+  margin-bottom: .6rem;
+}
+
+.uf-cta-box p {
+  color: var(--ink-soft);
+  font-size: .96rem;
+  line-height: 1.7;
+  margin-bottom: 1.6rem;
+}
+
+.uf-cta-actions {
+  display: flex;
+  gap: .9rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ---- Reveal-on-scroll reuses .rv / .spot from home.css convention;
+   define minimal fallback here so cards aren't invisible if JS reveal
+   observer (home-only) isn't present on this page. ---- */
+.uf-card.rv {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---- RESPONSIVE — mobile is the primary target ---- */
+@media (max-width: 1020px) {
+  .uf-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .uf-grid > .uf-card:last-child:nth-child(3n + 1) {
+    grid-column: auto;
+  }
+
+  /* Center lone last card in 2-col layout (13 cards → 1 in final row) */
+  .uf-grid > .uf-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    max-width: min(100%, 520px);
+    justify-self: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .upcoming-body .sec-pad {
+    padding: clamp(2.5rem, 8vw, 3.5rem) 0;
+  }
+
+  .uf-hero {
+    padding: clamp(4.8rem, 14vh, 6rem) 0 2rem;
+  }
+
+  .uf-hero-whistle {
+    width: 44px;
+    height: 44px;
+    opacity: .12;
+  }
+
+  .uf-hero h1 {
+    font-size: clamp(1.5rem, 7vw, 2rem);
+    padding: 0 .3rem;
+  }
+
+  .uf-hero-subtitle {
+    font-size: .88rem;
+    padding: 0 .3rem;
+  }
+
+  .uf-hero-stats {
+    gap: 2.2rem;
+  }
+
+  .uf-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .uf-grid > .uf-card:last-child:nth-child(odd) {
+    grid-column: auto;
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .uf-card {
+    padding: 1.35rem 1.2rem 1.25rem;
+  }
+
+  .uf-cta-box {
+    padding: 1.6rem 1.2rem;
+  }
+
+  .uf-cta-actions {
+    flex-direction: column;
+  }
+
+  .uf-cta-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uf-hero-ring-2 {
+    animation: none;
+  }
+
+  .uf-hero-badge::before {
+    animation: none;
+  }
+
+  .uf-card,
+  .uf-detail,
+  .uf-chevron {
+    transition: none;
+  }
+
+  .uf-card {
+    animation: none;
+  }
+}

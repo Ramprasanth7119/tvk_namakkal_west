@@ -17,6 +17,7 @@ import PrinciplesSection from '@/components/home/PrinciplesSection';
 import UnionExplorerSection from '@/components/home/UnionExplorerSection';
 import JoinSection from '@/components/home/JoinSection';
 import FooterSection from '@/components/home/FooterSection';
+import UpcomingServicesTeaser from '@/components/home/UpcomingServicesTeaser';
 import MarqueeTrack from '@/components/MarqueeTrack';
 import {
   COMPLAINT_CATEGORY_TREE,
@@ -1495,6 +1496,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <UpcomingServicesTeaser />
 
       <section className="sec-pad" data-cursor="maroon" data-rail={t('home.rail.tasks')} id="services">
         <div className="wrap">
