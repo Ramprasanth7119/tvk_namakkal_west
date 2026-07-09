@@ -1,6 +1,13 @@
 'use client';
 
+import type { SVGProps } from 'react';
 import { FLAG_MED } from '@/constants/flag_assets';
+
+/** SVG2 textPath attrs not yet in React's SVG typings. */
+const RING_TEXT_PATH_PROPS = {
+  side: 'right',
+  method: 'align',
+} as SVGProps<SVGTextPathElement>;
 
 type HeroEmblemRingProps = {
   ringText: string;
@@ -55,11 +62,10 @@ export default function HeroEmblemRing({ ringText, id = 'medWrap' }: HeroEmblemR
           <text className="hero-ring-text" fontSize="11.5" fontWeight="700">
             <textPath
               href="#heroRingPath"
-              side="right"
               textLength={ringCircumference.toFixed(2)}
               lengthAdjust="spacing"
-              method="align"
               startOffset="0%"
+              {...RING_TEXT_PATH_PROPS}
             >
               {label}
             </textPath>
