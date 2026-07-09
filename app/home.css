@@ -2657,6 +2657,55 @@
     }
 
     @media (max-width:720px) {
+      .nav .nav-inner {
+        gap: 0.35rem;
+        padding: 0 0.4rem 0 0.55rem;
+      }
+
+      .brand {
+        min-width: 0;
+        max-width: calc(100% - 138px);
+        gap: 0.35rem;
+      }
+
+      .brand-text {
+        min-width: 0;
+      }
+
+      .brand small {
+        display: none;
+      }
+
+      .brand b {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.82rem;
+        line-height: 1.1;
+      }
+
+      .nav-actions {
+        gap: 0.3rem;
+      }
+
+      .nav-lang-btn {
+        min-height: 34px;
+        padding: 0.3rem 0.5rem;
+        font-size: 0.72rem;
+      }
+
+      .nav-lang-btn span {
+        max-width: 58px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .nav-toggle {
+        min-width: 40px;
+        min-height: 40px;
+        padding: 0.3rem 0.55rem;
+      }
 
       /* hero: breathing room + sane title size so it never crowds the nav */
       .hero {
