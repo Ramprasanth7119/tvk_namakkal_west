@@ -21,7 +21,7 @@ export default function UpcomingServicesTeaser() {
       id="upcoming-teaser"
     >
       <div className="wrap">
-        <div className="upcoming-teaser-box rv spot">
+        <div className="upcoming-teaser-box spot">
           <img className="upcoming-teaser-whistle" src={TVK_LOGO} alt="" aria-hidden="true" />
           <div className="upcoming-teaser-copy">
             <span className="sec-eyebrow">{t("home.upcoming_teaser.eyebrow")}</span>

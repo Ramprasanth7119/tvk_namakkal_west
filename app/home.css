@@ -930,7 +930,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      padding: clamp(68px, 7.5vh, 86px) 1rem clamp(12px, 1.8vh, 24px);
+      padding: clamp(96px, 12vh, 116px) 1rem clamp(12px, 1.8vh, 24px);
       background:
         radial-gradient(1100px 520px at 50% -8%, rgba(160, 0, 0, .55), transparent 62%),
         radial-gradient(900px 600px at 50% 115%, rgba(160, 0, 0, .4), transparent 60%),
@@ -960,8 +960,8 @@
       position: relative;
       width: 100%;
       flex: 0 1 auto;
-      max-height: clamp(150px, 22vh, 300px);
-      min-height: 120px;
+      max-height: clamp(130px, 20vh, 260px);
+      min-height: 110px;
       display: flex;
       justify-content: center;
       align-items: flex-end;
@@ -969,7 +969,7 @@
       overflow: visible;
       pointer-events: none;
       will-change: transform, opacity;
-      margin-top: -0.15rem;
+      margin-top: clamp(6px, 0.8vh, 14px);
     }
 
     .hp-img {
@@ -1093,14 +1093,27 @@
       z-index: 8;
       text-align: center;
       color: #fff;
-      font-size: clamp(2.2rem, 6vw, 4.6rem);
+      font-size: clamp(1.9rem, 5vw, 3.8rem);
       font-weight: 800;
       letter-spacing: -.012em;
-      line-height: 1.1;
+      line-height: 1.08;
       margin-top: 0;
       margin-bottom: clamp(2px, 0.5vh, 8px);
       will-change: transform;
       flex-shrink: 0
+    }
+
+    html[lang="en"] .hero-pin {
+      padding-top: clamp(100px, 12.5vh, 120px);
+    }
+
+    html[lang="en"] .hero-portrait {
+      max-height: clamp(120px, 17vh, 230px);
+    }
+
+    html[lang="en"] .h-title {
+      font-size: clamp(1.65rem, 4.2vw, 3rem);
+      line-height: 1.06;
     }
     
     .h-title .row {
@@ -1121,16 +1134,31 @@
     .band {
       position: relative;
       width: 100%;
-      height: clamp(110px, 16vh, 160px);
+      height: 0;
+      min-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transform: translateY(12%);
       background: var(--gold);
-      overflow: visible;
-      will-change: transform;
+      will-change: transform, opacity, height;
       box-shadow: 0 0 0 6px rgba(254, 203, 2, .12), 0 40px 120px -30px rgba(160, 0, 0, .65);
       flex-shrink: 0;
       transition: box-shadow .35s ease;
       display: flex;
       align-items: center;
       justify-content: center;
+      pointer-events: none;
+    }
+
+    .band.band-measure {
+      height: clamp(110px, 16vh, 160px);
+      min-height: 0;
+      visibility: hidden;
+      position: absolute;
+      left: 0;
+      right: 0;
+      pointer-events: none;
+      overflow: visible;
     }
 
     .band.band-ele-intro {
@@ -1170,7 +1198,7 @@
       will-change: transform;
       filter: drop-shadow(0 18px 30px rgba(74, 8, 14, .35));
       z-index: 1;
-      opacity: 1;
+      opacity: 0;
     }
 
     .ele.l {
@@ -1258,47 +1286,55 @@
       position: absolute;
       left: 50%;
       top: 50%;
-      width: clamp(90px, 10.5vh, 124px);
+      height: min(96%, calc(100% - 14px));
+      width: min(96%, calc(100% - 14px));
+      max-width: min(clamp(92px, 16vh, 142px), calc(100% - 14px));
+      max-height: min(clamp(92px, 16vh, 142px), calc(100% - 14px));
       aspect-ratio: 1;
       transform: translate(-50%, -50%);
-      will-change: transform;
-      z-index: 2
+      z-index: 2;
+      overflow: visible;
+      pointer-events: none;
     }
 
-    .med-wrap .med {
+    .hero-emblem {
+      display: block;
       width: 100%;
       height: 100%;
-      object-fit: contain;
-      border-radius: 50%;
-      box-shadow: 0 24px 70px -18px rgba(74, 8, 14, .55), 0 0 0 8px rgba(160, 0, 0, .12)
+      overflow: visible;
+      filter: drop-shadow(0 18px 42px -14px rgba(74, 8, 14, .5));
     }
 
-    .textring {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 118%;
-      height: 118%;
-      animation: trot 26s linear infinite;
-      will-change: transform
+    .hero-ring-spin {
+      transform-origin: 100px 100px;
+      transform-box: view-box;
+      animation: heroRingSpin 26s linear infinite;
+      will-change: transform;
     }
 
-    @keyframes trot {
+    @keyframes heroRingSpin {
       from {
-        transform: translate(-50%, -50%) rotate(0deg)
+        transform: rotate(0deg)
       }
 
       to {
-        transform: translate(-50%, -50%) rotate(360deg)
+        transform: rotate(360deg)
       }
     }
 
-    .textring text {
+    @media (prefers-reduced-motion: reduce) {
+      .hero-ring-spin {
+        animation: none;
+      }
+    }
+
+    .hero-ring-text {
       font-family: 'Anek Tamil', 'Hind Madurai', sans-serif;
-      font-weight: 700;
-      font-size: 17px;
-      letter-spacing: .01em;
-      fill: var(--red)
+      fill: #5c000c;
+      stroke: rgba(254, 203, 2, .96);
+      stroke-width: 0.42;
+      paint-order: stroke fill;
+      letter-spacing: 0;
     }
 
     .h-kural {
@@ -1585,14 +1621,12 @@
     .rv {
       opacity: 0;
       transform: translateY(46px);
-      filter: blur(6px);
-      transition: opacity .9s var(--ease), transform .9s var(--ease), filter .9s var(--ease)
+      transition: opacity .9s var(--ease), transform .9s var(--ease)
     }
 
     .rv.in {
       opacity: 1;
-      transform: none;
-      filter: none
+      transform: none
     }
 
     .rv-d1 {
@@ -2801,6 +2835,11 @@
       .band {
         overflow: visible;
       }
+
+      .med-wrap {
+        max-width: min(clamp(88px, 14vh, 124px), calc(100% - 14px));
+        max-height: min(clamp(88px, 14vh, 124px), calc(100% - 14px));
+      }
     }
 
     @media (max-width:720px) {
@@ -2861,7 +2900,6 @@
 
       .band {
         overflow: visible;
-        height: clamp(112px, 18vh, 148px);
       }
 
       .ele {
@@ -2878,7 +2916,7 @@
       }
 
       .hero-pin {
-        padding-top: clamp(80px, 10vh, 90px);
+        padding-top: clamp(94px, 12vh, 108px);
         padding-bottom: 1.25rem;
         justify-content: flex-start
       }
@@ -2927,7 +2965,27 @@
         padding: 0 .4rem
       }
 
-      .band {
+      /* English hero copy is wider/taller; keep it safely below the fixed navbar */
+      html[lang="en"] .hero-pin {
+        padding-top: clamp(96px, 13vh, 122px);
+      }
+
+      html[lang="en"] .h-title {
+        font-size: clamp(1.35rem, 6.4vw, 1.92rem);
+        line-height: 1.06;
+        margin-bottom: clamp(8px, 1.4vh, 14px);
+      }
+
+      html[lang="en"] .h-kural b {
+        font-size: clamp(.86rem, 4.9vw, 1.08rem);
+      }
+
+      html[lang="en"] .h-kural span {
+        letter-spacing: .24em;
+        font-size: .62rem;
+      }
+
+      .band.band-measure {
         height: clamp(112px, 18vh, 148px);
       }
 
@@ -2945,13 +3003,8 @@
       }
 
       .med-wrap {
-        width: min(68%, 32vw, 118px);
-        max-height: 68%;
-      }
-
-      .textring {
-        width: 118%;
-        height: 118%;
+        max-width: min(clamp(82px, 24vw, 110px), calc(100% - 14px));
+        max-height: min(clamp(82px, 24vw, 110px), calc(100% - 14px));
       }
 
       .hero-stack {
@@ -3089,12 +3142,25 @@
     /* ---- DESKTOP HERO & ELEPHANTS ---- */
     @media (min-width: 1481px) {
       .hero-pin {
-        padding: clamp(66px, 7vh, 82px) 0 clamp(10px, 1.2vh, 20px);
+        padding: clamp(100px, 11vh, 118px) 0 clamp(10px, 1.2vh, 20px);
+      }
+
+      html[lang="en"] .hero-pin {
+        padding-top: clamp(104px, 12vh, 124px);
       }
 
       .hero-portrait {
-        max-height: clamp(175px, 24vh, 310px);
+        max-height: clamp(160px, 21vh, 270px);
         padding-inline: clamp(1rem, 2.5vw, 2rem);
+      }
+
+      html[lang="en"] .hero-portrait {
+        max-height: clamp(150px, 19vh, 240px);
+      }
+
+      html[lang="en"] .h-title {
+        font-size: clamp(2.2rem, 3.6vw, 3rem);
+        line-height: 1.06;
       }
 
       .hero-stack {
@@ -3111,8 +3177,16 @@
 
       .band {
         width: 100%;
-        height: clamp(128px, 17vh, 215px);
         overflow: visible;
+      }
+
+      .band.band-measure {
+        height: clamp(128px, 17vh, 215px);
+      }
+
+      .med-wrap {
+        max-width: min(clamp(102px, 15vh, 152px), calc(100% - 14px));
+        max-height: min(clamp(102px, 15vh, 152px), calc(100% - 14px));
       }
 
       .ele {
@@ -3162,9 +3236,6 @@
         margin-bottom: clamp(6px, 0.8vh, 12px);
       }
 
-      .band {
-        height: clamp(90px, 14vh, 130px);
-      }
 
       .h-kural {
         margin-top: clamp(6px, 0.8vh, 12px);
@@ -3197,8 +3268,7 @@
 
       .rv {
         opacity: 1;
-        transform: none;
-        filter: none
+        transform: none
       }
 
       .hero {

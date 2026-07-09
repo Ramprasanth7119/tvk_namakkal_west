@@ -38,7 +38,7 @@ function FeatureCard({
   }, [expandedByDefault]);
 
   return (
-    <div className={`uf-card spot rv ${open ? "open" : ""}`}>
+    <div className={`uf-card spot ${open ? "open" : ""}`}>
       <div className="uf-card-top">
         <div className="uf-ic">
           <FeatureIcon paths={paths} />
