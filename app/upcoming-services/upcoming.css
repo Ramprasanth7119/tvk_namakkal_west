@@ -584,12 +584,11 @@
   flex-wrap: wrap;
 }
 
-/* ---- Reveal-on-scroll reuses .rv / .spot from home.css convention;
-   define minimal fallback here so cards aren't invisible if JS reveal
-   observer (home-only) isn't present on this page. ---- */
-.uf-card.rv {
+/* Cards are fully visible on first paint — no scroll-reveal blur on this route. */
+.upcoming-body .uf-card {
   opacity: 1;
   transform: none;
+  filter: none;
 }
 
 /* ---- RESPONSIVE — mobile is the primary target ---- */
